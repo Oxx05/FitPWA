@@ -17,7 +17,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, GripVertical, Trash2, AlertCircle } from 'lucide-react'
+import { Plus, GripVertical, Trash2, AlertCircle, Dumbbell } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
 import { Modal } from '@/shared/components/Modal'
@@ -133,17 +133,27 @@ export function WorkoutEditor() {
       // Supondo que existe uma tabela exercises
       const { data, error: err } = await supabase
         .from('exercises')
-        .select('*')
-        .limit(100)
+        .select('id, name, category, difficulty')
+        .order('category')
+        .order('name')
+        .limit(200)
 
       if (err) console.error('Erro a carregar exercícios:', err)
-      if (data) {
+      if (data && data.length > 0) {
         setAvailableExercises(data.map((e: any) => ({
           id: e.id,
           name: e.name,
-          category: e.category,
-          difficulty: e.difficulty
+          category: e.category || 'Outro',
+          difficulty: e.difficulty || 'beginner'
         })))
+      } else {
+        // Fallback com exercícios básicos se BD estiver vazia
+        console.warn('Nenhum exercício encontrado. Use o SQL seed para popular.')
+        setAvailableExercises([
+          { id: 'squat', name: 'Agachamento', category: 'Perna', difficulty: 'intermediate' },
+          { id: 'bench-press', name: 'Supino', category: 'Peito', difficulty: 'intermediate' },
+          { id: 'deadlift', name: 'Levantamento Terra', category: 'Costas', difficulty: 'advanced' }
+        ])
       }
     } catch (err) {
       console.error('Erro:', err)
@@ -295,7 +305,11 @@ export function WorkoutEditor() {
             </DndContext>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">Nenhum exercício adicionado ainda</p>
+          <div className="text-center py-8 text-gray-400 bg-surface-100 rounded-xl border border-surface-200">
+            <Dumbbell className="w-12 h-12 mx-auto mb-2 opacity-30" />
+            <p>Nenhum exercício adicionado ainda</p>
+            <p className="text-sm text-gray-500 mt-1">Clica no botão abaixo para adicionar o primeiro exercício</p>
+          </div>
         )}
       </div>
 

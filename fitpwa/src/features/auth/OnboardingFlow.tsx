@@ -7,7 +7,7 @@ import { supabase } from '@/shared/lib/supabase'
 
 export function OnboardingFlow() {
   const navigate = useNavigate()
-  const { session, profile, setProfile } = useAuthStore()
+  const { session, profile, setProfile, isLoading: authLoading } = useAuthStore()
   
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
@@ -23,11 +23,15 @@ export function OnboardingFlow() {
   useEffect(() => {
     if (!session) {
       navigate('/login')
-    } else if (profile?.username || profile?.full_name) {
-      // already onboarded
+    }
+  }, [session, navigate])
+
+  useEffect(() => {
+    // If profile is already complete (has full_name), skip to dashboard
+    if (profile?.full_name && !authLoading) {
       navigate('/dashboard')
     }
-  }, [session, profile, navigate])
+  }, [profile, authLoading, navigate])
 
   const handleNext = () => setStep(s => Math.min(4, s + 1))
   const handleBack = () => setStep(s => Math.max(1, s - 1))
