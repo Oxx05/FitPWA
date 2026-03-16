@@ -38,8 +38,11 @@ interface PlanExercise {
 interface Exercise {
   id: string
   name: string
-  category: string
-  difficulty: string
+  name_pt?: string
+  muscle_groups?: string[]
+  equipment?: string[]
+  difficulty?: number
+  instructions?: string
 }
 
 function SortableExerciseItem({ ex, onRemove }: { ex: PlanExercise, onRemove: (id: string) => void }) {
@@ -108,18 +111,35 @@ export function WorkoutEditor() {
   const loadPlan = async () => {
     try {
       setLoading(true)
-      const { data, error: err } = await supabase
-        .from('workspace_plans')
+      const { data: plan, error: planErr } = await supabase
+        .from('workout_plans')
         .select('*')
         .eq('id', id)
         .single()
 
-      if (err) throw err
-      if (data) {
-        setTitle(data.name)
-        setDescription(data.description || '')
-        setDifficulty(data.difficulty)
-        // Carregar exercícios do plano - isso dependeria da estrutura da BD
+      if (planErr) throw planErr
+      if (plan) {
+        setTitle(plan.name)
+        setDescription(plan.description || '')
+        
+        // Load exercises for this plan from plan_exercises junction table
+        const { data: planExercises, error: exErr } = await supabase
+          .from('plan_exercises')
+          .select(`
+            exercise_id,
+            exercises (id, name, name_pt, muscle_groups, equipment, difficulty)
+          `)
+          .eq('plan_id', id)
+          .order('order_index', { ascending: true })
+        
+        if (exErr) throw exErr
+        
+        if (planExercises && planExercises.length > 0) {
+          const exerciseList = planExercises
+            .map((pe: any) => pe.exercises)
+            .filter(Boolean)
+          setExercises(exerciseList)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar plano')
@@ -130,11 +150,11 @@ export function WorkoutEditor() {
 
   const loadExercises = async () => {
     try {
-      // Supondo que existe uma tabela exercises
+      // Load exercises from database
       const { data, error: err } = await supabase
         .from('exercises')
-        .select('id, name, category, difficulty')
-        .order('category')
+        .select('id, name, name_pt, muscle_groups, equipment, difficulty, instructions')
+        .eq('is_custom', false)
         .order('name')
         .limit(200)
 
@@ -143,16 +163,19 @@ export function WorkoutEditor() {
         setAvailableExercises(data.map((e: any) => ({
           id: e.id,
           name: e.name,
-          category: e.category || 'Outro',
-          difficulty: e.difficulty || 'beginner'
+          name_pt: e.name_pt,
+          muscle_groups: e.muscle_groups || [],
+          equipment: e.equipment || [],
+          difficulty: e.difficulty || 3,
+          instructions: e.instructions
         })))
       } else {
         // Fallback com exercícios básicos se BD estiver vazia
         console.warn('Nenhum exercício encontrado. Use o SQL seed para popular.')
         setAvailableExercises([
-          { id: 'squat', name: 'Agachamento', category: 'Perna', difficulty: 'intermediate' },
-          { id: 'bench-press', name: 'Supino', category: 'Peito', difficulty: 'intermediate' },
-          { id: 'deadlift', name: 'Levantamento Terra', category: 'Costas', difficulty: 'advanced' }
+          { id: 'squat', name: 'Agachamento', muscle_groups: ['legs'], difficulty: 3 },
+          { id: 'bench-press', name: 'Supino', muscle_groups: ['chest'], difficulty: 3 },
+          { id: 'deadlift', name: 'Levantamento Terra', muscle_groups: ['back', 'legs'], difficulty: 5 }
         ])
       }
     } catch (err) {
@@ -204,25 +227,51 @@ export function WorkoutEditor() {
       setLoading(true)
       setError(null)
 
-      const planData = {
-        name: title,
-        description,
-        difficulty,
+      let planId = id
+      const planData: Record<string, any> = {
         user_id: user?.id,
-        exercises_data: exercises, // Ou serializado conforme necessário
+        name: title,
+        description: description || null,
+        type: 'custom',
+        days_per_week: 3,
       }
 
       if (id) {
         const { error: err } = await supabase
-          .from('workspace_plans')
+          .from('workout_plans')
           .update(planData)
           .eq('id', id)
         if (err) throw err
+        
+        // Delete existing exercises for this plan
+        await supabase.from('plan_exercises').delete().eq('plan_id', id)
       } else {
-        const { error: err } = await supabase
-          .from('workspace_plans')
+        const { data: newPlan, error: err } = await supabase
+          .from('workout_plans')
           .insert([planData])
+          .select()
         if (err) throw err
+        if (!newPlan?.[0]) throw new Error('Falha ao criar plano')
+        
+        planId = newPlan[0].id
+      }
+
+      // Save exercises to plan_exercises table
+      if (exercises.length > 0 && planId) {
+        const planExercises = exercises.map((ex, idx) => ({
+          plan_id: planId,
+          exercise_id: ex.id,
+          order_index: idx,
+          sets: 3,
+          reps_min: 8,
+          reps_max: 12,
+          rest_seconds: 90,
+        }))
+        
+        const { error: exErr } = await supabase
+          .from('plan_exercises')
+          .insert(planExercises)
+        if (exErr) throw exErr
       }
 
       navigate('/workouts')
@@ -363,7 +412,17 @@ export function WorkoutEditor() {
                   className="w-full text-left p-3 bg-surface-100 hover:bg-surface-100/80 rounded-lg transition-colors border border-surface-100 hover:border-primary"
                 >
                   <h4 className="font-semibold text-white">{ex.name}</h4>
-                  <p className="text-sm text-gray-400">{ex.category} • {ex.difficulty}</p>
+                  <div className="flex gap-2 text-xs text-gray-400 mt-1">
+                    {ex.muscle_groups && ex.muscle_groups.length > 0 && (
+                      <span>{ex.muscle_groups.join(', ')}</span>
+                    )}
+                    {ex.difficulty && (
+                      <span>•</span>
+                    )}
+                    {ex.difficulty && (
+                      <span>Nível {ex.difficulty}</span>
+                    )}
+                  </div>
                 </button>
               ))
             ) : (
