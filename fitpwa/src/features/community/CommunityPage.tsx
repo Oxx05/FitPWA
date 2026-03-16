@@ -129,9 +129,9 @@ export function CommunityPage() {
         <div className="flex justify-center p-12">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : (
+      ) : workouts && workouts.length > 0 ? (
         <div className="space-y-4">
-          {workouts?.map((workout, idx) => (
+          {workouts.map((workout, idx) => (
             <motion.div
               key={workout.id}
               initial={{ opacity: 0, y: 20 }}
@@ -215,6 +215,21 @@ export function CommunityPage() {
             </motion.div>
           ))}
         </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center p-12 bg-surface-200 border border-dashed border-surface-100 rounded-2xl text-center"
+        >
+          <Dumbbell className="w-16 h-16 text-gray-600 mb-4" />
+          <h3 className="text-xl font-bold text-white mb-2">Comunidade Vazia</h3>
+          <p className="text-gray-400 max-w-md mb-6">
+            Nenhum plano foi partilhado na comunidade ainda. Sê o primeiro a publicar o teu plano de treino!
+          </p>
+          <a href="/workouts/new" className="px-6 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors">
+            Criar e Publicar Plano
+          </a>
+        </motion.div>
       )}
     </div>
   )
