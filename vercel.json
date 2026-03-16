@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd fitpwa && npm install && npm run build",
+  "buildCommand": "cd fitpwa && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "fitpwa/dist",
   "framework": "vite",
   "rewrites": [
