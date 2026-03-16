@@ -74,7 +74,6 @@ export function AiWorkoutGenerator() {
 
       if (newPlan && generatedPlan.exercises.length > 0) {
         // Look up UUIDs for exercise slugs
-        const slugs = generatedPlan.exercises.map(e => e.exercise_id)
         const { data: dbExercises } = await supabase
           .from('exercises')
           .select('id, name')
