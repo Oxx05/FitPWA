@@ -464,6 +464,7 @@ export function SessionScreen() {
                 exerciseId: ex.exerciseId,
                 setsCompleted: ex.setsCompleted,
                 durationSeconds: ex.durationSeconds,
+                createdAt: new Date().toISOString(),
                 synced: false
               })
             }
@@ -479,6 +480,7 @@ export function SessionScreen() {
               exerciseId: ex.exerciseId,
               setsCompleted: ex.setsCompleted,
               durationSeconds: ex.durationSeconds,
+              createdAt: new Date().toISOString(),
               synced: false
             })
           }
