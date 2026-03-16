@@ -44,19 +44,18 @@ export function Modal({
             className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 ${sizes[size]} w-full mx-4`}
           >
             <div className="bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden">
-              {title && (
-                <div className="flex justify-between items-center p-6 border-b border-surface-100">
-                  <h2 className="text-xl font-bold text-white">{title}</h2>
-                  {closeButton && (
-                    <button
-                      onClick={onClose}
-                      className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-gray-400 hover:text-white"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="flex justify-between items-center p-6 border-b border-surface-100">
+                <h2 className="text-xl font-bold text-white">{title || 'Dialog'}</h2>
+                {closeButton && (
+                  <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-gray-400 hover:text-white"
+                    aria-label="Fechar"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
               
               <div className="p-6">
                 {children}

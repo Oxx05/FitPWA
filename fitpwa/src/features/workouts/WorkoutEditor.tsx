@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -16,8 +17,12 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, GripVertical, Trash2 } from 'lucide-react'
+import { Plus, GripVertical, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
+import { Input } from '@/shared/components/Input'
+import { Modal } from '@/shared/components/Modal'
+import { supabase } from '@/shared/lib/supabase'
+import { useAuthStore } from '../auth/AuthProvider'
 
 interface PlanExercise {
   id: string
@@ -28,6 +33,13 @@ interface PlanExercise {
   reps_max: number
   rest_seconds: number
   is_superset: boolean
+}
+
+interface Exercise {
+  id: string
+  name: string
+  category: string
+  difficulty: string
 }
 
 function SortableExerciseItem({ ex, onRemove }: { ex: PlanExercise, onRemove: (id: string) => void }) {
@@ -67,15 +79,91 @@ function SortableExerciseItem({ ex, onRemove }: { ex: PlanExercise, onRemove: (i
 }
 
 export function WorkoutEditor() {
-  const [exercises, setExercises] = useState<PlanExercise[]>([
-    { id: '1', exercise_id: 'ex1', name: 'Agachamento com Barra', sets: 4, reps_min: 6, reps_max: 10, rest_seconds: 90, is_superset: false },
-    { id: '2', exercise_id: 'ex2', name: 'Leg Press 45°', sets: 3, reps_min: 10, reps_max: 12, rest_seconds: 90, is_superset: true },
-  ])
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const { user } = useAuthStore()
+
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [difficulty, setDifficulty] = useState('intermediate')
+  const [exercises, setExercises] = useState<PlanExercise[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showExerciseModal, setShowExerciseModal] = useState(false)
+  const [availableExercises, setAvailableExercises] = useState<Exercise[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
+
+  useEffect(() => {
+    if (id) {
+      loadPlan()
+    }
+    loadExercises()
+  }, [id])
+
+  const loadPlan = async () => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('workspace_plans')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (err) throw err
+      if (data) {
+        setTitle(data.name)
+        setDescription(data.description || '')
+        setDifficulty(data.difficulty)
+        // Carregar exercícios do plano - isso dependeria da estrutura da BD
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar plano')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadExercises = async () => {
+    try {
+      // Supondo que existe uma tabela exercises
+      const { data, error: err } = await supabase
+        .from('exercises')
+        .select('*')
+        .limit(100)
+
+      if (err) console.error('Erro a carregar exercícios:', err)
+      if (data) {
+        setAvailableExercises(data.map((e: any) => ({
+          id: e.id,
+          name: e.name,
+          category: e.category,
+          difficulty: e.difficulty
+        })))
+      }
+    } catch (err) {
+      console.error('Erro:', err)
+    }
+  }
+
+  const handleAddExercise = (exercise: Exercise) => {
+    const newExercise: PlanExercise = {
+      id: `${Date.now()}-${Math.random()}`,
+      exercise_id: exercise.id,
+      name: exercise.name,
+      sets: 3,
+      reps_min: 8,
+      reps_max: 12,
+      rest_seconds: 60,
+      is_superset: false
+    }
+    setExercises([...exercises, newExercise])
+    setShowExerciseModal(false)
+  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -92,37 +180,184 @@ export function WorkoutEditor() {
     setExercises(items => items.filter(i => i.id !== id))
   }
 
+  const handleSave = async () => {
+    if (!title.trim()) {
+      setError('Nome do plano é obrigatório')
+      return
+    }
+    if (exercises.length === 0) {
+      setError('Adiciona pelo menos um exercício')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const planData = {
+        name: title,
+        description,
+        difficulty,
+        user_id: user?.id,
+        exercises_data: exercises, // Ou serializado conforme necessário
+      }
+
+      if (id) {
+        const { error: err } = await supabase
+          .from('workspace_plans')
+          .update(planData)
+          .eq('id', id)
+        if (err) throw err
+      } else {
+        const { error: err } = await supabase
+          .from('workspace_plans')
+          .insert([planData])
+        if (err) throw err
+      }
+
+      navigate('/workouts')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao guardar')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredExercises = availableExercises.filter(ex =>
+    ex.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (loading && id) {
+    return <div className="flex items-center justify-center h-screen">Carregando...</div>
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6 pb-24">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Criar Plano</h1>
-          <p className="text-gray-400">Constrói o teu treino ideal.</p>
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-error/10 border border-error/30 rounded-lg text-error">
+          <AlertCircle className="w-5 h-5" />
+          <span>{error}</span>
         </div>
-        <Button>Guardar</Button>
-      </div>
+      )}
 
       <div className="space-y-4">
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={exercises}
-            strategy={verticalListSortingStrategy}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Nome do Plano</label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex: Perna 5x/semana"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Descrição</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descreve o objetivo deste plano..."
+            className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Dificuldade</label>
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
           >
-            {exercises.map((ex) => (
-              <SortableExerciseItem key={ex.id} ex={ex} onRemove={handleRemove} />
-            ))}
-          </SortableContext>
-        </DndContext>
+            <option value="beginner">Iniciante</option>
+            <option value="intermediate">Intermédio</option>
+            <option value="advanced">Avançado</option>
+          </select>
+        </div>
       </div>
 
-      <Button variant="secondary" className="w-full h-14 border border-dashed border-gray-600 hover:border-primary/50 text-gray-400 hover:bg-primary/5">
+      <div>
+        <h2 className="text-xl font-bold mb-4">Exercícios</h2>
+        {exercises.length > 0 ? (
+          <div className="space-y-4">
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext 
+                items={exercises.map(e => e.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {exercises.map((ex) => (
+                  <SortableExerciseItem key={ex.id} ex={ex} onRemove={handleRemove} />
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">Nenhum exercício adicionado ainda</p>
+        )}
+      </div>
+
+      <Button 
+        variant="secondary" 
+        className="w-full h-14 border border-dashed border-gray-600 hover:border-primary/50 text-gray-400 hover:bg-primary/5"
+        onClick={() => setShowExerciseModal(true)}
+      >
         <Plus className="w-5 h-5 mr-2 text-primary" />
         Adicionar Exercício
       </Button>
+
+      <div className="flex gap-4">
+        <Button 
+          variant="secondary" 
+          className="flex-1"
+          onClick={() => navigate(-1)}
+          disabled={loading}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          className="flex-1"
+          onClick={handleSave}
+          disabled={loading}
+        >
+          {loading ? 'Guardando...' : 'Guardar Plano'}
+        </Button>
+      </div>
+
+      {/* Exercise Selection Modal */}
+      <Modal
+        isOpen={showExerciseModal}
+        onClose={() => setShowExerciseModal(false)}
+        title="Seleciona Exercício"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Input
+            placeholder="Procura exercício..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+          <div className="max-h-[60vh] overflow-y-auto space-y-2">
+            {filteredExercises.length > 0 ? (
+              filteredExercises.map((ex) => (
+                <button
+                  key={ex.id}
+                  onClick={() => handleAddExercise(ex)}
+                  className="w-full text-left p-3 bg-surface-100 hover:bg-surface-100/80 rounded-lg transition-colors border border-surface-100 hover:border-primary"
+                >
+                  <h4 className="font-semibold text-white">{ex.name}</h4>
+                  <p className="text-sm text-gray-400">{ex.category} • {ex.difficulty}</p>
+                </button>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8">Nenhum exercício encontrado</p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
