@@ -4,7 +4,7 @@ import { Sparkles, Loader2, AlertCircle, Dumbbell, X, RotateCw } from 'lucide-re
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
 
 const SUGGESTION_CHIPS = [

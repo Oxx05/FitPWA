@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
-import { useAuthStore } from './AuthProvider'
+import { useAuthStore } from './authStore'
 import { supabase } from '@/shared/lib/supabase'
 
 export function OnboardingFlow() {

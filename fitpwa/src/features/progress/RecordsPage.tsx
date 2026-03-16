@@ -3,14 +3,17 @@ import { Trophy, TrendingUp, Calendar, Zap, Bell } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { supabase } from '@/shared/lib/supabase'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 import { EXERCISES } from '@/shared/data/exercises'
 import { WeightProgressChart } from './WeightProgressChart'
 import { SocialShare } from './SocialShare'
 import { Button } from '@/shared/components/Button'
 import { pushNotifications } from '@/shared/lib/pushNotifications'
+import type { PersonalRecord } from '@/shared/types'
 
 interface PR {
+  id: string
+  user_id: string
   exercise_id: string
   exercise_name: string
   weight_kg: number
@@ -18,6 +21,15 @@ interface PR {
   date_set: string
 }
 
+interface PRHistory {
+  id: string
+  exercise_id: string
+  exercise_name: string
+  weight_kg: number
+  reps: number
+  one_rep_max: number | null
+  achieved_at: string
+}
 interface WorkoutHistory {
   id: string
   exercise_id: string
@@ -57,6 +69,8 @@ export function RecordsPage() {
       return (data || []).map(pr => {
         const exercise = EXERCISES.find(e => e.id === pr.exercise_id)
         return {
+          id: pr.id,
+          user_id: pr.user_id,
           exercise_id: pr.exercise_id,
           exercise_name: exercise?.name || pr.exercise_id,
           weight_kg: pr.weight_kg || 0,
@@ -97,9 +111,49 @@ export function RecordsPage() {
     }
   })
 
+  const { data: prHistory, isLoading: prHistoryLoading } = useQuery({
+    queryKey: ['pr-history', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+      const { data, error } = await supabase
+        .from('personal_record_history')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('achieved_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching PR history:', error)
+        return []
+      }
+
+      return (data || []).map(pr => {
+        const exercise = EXERCISES.find(e => e.id === pr.exercise_id)
+        return {
+          id: pr.id,
+          exercise_id: pr.exercise_id,
+          exercise_name: exercise?.name || pr.exercise_id,
+          weight_kg: pr.weight_kg || 0,
+          reps: pr.reps || 0,
+          one_rep_max: pr.one_rep_max ?? null,
+          achieved_at: pr.achieved_at
+        }
+      }) as PRHistory[]
+    }
+  })
+
   const totalWorkouts = history?.length || 0
   const totalVolume = prs?.reduce((sum, pr) => sum + pr.weight_kg, 0) || 0
   const bestExercise = prs?.[0]?.exercise_name || 'N/A'
+  const chartRecords: PersonalRecord[] = (prs || []).map(pr => ({
+    id: pr.id,
+    user_id: pr.user_id,
+    exercise_id: pr.exercise_id,
+    weight_kg: pr.weight_kg,
+    reps: pr.reps,
+    date_set: pr.date_set,
+    created_at: pr.date_set
+  }))
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-24">
@@ -174,15 +228,7 @@ export function RecordsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <WeightProgressChart records={prs.map(pr => ({
-            id: pr.exercise_id,
-            user_id: profile?.id || '',
-            exercise_id: pr.exercise_id,
-            weight_kg: pr.weight_kg,
-            reps: pr.reps,
-            date_set: pr.date_set,
-            created_at: pr.date_set
-          } as any))} />
+          <WeightProgressChart records={chartRecords} />
         </motion.div>
       )}
 
@@ -229,6 +275,47 @@ export function RecordsPage() {
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
             <p>Nenhum PR registado ainda. Comece a treinar!</p>
+          </div>
+        )}
+      </div>
+
+      {/* PR History */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Histórico de PRs</h2>
+        {prHistoryLoading ? (
+          <div className="flex justify-center p-12">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : prHistory && prHistory.length > 0 ? (
+          <div className="space-y-3">
+            {prHistory.map((pr, idx) => (
+              <motion.div
+                key={pr.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.03 }}
+                className="bg-surface-200 border border-surface-100 p-4 rounded-xl hover:border-primary/30 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-bold text-white">{pr.exercise_name}</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {new Date(pr.achieved_at).toLocaleDateString('pt-PT')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-primary">{pr.weight_kg}kg</p>
+                  <p className="text-sm text-gray-400">x{pr.reps}</p>
+                  {pr.one_rep_max && (
+                    <p className="text-xs text-gray-500">1RM {Math.round(pr.one_rep_max)}kg</p>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
+            <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
+            <p>Ainda não tens histórico de PRs.</p>
           </div>
         )}
       </div>

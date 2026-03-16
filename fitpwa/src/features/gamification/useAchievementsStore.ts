@@ -12,12 +12,19 @@ export interface Achievement {
   threshold: number
 }
 
+export interface AchievementStats {
+  workoutsCount: number
+  streakDays: number
+  sessionVolume: number
+  isEarly: boolean
+}
+
 interface AchievementsState {
   achievements: Achievement[]
   unlockedIds: string[]
   isLoading: boolean
   fetchAchievements: (userId: string) => Promise<void>
-  checkAchievements: (userId: string, stats: Record<string, any>) => Promise<Achievement[]>
+  checkAchievements: (userId: string, stats: AchievementStats) => Promise<Achievement[]>
 }
 
 export const useAchievementsStore = create<AchievementsState>()(

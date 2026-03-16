@@ -1,34 +1,22 @@
-import { useEffect, useState } from 'react'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useState } from 'react'
+import { useAuthStore } from '../auth/authStore'
 import { type Achievement } from './useAchievementsStore'
 import { LevelUpModal, AchievementToast } from './GamificationEffects'
 import { AnimatePresence } from 'framer-motion'
 
 export function GamificationManager() {
-  const { profile } = useAuthStore()
-  const [lastLevel, setLastLevel] = useState<number | null>(null)
-  const [showLevelUp, setShowLevelUp] = useState<number | null>(null)
+  const { pendingLevelUp, clearPendingLevelUp } = useAuthStore()
   const [activeToasts, setActiveToasts] = useState<Achievement[]>([])
-
-  useEffect(() => {
-    if (!profile) return
-
-    // Level Up check
-    if (lastLevel !== null && profile.level && profile.level > lastLevel) {
-      setShowLevelUp(profile.level)
-    }
-    setLastLevel(profile.level || 1)
-  }, [profile?.level])
 
   // To simplify, we could expose a way to trigger achievement checks from other components
   // or use a global discovery system. For now, we'll rely on the stores.
 
   return (
     <>
-      {showLevelUp && (
+      {pendingLevelUp && (
         <LevelUpModal 
-          level={showLevelUp} 
-          onClose={() => setShowLevelUp(null)} 
+          level={pendingLevelUp} 
+          onClose={clearPendingLevelUp} 
         />
       )}
 

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Check, Zap, Shield, Crown } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 import { createCheckoutSession } from '@/shared/lib/stripe'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
@@ -10,12 +10,13 @@ import { useState, useEffect } from 'react'
 export function PremiumPage() {
   const { user, isPremium } = useAuthStore()
   const navigate = useNavigate()
-  const [useModal, setUseModal] = useState(false)
+  const [useModal, setUseModal] = useState(() => (
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  ))
 
   useEffect(() => {
     const handleResize = () => setUseModal(window.innerWidth < 768)
     window.addEventListener('resize', handleResize)
-    setUseModal(window.innerWidth < 768)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 

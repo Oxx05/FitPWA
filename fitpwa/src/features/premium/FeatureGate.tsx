@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 import { Link } from 'react-router-dom'
 import { Lock, Crown } from 'lucide-react'
 import { Button } from '@/shared/components/Button'

@@ -4,6 +4,22 @@ import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2 } from 'lucide-re
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
+import { OfflineSyncService } from '@/shared/lib/offlineSync'
+import { useAuthStore } from '@/features/auth/authStore'
+import { XP_PER_EXERCISE, XP_PER_SET, XP_PER_WORKOUT, XP_STREAK_MULTIPLIER } from '@/shared/utils/gamification'
+import {
+  clearSpotifyToken,
+  exchangeSpotifyCode,
+  getSpotifyNowPlaying,
+  getSpotifyAuthUrl,
+  getStoredSpotifyState,
+  hasValidSpotifyToken,
+  clearStoredSpotifyState,
+  spotifyNext,
+  spotifyPause,
+  spotifyPlay,
+  spotifyPrevious
+} from '@/shared/lib/spotify'
 
 interface SetRecord {
   id: string
@@ -29,6 +45,7 @@ interface ExerciseInSession {
 export function SessionScreen() {
   const navigate = useNavigate()
   const { id: planId } = useParams<{ id?: string }>()
+  const { user, profile, addXp } = useAuthStore()
 
   const [exercises, setExercises] = useState<ExerciseInSession[]>([])
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
@@ -37,6 +54,18 @@ export function SessionScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [restTimer, setRestTimer] = useState<number | null>(null)
+  const [planName, setPlanName] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'treino' | 'controlo'>('treino')
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null)
+  const [spotifyConnected, setSpotifyConnected] = useState(() => hasValidSpotifyToken())
+  const [spotifyPlaying, setSpotifyPlaying] = useState<boolean | null>(null)
+  const [spotifyTrack, setSpotifyTrack] = useState<{ name: string; artist: string; albumArt?: string } | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   // Timer efeito
   useEffect(() => {
@@ -62,13 +91,14 @@ export function SessionScreen() {
       try {
         if (!planId) throw new Error('Plan ID missing')
 
-        const { error: planError } = await supabase
+        const { data: planData, error: planError } = await supabase
           .from('workout_plans')
-          .select('id')
+          .select('id, name')
           .eq('id', planId)
           .single()
 
         if (planError) throw planError
+        setPlanName(planData?.name ?? null)
 
         // Load exercises via the correct junction table
         const { data: planExercises, error: peError } = await supabase
@@ -115,7 +145,73 @@ export function SessionScreen() {
     loadPlanData()
   }, [planId])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const media = window.matchMedia('(min-width: 768px)')
+    const update = () => setIsDesktop(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!spotifyConnected) return
+    let active = true
+    const loadNowPlaying = async () => {
+      const now = await getSpotifyNowPlaying()
+      if (!active) return
+      if (!now) {
+        setSpotifyPlaying(false)
+        setSpotifyTrack(null)
+        return
+      }
+      setSpotifyPlaying(now.isPlaying)
+      setSpotifyTrack({
+        name: now.trackName,
+        artist: now.artistName,
+        albumArt: now.albumArtUrl
+      })
+    }
+    void loadNowPlaying()
+    const timer = setInterval(loadNowPlaying, 15000)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [spotifyConnected])
+
+  // Handle Spotify OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    const state = params.get('state')
+    const storedState = getStoredSpotifyState()
+    if (!code || !state || state !== storedState) return
+
+    const redirectUri = `${window.location.origin}/session`
+    exchangeSpotifyCode(code, redirectUri).then((token) => {
+      if (token) {
+        setSpotifyConnected(true)
+        showToast('Spotify conectado com sucesso.', 'success')
+      } else {
+        showToast('Falha ao conectar o Spotify.', 'error')
+      }
+      clearStoredSpotifyState()
+      const returnPath = sessionStorage.getItem('fitpwa.spotify.returnPath')
+      sessionStorage.removeItem('fitpwa.spotify.returnPath')
+      const nextPath = returnPath || window.location.pathname
+      navigate(nextPath, { replace: true })
+    }).catch(() => {
+      showToast('Falha ao conectar o Spotify.', 'error')
+      clearStoredSpotifyState()
+    })
+  }, [navigate])
+
   const currentExercise = exercises[currentExerciseIndex]
+  const completedVolume = exercises.reduce((acc, ex) =>
+    acc + ex.sets.reduce((setAcc, set) =>
+      set.completed ? setAcc + ((set.weight || 0) * (set.reps || 0)) : setAcc, 0), 0)
+  const completedSetsCount = exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -138,20 +234,41 @@ export function SessionScreen() {
   }
 
   const handleCompleteSet = (setId: string) => {
+    let shouldStartRest = false
     setExercises(prev => prev.map(ex => ({
       ...ex,
       sets: ex.sets.map(set =>
         set.id === setId
-          ? { ...set, completed: !set.completed }
+          ? (() => {
+              const nextCompleted = !set.completed
+              if (nextCompleted) shouldStartRest = true
+              return { ...set, completed: nextCompleted }
+            })()
           : set
       )
     })))
 
     // Start rest timer after completing a set
     const exercise = exercises[currentExerciseIndex]
-    if (exercise) {
+    if (exercise && shouldStartRest) {
       setRestTimer(exercise.restSeconds)
     }
+  }
+
+  const handleCopyPreviousSet = (setId: string) => {
+    setExercises(prev => prev.map(ex => ({
+      ...ex,
+      sets: ex.sets.map((set, idx, arr) => {
+        if (set.id !== setId) return set
+        const prevSet = arr[idx - 1]
+        if (!prevSet) return set
+        return {
+          ...set,
+          weight: prevSet.weight,
+          reps: prevSet.reps
+        }
+      })
+    })))
   }
 
   const handleAddSet = () => {
@@ -193,21 +310,246 @@ export function SessionScreen() {
       // Calculate stats
       const totalVolume = exercises.reduce((acc, ex) =>
         acc + ex.sets.reduce((setAcc, set) =>
-          setAcc + ((set.weight || 0) * (set.reps || 0)), 0), 0)
+          set.completed ? setAcc + ((set.weight || 0) * (set.reps || 0)) : setAcc, 0), 0)
 
       const stats = {
         volume: totalVolume,
-        exercisesCount: exercises.length,
-        setsCount: exercises.reduce((acc, ex) => acc + ex.sets.length, 0),
+        exercisesCount: exercises.filter(ex => ex.sets.some(s => s.completed)).length,
+        setsCount: exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0),
         duration
       }
 
-      // TODO: Save to Supabase + calculate XP
+      const streakBonus = profile?.login_streak
+        ? Math.min(1 + ((profile.login_streak - 1) * (XP_STREAK_MULTIPLIER - 1)), 1.5)
+        : 1
+      const xpGained = Math.round(
+        (XP_PER_WORKOUT + (stats.exercisesCount * XP_PER_EXERCISE) + (stats.setsCount * XP_PER_SET)) * streakBonus
+      )
 
-      navigate('/session/summary', { state: { stats, duration } })
+      if (user?.id) {
+        const workoutId = (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`)
+        const exerciseNameMap = new Map(exercises.map(ex => [ex.exerciseId, ex.name]))
+        const completedExercises = exercises
+          .map(ex => ({
+            exerciseId: ex.exerciseId,
+            setsCompleted: ex.sets.filter(s => s.completed).length,
+            durationSeconds: duration
+          }))
+          .filter(ex => ex.setsCompleted > 0)
+
+        const completedSets = exercises.flatMap(ex =>
+          ex.sets
+            .filter(s => s.completed)
+            .map(s => ({
+              exerciseId: ex.exerciseId,
+              exerciseName: ex.name,
+              setNumber: s.setNumber,
+              reps: s.reps,
+              weight: s.weight
+            }))
+        )
+
+        const bestSets = exercises.map(ex => {
+          const best = ex.sets
+            .filter(s => s.completed && s.weight !== null && s.reps !== null)
+            .sort((a, b) => ((b.weight ?? 0) * (b.reps ?? 0)) - ((a.weight ?? 0) * (a.reps ?? 0)))[0]
+          return {
+            exerciseId: ex.exerciseId,
+            weight: best?.weight ?? null,
+            reps: best?.reps ?? null
+          }
+        }).filter(b => b.weight !== null && b.reps !== null)
+
+        const newPrs: Array<{ exerciseName: string; weight: number; reps: number; oneRepMax: number; exerciseId: string }> = []
+
+        try {
+          if (navigator.onLine) {
+            const { data: sessionRow, error: sessionError } = await supabase
+              .from('workout_sessions')
+              .insert({
+                user_id: user.id,
+                plan_id: planId || null,
+                plan_name: planName,
+                duration_seconds: duration,
+                total_volume_kg: totalVolume
+              })
+              .select('id')
+              .single()
+
+            if (sessionError) throw sessionError
+
+            if (completedSets.length > 0) {
+              await supabase.from('session_sets').insert(
+                completedSets.map(s => ({
+                  session_id: sessionRow.id,
+                  exercise_id: s.exerciseId,
+                  exercise_name: s.exerciseName,
+                  set_number: s.setNumber,
+                  reps: s.reps,
+                  weight_kg: s.weight
+                }))
+              )
+            }
+
+            if (completedExercises.length > 0) {
+              await supabase.from('workout_history').insert(
+                completedExercises.map(ex => ({
+                  user_id: user.id,
+                  plan_id: planId || null,
+                  exercise_id: ex.exerciseId,
+                  sets_completed: ex.setsCompleted,
+                  duration_seconds: ex.durationSeconds,
+                  created_at: new Date().toISOString()
+                }))
+              )
+            }
+
+            if (bestSets.length > 0) {
+              const exerciseIds = bestSets.map(b => b.exerciseId)
+              const { data: existing } = await supabase
+                .from('personal_records')
+                .select('exercise_id, weight_kg, reps, one_rep_max')
+                .eq('user_id', user.id)
+                .in('exercise_id', exerciseIds)
+
+              const existingMap = new Map(
+                (existing || []).map(pr => [pr.exercise_id as string, pr])
+              )
+
+              const toUpsert = bestSets
+                .map(b => {
+                  const oneRepMax = (b.weight ?? 0) * (1 + (b.reps ?? 0) / 30)
+                  const current = existingMap.get(b.exerciseId)
+                  const currentOrm = current?.one_rep_max ?? ((current?.weight_kg ?? 0) * (1 + (current?.reps ?? 0) / 30))
+                  if (oneRepMax <= currentOrm) return null
+                  newPrs.push({
+                    exerciseName: exerciseNameMap.get(b.exerciseId) || 'Exercício',
+                    weight: b.weight ?? 0,
+                    reps: b.reps ?? 0,
+                    oneRepMax,
+                    exerciseId: b.exerciseId
+                  })
+                  return {
+                    user_id: user.id,
+                    exercise_id: b.exerciseId,
+                    weight_kg: b.weight,
+                    reps: b.reps,
+                    one_rep_max: oneRepMax,
+                    achieved_at: new Date().toISOString()
+                  }
+                })
+                .filter(Boolean)
+
+              if (toUpsert.length > 0) {
+                await supabase.from('personal_records').upsert(toUpsert)
+                await supabase.from('personal_record_history').insert(
+                  newPrs.map(pr => ({
+                    user_id: user.id,
+                    exercise_id: pr.exerciseId,
+                    weight_kg: pr.weight,
+                    reps: pr.reps,
+                    one_rep_max: pr.oneRepMax,
+                    achieved_at: new Date().toISOString()
+                  }))
+                )
+              }
+            }
+            showToast('Treino guardado na cloud.', 'success')
+          } else {
+            for (const ex of completedExercises) {
+              await OfflineSyncService.saveWorkoutOffline({
+                workoutId,
+                userId: user.id,
+                planId: planId || undefined,
+                exerciseId: ex.exerciseId,
+                setsCompleted: ex.setsCompleted,
+                durationSeconds: ex.durationSeconds,
+                synced: false
+              })
+            }
+            showToast('Sem internet. Treino guardado localmente.', 'info')
+          }
+        } catch (saveError) {
+          console.error('Error saving workout:', saveError)
+          for (const ex of completedExercises) {
+            await OfflineSyncService.saveWorkoutOffline({
+              workoutId,
+              userId: user.id,
+              planId: planId || undefined,
+              exerciseId: ex.exerciseId,
+              setsCompleted: ex.setsCompleted,
+              durationSeconds: ex.durationSeconds,
+              synced: false
+            })
+          }
+          showToast('Falha ao guardar online. Guardado localmente.', 'info')
+        }
+        addXp(xpGained)
+        navigate('/session/summary', { state: { stats, duration, xpGained, newPrs } })
+        return
+      }
+
+      navigate('/session/summary', { state: { stats, duration, xpGained } })
     } catch (error) {
       console.error('Error finishing workout:', error)
-      // TODO: Show error toast
+      showToast('Erro ao finalizar treino.', 'error')
+    }
+  }
+
+  const handleSpotifyConnect = async () => {
+    const redirectUri = `${window.location.origin}/session`
+    const authUrl = await getSpotifyAuthUrl(redirectUri)
+    if (!authUrl) {
+      showToast('Configura VITE_SPOTIFY_CLIENT_ID para ligar o Spotify.', 'error')
+      return
+    }
+    sessionStorage.setItem('fitpwa.spotify.returnPath', window.location.pathname)
+    window.location.href = authUrl
+  }
+
+  const handleSpotifyDisconnect = () => {
+    clearSpotifyToken()
+    setSpotifyConnected(false)
+    showToast('Spotify desconectado.', 'info')
+  }
+
+  const handleSpotifyPlayPause = async () => {
+    try {
+      if (spotifyPlaying) {
+        await spotifyPause()
+        setSpotifyPlaying(false)
+      } else {
+        await spotifyPlay()
+        setSpotifyPlaying(true)
+      }
+    } catch {
+      showToast('Não foi possível controlar o Spotify.', 'error')
+    }
+  }
+
+  const handleSpotifyNext = async () => {
+    try {
+      await spotifyNext()
+      const now = await getSpotifyNowPlaying()
+      if (now) {
+        setSpotifyTrack({ name: now.trackName, artist: now.artistName, albumArt: now.albumArtUrl })
+        setSpotifyPlaying(now.isPlaying)
+      }
+    } catch {
+      showToast('Não foi possível avançar a música.', 'error')
+    }
+  }
+
+  const handleSpotifyPrev = async () => {
+    try {
+      await spotifyPrevious()
+      const now = await getSpotifyNowPlaying()
+      if (now) {
+        setSpotifyTrack({ name: now.trackName, artist: now.artistName, albumArt: now.albumArtUrl })
+        setSpotifyPlaying(now.isPlaying)
+      }
+    } catch {
+      showToast('Não foi possível voltar a música.', 'error')
     }
   }
 
@@ -258,101 +600,256 @@ export function SessionScreen() {
 
       {/* Main Content */}
       <main className="flex-grow p-4 max-w-4xl mx-auto w-full space-y-6">
-        {/* Exercise Card */}
-        <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-white">{currentExercise.name}</h2>
-              <p className="text-sm text-gray-400 capitalize mt-1">
-                {currentExercise.muscleGroups.join(', ')}
-              </p>
-            </div>
-            <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full">
-              {currentExercise.repsMin}–{currentExercise.repsMax} reps
-            </span>
-          </div>
-
-          {/* Sets List */}
-          <div className="space-y-2 mb-4">
-            {currentExercise.sets.map(set => (
-              <div 
-                key={set.id}
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                  set.completed 
-                    ? 'bg-primary/10 border border-primary/30' 
-                    : 'bg-surface-100 border border-surface-100'
-                }`}
-              >
-                <span className="font-bold text-gray-400 w-8 text-center">
-                  {set.setNumber}
-                </span>
-
-                <input
-                  type="number"
-                  placeholder="kg"
-                  value={set.weight || ''}
-                  onChange={e => handleSetChange(set.id, 'weight', e.target.value)}
-                  className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-
-                <span className="text-gray-500">×</span>
-
-                <input
-                  type="number"
-                  placeholder="reps"
-                  value={set.reps || ''}
-                  onChange={e => handleSetChange(set.id, 'reps', e.target.value)}
-                  className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-
-                <button
-                  onClick={() => handleCompleteSet(set.id)}
-                  className={`ml-auto w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-                    set.completed
-                      ? 'bg-primary text-black'
-                      : 'bg-gray-700 text-gray-400 hover:bg-primary hover:text-black'
-                  }`}
-                >
-                  {set.completed ? '✓' : '○'}
-                </button>
-
-                <button
-                  onClick={() => handleRemoveSet(set.id)}
-                  className="text-gray-500 hover:text-red-400 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-
+        <div className="flex gap-2 bg-surface-200/80 border border-surface-100 p-2 rounded-xl">
           <button
-            onClick={handleAddSet}
-            className="w-full h-10 border border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            onClick={() => setActiveTab('treino')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
+              activeTab === 'treino' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            Adicionar Série
+            Treino
+          </button>
+          <button
+            onClick={() => setActiveTab('controlo')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
+              activeTab === 'controlo' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Controlo
           </button>
         </div>
 
-        {/* Rest Timer */}
-        {restTimer !== null && (
-          <div className="bg-surface-200 border-2 border-primary/50 p-6 rounded-2xl text-center">
-            <p className="text-gray-400 text-sm mb-2">Tempo de Descanso</p>
-            <p className="text-6xl font-bold text-primary font-mono">
-              {restTimer}
-            </p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setRestTimer(null)}
-              className="mt-4 text-gray-400"
-            >
-              Pular
-            </Button>
+        {activeTab === 'treino' ? (
+          <>
+            {/* Exercise Card */}
+            <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">{currentExercise.name}</h2>
+                  <p className="text-sm text-gray-400 capitalize mt-1">
+                    {currentExercise.muscleGroups.join(', ')}
+                  </p>
+                </div>
+                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full">
+                  {currentExercise.repsMin}–{currentExercise.repsMax} reps
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[48px_1fr_1fr_120px] gap-2 text-xs text-gray-400 px-1 mb-2">
+                <span>Set</span>
+                <span>Kg</span>
+                <span>Reps</span>
+                <span className="text-right">Ações</span>
+              </div>
+
+              {/* Sets List */}
+              <div className="space-y-2 mb-4">
+                {currentExercise.sets.map((set, idx) => (
+                  <div 
+                    key={set.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      set.completed 
+                        ? 'bg-primary/10 border border-primary/30' 
+                        : 'bg-surface-100 border border-surface-100'
+                    }`}
+                  >
+                    <span className="font-bold text-gray-400 w-8 text-center">
+                      {set.setNumber}
+                    </span>
+
+                    <input
+                      type="number"
+                      placeholder="kg"
+                      value={set.weight || ''}
+                      onChange={e => handleSetChange(set.id, 'weight', e.target.value)}
+                      className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+
+                    <span className="text-gray-500">×</span>
+
+                    <input
+                      type="number"
+                      placeholder="reps"
+                      value={set.reps || ''}
+                      onChange={e => handleSetChange(set.id, 'reps', e.target.value)}
+                      className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+
+                    <button
+                      onClick={() => handleCompleteSet(set.id)}
+                      className={`ml-auto w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                        set.completed
+                          ? 'bg-primary text-black'
+                          : 'bg-gray-700 text-gray-400 hover:bg-primary hover:text-black'
+                      }`}
+                    >
+                      {set.completed ? '✓' : '○'}
+                    </button>
+
+                    {idx > 0 && (
+                      <button
+                        onClick={() => handleCopyPreviousSet(set.id)}
+                        className="text-xs text-gray-400 hover:text-white border border-surface-200 rounded px-2 py-1"
+                      >
+                        Copiar
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleRemoveSet(set.id)}
+                      className="text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleAddSet}
+                className="w-full h-10 border border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar Série
+              </button>
+            </div>
+
+            {/* Rest Timer */}
+            {restTimer !== null && (
+              <div className="bg-surface-200 border-2 border-primary/50 p-6 rounded-2xl text-center">
+                <p className="text-gray-400 text-sm mb-2">Tempo de Descanso</p>
+                <p className="text-6xl font-bold text-primary font-mono">
+                  {restTimer}
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setRestTimer(null)}
+                  className="mt-4 text-gray-400"
+                >
+                  Pular
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+                <p className="text-gray-400 text-sm">Tempo Total</p>
+                <p className="text-2xl font-bold text-white">{formatTime(duration)}</p>
+              </div>
+              <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+                <p className="text-gray-400 text-sm">Descanso</p>
+                <p className="text-2xl font-bold text-white">{restTimer !== null ? `${restTimer}s` : '—'}</p>
+              </div>
+              <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+                <p className="text-gray-400 text-sm">Volume (completado)</p>
+                <p className="text-2xl font-bold text-white">{completedVolume.toFixed(0)} kg</p>
+              </div>
+              <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+                <p className="text-gray-400 text-sm">Sets Completados</p>
+                <p className="text-2xl font-bold text-white">{completedSetsCount}</p>
+              </div>
+            </div>
+
+            <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-white mb-4">Exercícios (ordem do treino)</h3>
+              <div className="space-y-3">
+                {exercises.map((ex, idx) => {
+                  const completed = ex.sets.filter(s => s.completed).length
+                  const total = ex.sets.length
+                  const isCurrent = idx === currentExerciseIndex
+                  return (
+                    <div
+                      key={ex.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between ${
+                        isCurrent ? 'border-primary/60 bg-primary/10' : 'border-surface-100 bg-surface-100'
+                      }`}
+                    >
+                      <div>
+                        <p className="font-semibold text-white">{idx + 1}. {ex.name}</p>
+                        <p className="text-xs text-gray-400">{completed}/{total} sets completados</p>
+                      </div>
+                      {isCurrent && (
+                        <span className="text-xs text-primary font-bold">Agora</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="bg-surface-200 border border-surface-100 p-5 rounded-2xl">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-white">Spotify</h3>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  spotifyConnected ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-300'
+                }`}>
+                  {spotifyConnected ? 'Conectado' : 'Desconectado'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-400 mb-4">
+                Liga a tua conta para controlar a música durante o treino.
+              </p>
+              {spotifyConnected && (
+                <div className="flex items-center gap-3 bg-surface-100 border border-surface-100 rounded-xl p-3 mb-4">
+                  <div className="w-12 h-12 rounded-lg bg-surface-200 overflow-hidden flex items-center justify-center">
+                    {spotifyTrack?.albumArt ? (
+                      <img src={spotifyTrack.albumArt} alt="Album art" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-gray-500">Spotify</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm text-white truncate">{spotifyTrack?.name || 'Sem música'}</p>
+                    <p className="text-xs text-gray-400 truncate">{spotifyTrack?.artist || '—'}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                {spotifyConnected ? (
+                  <>
+                    <Button variant="secondary" onClick={handleSpotifyPrev}>
+                      Anterior
+                    </Button>
+                    <Button onClick={handleSpotifyPlayPause}>
+                      {spotifyPlaying ? 'Pausar' : 'Play'}
+                    </Button>
+                    <Button variant="secondary" onClick={handleSpotifyNext}>
+                      Seguinte
+                    </Button>
+                    <Button variant="secondary" onClick={handleSpotifyDisconnect}>
+                      Desconectar
+                    </Button>
+                    {isDesktop && (
+                      <Button onClick={() => window.open('https://open.spotify.com', '_blank')}>
+                        Abrir Spotify
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button onClick={handleSpotifyConnect}>
+                    Ligar Spotify
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </main>
+
+      {toast && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border ${
+          toast.type === 'success'
+            ? 'bg-green-500/20 text-green-300 border-green-500/30'
+            : toast.type === 'error'
+              ? 'bg-red-500/20 text-red-300 border-red-500/30'
+              : 'bg-surface-200 text-gray-200 border-surface-100'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* Footer Controls */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface-200 border-t border-surface-100 z-40">

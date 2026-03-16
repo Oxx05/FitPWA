@@ -1,5 +1,5 @@
 
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
 import { getLevelProgress } from '@/shared/utils/gamification'
 import { GamificationManager } from '@/features/gamification/GamificationManager'

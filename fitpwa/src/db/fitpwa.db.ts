@@ -8,7 +8,7 @@ export interface ActiveSessionRecord {
   startedAt: Date
   currentExerciseIndex: number
   currentSetIndex: number
-  sets: any[] // We can define SessionSetLog later
+  sets: unknown[] // We can define SessionSetLog later
   timerState: 'idle' | 'active' | 'rest'
   restSeconds: number
 }
@@ -16,7 +16,7 @@ export interface ActiveSessionRecord {
 export interface PendingSyncRecord {
   id?: number
   type: string
-  payload: any
+  payload: unknown
   createdAt: Date
   synced: boolean
 }

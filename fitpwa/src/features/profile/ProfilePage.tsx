@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { Input } from '@/shared/components/Input'

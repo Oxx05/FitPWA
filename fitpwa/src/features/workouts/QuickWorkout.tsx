@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { EXERCISES } from '@/shared/data/exercises'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 import { useNavigate } from 'react-router-dom'
 
 interface QuickExercise {

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Heart, Share2, Save, MessageCircle, Dumbbell } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/shared/lib/supabase'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 
 interface PublicWorkout {
   id: string

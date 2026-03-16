@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
-import { useAuthStore } from './AuthProvider'
+import { useAuthStore } from './authStore'
 
 const registerSchema = z.object({
   email: z.string().email('Email inválido'),

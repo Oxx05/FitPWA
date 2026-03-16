@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { FeatureGate } from '../premium/FeatureGate'
 import { supabase } from '@/shared/lib/supabase'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 import { startOfWeek, subWeeks, isSameWeek, format } from 'date-fns'
 import { pt } from 'date-fns/locale'
 
@@ -52,7 +52,7 @@ export function ProgressDashboard() {
       
       // Initialize last 8 weeks with 0 volume
       for (let i = 7; i >= 0; i--) {
-        const weekDate = subWeeks(now, i)
+        const weekDate = startOfWeek(subWeeks(now, i))
         const weekKey = format(weekDate, "dd MMM", { locale: pt })
         chartDataMap.set(weekKey, { week: weekKey, volume: 0 })
       }
@@ -73,7 +73,7 @@ export function ProgressDashboard() {
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // Descending
 
       if (dates.length > 0) {
-        let currentDate = new Date()
+        const currentDate = new Date()
         const todayStr = format(currentDate, 'yyyy-MM-dd')
         
         // If they haven't worked out today or yesterday, streak is 0
@@ -81,7 +81,7 @@ export function ProgressDashboard() {
         
         if (dates[0] === todayStr || dates[0] === yesterdayStr) {
           streak = 1
-          let checkDate = new Date(dates[0])
+          const checkDate = new Date(dates[0])
           
           for (let i = 1; i < dates.length; i++) {
             checkDate.setDate(checkDate.getDate() - 1)
@@ -104,6 +104,16 @@ export function ProgressDashboard() {
     }
   })
 
+  const defaultStats = {
+    currentWeekCount: 0,
+    currentWeekVolume: 0,
+    volumeChange: 0,
+    streak: 0,
+    chartData: [] as Array<{ week: string; volume: number }>
+  }
+
+  const safeStats = stats ?? defaultStats
+
   // Format volume from kg to Toneladas (T)
   const formatVolume = (kg: number) => {
     if (kg >= 1000) return (kg / 1000).toFixed(1)
@@ -121,25 +131,25 @@ export function ProgressDashboard() {
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
           <h3 className="text-gray-400 text-sm font-medium mb-1">Treinos esta semana</h3>
           <p className="text-3xl font-bold text-primary">
-            {stats?.currentWeekCount || 0} <span className="text-base font-normal text-gray-500">/ 4 meta</span>
+            {safeStats.currentWeekCount}
           </p>
         </div>
         
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
           <h3 className="text-gray-400 text-sm font-medium mb-1">Volume Semanal</h3>
           <p className="text-3xl font-bold text-white">
-            {stats ? formatVolume(stats.currentWeekVolume) : 0} <span className="text-base font-normal text-gray-500">{stats?.currentWeekVolume >= 1000 ? 'toneladas' : 'kg'}</span>
+            {formatVolume(safeStats.currentWeekVolume)} <span className="text-base font-normal text-gray-500">{safeStats.currentWeekVolume >= 1000 ? 'toneladas' : 'kg'}</span>
           </p>
-          <p className={`text-sm mt-1 flex items-center gap-1 ${stats?.volumeChange && stats.volumeChange >= 0 ? 'text-primary' : 'text-red-400'}`}>
-            <span className="text-xs">{stats?.volumeChange && stats.volumeChange >= 0 ? '▲' : '▼'}</span> 
-            {stats?.volumeChange ? Math.abs(stats.volumeChange) : 0}% vs semana anterior
+          <p className={`text-sm mt-1 flex items-center gap-1 ${safeStats.volumeChange >= 0 ? 'text-primary' : 'text-red-400'}`}>
+            <span className="text-xs">{safeStats.volumeChange >= 0 ? '▲' : '▼'}</span> 
+            {Math.abs(safeStats.volumeChange)}% vs semana anterior
           </p>
         </div>
 
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
           <h3 className="text-gray-400 text-sm font-medium mb-1">Streak Atual</h3>
           <p className="text-3xl font-bold text-white">
-            {stats?.streak || 0} <span className="text-base font-normal text-gray-500">{stats?.streak === 1 ? 'dia' : 'dias'}</span>
+            {safeStats.streak} <span className="text-base font-normal text-gray-500">{safeStats.streak === 1 ? 'dia' : 'dias'}</span>
           </p>
         </div>
       </div>
@@ -152,7 +162,7 @@ export function ProgressDashboard() {
         <div className="h-64 w-full">
           <FeatureGate featureName="Gráficos de Volume Detalhados">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats?.chartData || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={safeStats.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#00ff87" stopOpacity={0.3}/>
@@ -170,7 +180,13 @@ export function ProgressDashboard() {
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#111111', borderColor: '#262626', borderRadius: '8px' }}
                   itemStyle={{ color: '#00ff87' }}
-                  formatter={(value: number) => [value >= 1000 ? `${(value/1000).toFixed(2)} TON` : `${value} kg`, 'Volume']}
+                  formatter={(value) => {
+                    const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
+                    const label = numericValue >= 1000
+                      ? `${(numericValue / 1000).toFixed(2)} TON`
+                      : `${numericValue} kg`
+                    return [label, 'Volume']
+                  }}
                 />
                 <Area type="monotone" dataKey="volume" stroke="#00ff87" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
               </AreaChart>

@@ -1,40 +1,31 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import { type ActiveSessionRecord, db } from '@/db/fitpwa.db'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 import { v4 as uuidv4 } from 'uuid'
 import { XP_PER_SET, XP_PER_EXERCISE, XP_PER_WORKOUT } from '@/shared/utils/gamification'
 import { useAchievementsStore } from '../gamification/useAchievementsStore'
-
-interface ActiveSessionContextType {
-  activeSession: ActiveSessionRecord | null
-  startSession: (planId: string, planName: string) => Promise<void>
-  endSession: (stats: { volume: number, exercisesCount: number, setsCount: number }) => Promise<void>
-  updateSession: (updates: Partial<ActiveSessionRecord>) => Promise<void>
-}
-
-const ActiveSessionContext = createContext<ActiveSessionContextType>({} as ActiveSessionContextType)
-
-export function useActiveSession() {
-  return useContext(ActiveSessionContext)
-}
+import { ActiveSessionContext } from './ActiveSessionContext'
 
 export function ActiveSessionProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuthStore()
   const [activeSession, setActiveSession] = useState<ActiveSessionRecord | null>(null)
 
-  const loadActiveSession = useCallback(async (userId: string) => {
-    const sessions = await db.activeSessions.where('userId').equals(userId).toArray()
-    if (sessions.length > 0) {
-      const mostRecent = sessions.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0]
-      setActiveSession(mostRecent)
-    }
-  }, [])
-
   useEffect(() => {
-    if (session?.user?.id) {
-      loadActiveSession(session.user.id)
+    if (!session?.user?.id) return
+    let cancelled = false
+    const run = async () => {
+      const sessions = await db.activeSessions.where('userId').equals(session.user.id).toArray()
+      if (cancelled) return
+      if (sessions.length > 0) {
+        const mostRecent = sessions.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0]
+        setActiveSession(mostRecent)
+      }
     }
-  }, [session?.user?.id, loadActiveSession])
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.id])
 
   const startSession = async (planId: string, planName: string) => {
     if (!session?.user) return

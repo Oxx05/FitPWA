@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useAuthStore } from './features/auth/AuthProvider'
+import type { Session, User } from '@supabase/supabase-js'
+import { useAuthStore } from './features/auth/authStore'
 
 // Mock Supabase client
 vi.mock('@/shared/lib/supabase', () => ({
@@ -24,7 +25,8 @@ describe('Auth Store (useAuthStore)', () => {
       user: null,
       profile: null,
       isPremium: false,
-      isLoading: true
+      isLoading: true,
+      pendingLevelUp: null
     })
   })
 
@@ -81,7 +83,9 @@ describe('Auth Store (useAuthStore)', () => {
   })
 
   it('should handle signOut', async () => {
-    useAuthStore.setState({ user: { id: '123' } as any, session: {} as any })
+    const mockUser = { id: '123' } as User
+    const mockSession = { user: mockUser } as Session
+    useAuthStore.setState({ user: mockUser, session: mockSession })
     
     await useAuthStore.getState().signOut()
     

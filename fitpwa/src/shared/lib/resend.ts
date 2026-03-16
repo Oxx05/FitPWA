@@ -10,7 +10,8 @@ export async function sendWelcomeEmail(email: string, name: string) {
   // await resend.emails.send({ ... })
 }
 
-export async function sendWorkoutSummaryEmail(email: string, _summary: any) {
+export async function sendWorkoutSummaryEmail(email: string, summary: unknown) {
+  void summary
   console.log(`[Resend Mock] Sending workout summary to ${email}...`)
 }
 

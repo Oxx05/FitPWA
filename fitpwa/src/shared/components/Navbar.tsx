@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Home, Dumbbell, BarChart2, User, Crown, Zap, Users } from 'lucide-react'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 
 export function Navbar() {
   const location = useLocation()

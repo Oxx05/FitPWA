@@ -7,8 +7,8 @@ export function SessionSummary() {
   const location = useLocation()
   const stats = location.state?.stats || { volume: 0, exercisesCount: 0, setsCount: 0 }
   const duration = location.state?.duration || 0
-  
-  const xpGained = 100 + (stats.exercisesCount * 10) + (stats.setsCount * 2)
+  const xpGained = location.state?.xpGained || 0
+  const newPrs = (location.state?.newPrs || []) as Array<{ exerciseName: string; weight: number; reps: number; oneRepMax?: number; exerciseId?: string }>
 
   const [mood, setMood] = useState<string | null>(null)
   
@@ -49,16 +49,24 @@ export function SessionSummary() {
           <TrendingUp className="text-pr w-6 h-6" />
           <h3 className="font-bold text-lg text-white">Novos PRs!</h3>
         </div>
-        <ul className="space-y-3">
-          <li className="flex justify-between items-center text-sm border-b border-surface-100 pb-2">
-            <span className="text-gray-300">Agachamento com Barra</span>
-            <span className="font-bold text-pr">100kg x 8</span>
-          </li>
-          <li className="flex justify-between items-center text-sm">
-            <span className="text-gray-300">Supino Plano</span>
-            <span className="font-bold text-pr">80kg x 6</span>
-          </li>
-        </ul>
+        {newPrs.length > 0 ? (
+          <ul className="space-y-3">
+            {newPrs.map((pr, idx) => (
+              <li
+                key={`${pr.exerciseName}-${idx}`}
+                className={`flex justify-between items-center text-sm ${idx < newPrs.length - 1 ? 'border-b border-surface-100 pb-2' : ''}`}
+              >
+                <span className="text-gray-300">{pr.exerciseName}</span>
+                <span className="font-bold text-pr">
+                  {pr.weight}kg x {pr.reps}
+                  {pr.oneRepMax ? ` · 1RM ${Math.round(pr.oneRepMax)}kg` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-400">Sem novos PRs nesta sessão.</p>
+        )}
       </div>
 
       <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100">

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { ActiveSessionProvider, useActiveSession } from './features/session/ActiveSessionProvider'
+import { ActiveSessionProvider } from './features/session/ActiveSessionProvider'
+import { useActiveSession } from './features/session/ActiveSessionContext'
 import React from 'react'
 
 // Mock Dexie DB
@@ -28,7 +29,7 @@ vi.mock('uuid', () => ({
 
 // Mock AuthStore
 const mockAddXp = vi.fn()
-vi.mock('./features/auth/AuthProvider', () => ({
+vi.mock('./features/auth/authStore', () => ({
   useAuthStore: Object.assign(vi.fn(() => ({
     session: { user: { id: 'user-1' } },
     profile: { login_streak: 5 },

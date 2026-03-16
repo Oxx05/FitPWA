@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { motion } from 'framer-motion'
-import { useAuthStore } from '@/features/auth/AuthProvider'
+import { useAuthStore } from '@/features/auth/authStore'
 
 export function WorkoutsList() {
   const { profile } = useAuthStore()

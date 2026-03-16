@@ -279,8 +279,3 @@ export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
     exercises,
   }
 }
-
-// Always available — no API key needed
-export function isAiConfigured(): boolean {
-  return true
-}

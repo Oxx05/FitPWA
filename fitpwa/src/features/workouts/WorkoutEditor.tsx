@@ -22,7 +22,7 @@ import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
-import { useAuthStore } from '../auth/AuthProvider'
+import { useAuthStore } from '../auth/authStore'
 
 interface PlanExercise {
   id: string

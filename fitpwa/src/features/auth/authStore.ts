@@ -1,0 +1,71 @@
+import type { Session, User } from '@supabase/supabase-js'
+import { create } from 'zustand'
+import { supabase } from '@/shared/lib/supabase'
+
+export interface Profile {
+  id: string
+  username?: string
+  full_name?: string
+  avatar_url?: string
+  is_premium: boolean
+  premium_expires_at?: string
+  level?: number
+  xp_total?: number
+  login_streak?: number
+  last_login_date?: string
+}
+
+interface AuthState {
+  session: Session | null
+  user: User | null
+  profile: Profile | null
+  isPremium: boolean
+  isLoading: boolean
+  pendingLevelUp: number | null
+  setSession: (session: Session | null) => void
+  setProfile: (profile: Profile | null) => void
+  setLoading: (isLoading: boolean) => void
+  addXp: (amount: number) => void
+  clearPendingLevelUp: () => void
+  signOut: () => Promise<void>
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  session: null,
+  user: null,
+  profile: null,
+  isPremium: false,
+  isLoading: true,
+  pendingLevelUp: null,
+  setSession: (session) => set({ session, user: session?.user || null }),
+  setProfile: (profile) => {
+    const previousLevel = get().profile?.level ?? null
+    const nextLevel = profile?.level ?? null
+    const pendingLevelUp = previousLevel !== null && nextLevel !== null && nextLevel > previousLevel
+      ? nextLevel
+      : null
+    const isPremium = !!profile?.is_premium &&
+      (!profile.premium_expires_at || new Date(profile.premium_expires_at) > new Date())
+    set({ profile, isPremium, pendingLevelUp })
+  },
+  addXp: (amount: number) => {
+    const profile = get().profile
+    if (!profile) return
+    const newXp = (profile.xp_total || 0) + amount
+    const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1
+    const updatedProfile = { ...profile, xp_total: newXp, level: newLevel }
+    get().setProfile(updatedProfile)
+
+    // Update in Supabase
+    supabase.from('profiles').update({
+      xp_total: newXp,
+      level: newLevel
+    }).eq('id', profile.id).then()
+  },
+  setLoading: (isLoading) => set({ isLoading }),
+  clearPendingLevelUp: () => set({ pendingLevelUp: null }),
+  signOut: async () => {
+    await supabase.auth.signOut()
+    set({ session: null, user: null, profile: null, isPremium: false, pendingLevelUp: null })
+  }
+}))

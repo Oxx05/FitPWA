@@ -1,29 +1,37 @@
 
+import React, { Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/features/auth/AuthProvider'
-import { LoginPage } from '@/features/auth/LoginPage'
-import { RegisterPage } from '@/features/auth/RegisterPage'
-import { OnboardingFlow } from '@/features/auth/OnboardingFlow'
-import { Dashboard } from '@/features/dashboard/Dashboard'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { ActiveSessionProvider } from '@/features/session/ActiveSessionProvider'
-import { SessionScreen } from '@/features/session/SessionScreen'
-import { SessionSummary } from '@/features/session/SessionSummary'
-import { WorkoutsList } from '@/features/workouts/WorkoutsList'
-import { BaseWorkouts } from '@/features/workouts/BaseWorkouts'
-import { QuickWorkout } from '@/features/workouts/QuickWorkout'
-import { WorkoutEditor } from '@/features/workouts/WorkoutEditor'
-import { ExerciseLibrary } from '@/features/exercises/ExerciseLibrary'
-import { ProgressDashboard } from '@/features/progress/ProgressDashboard'
-import { RecordsPage } from '@/features/progress/RecordsPage'
-import { PremiumPage } from '@/features/premium/PremiumPage'
-import { CommunityPage } from '@/features/community/CommunityPage'
 import { Navbar } from '@/shared/components/Navbar'
-import { ProfilePage } from '@/features/profile/ProfilePage'
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
 
 const queryClient = new QueryClient()
+
+const LoginPage = React.lazy(() => import('@/features/auth/LoginPage').then(m => ({ default: m.LoginPage })))
+const RegisterPage = React.lazy(() => import('@/features/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
+const OnboardingFlow = React.lazy(() => import('@/features/auth/OnboardingFlow').then(m => ({ default: m.OnboardingFlow })))
+const Dashboard = React.lazy(() => import('@/features/dashboard/Dashboard').then(m => ({ default: m.Dashboard })))
+const SessionScreen = React.lazy(() => import('@/features/session/SessionScreen').then(m => ({ default: m.SessionScreen })))
+const SessionSummary = React.lazy(() => import('@/features/session/SessionSummary').then(m => ({ default: m.SessionSummary })))
+const WorkoutsList = React.lazy(() => import('@/features/workouts/WorkoutsList').then(m => ({ default: m.WorkoutsList })))
+const BaseWorkouts = React.lazy(() => import('@/features/workouts/BaseWorkouts').then(m => ({ default: m.BaseWorkouts })))
+const QuickWorkout = React.lazy(() => import('@/features/workouts/QuickWorkout').then(m => ({ default: m.QuickWorkout })))
+const WorkoutEditor = React.lazy(() => import('@/features/workouts/WorkoutEditor').then(m => ({ default: m.WorkoutEditor })))
+const ExerciseLibrary = React.lazy(() => import('@/features/exercises/ExerciseLibrary').then(m => ({ default: m.ExerciseLibrary })))
+const ProgressDashboard = React.lazy(() => import('@/features/progress/ProgressDashboard').then(m => ({ default: m.ProgressDashboard })))
+const RecordsPage = React.lazy(() => import('@/features/progress/RecordsPage').then(m => ({ default: m.RecordsPage })))
+const PremiumPage = React.lazy(() => import('@/features/premium/PremiumPage').then(m => ({ default: m.PremiumPage })))
+const CommunityPage = React.lazy(() => import('@/features/community/CommunityPage').then(m => ({ default: m.CommunityPage })))
+const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background text-white">
+    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+)
 
 function App() {
   return (
@@ -34,6 +42,7 @@ function App() {
           <Router>
             <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-20 md:pb-0 md:pl-24">
               <Navbar />
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -90,6 +99,7 @@ function App() {
                   <ProtectedRoute><ProfilePage /></ProtectedRoute>
                 } />
               </Routes>
+              </Suspense>
             </div>
           </Router>
         </ActiveSessionProvider>
@@ -100,4 +110,3 @@ function App() {
 }
 
 export default App
-
