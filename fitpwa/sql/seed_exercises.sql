@@ -1,37 +1,36 @@
 -- Seed exercises básicos para a aplicação
-INSERT INTO exercises (id, name, category, muscle_groups, difficulty, description, image_url, video_url)
+INSERT INTO exercises (id, name, name_pt, muscle_groups, secondary_muscles, equipment, difficulty, instructions, tips, video_url, is_custom, created_by, is_premium)
 VALUES
 -- Perna
-('squat', 'Agachamento com Barra', 'legs', '{perna, glúteos}', 'intermediate', 'Exercício composto para perna inferior', 'https://images.unsplash.com/photo-1541534227411-a320f32b9f50?w=400', 'https://example.com'),
-('leg-press', 'Leg Press 45°', 'legs', '{perna, glúteos}', 'beginner', 'Máquina segura para desenvolvimento de pernas', 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400', 'https://example.com'),
-('leg-curl', 'Leg Curl (sentado)', 'legs', '{isquiotibiais}', 'beginner', 'Isolamento para posteriores coxa', 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400', 'https://example.com'),
-('leg-extension', 'Leg Extension', 'legs', '{quadríceps}', 'beginner', 'Isolamento para quadríceps', 'https://images.unsplash.com/photo-1517836357463-d25ddfcb53ef?w=400', 'https://example.com'),
+(gen_random_uuid(), 'Barbell Squat', 'Agachamento com Barra', '{perna, glúteos}', '{costas_inferior}', '{barbell, rack}', 3, 'Coloca a barra nos ombros, abaixe o glúteo para trás mantendo o peito elevado', 'Manter joelhos alinhados com os artelhos', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Leg Press', 'Leg Press 45°', '{perna, glúteos}', '{~}', '{machine}', 1, 'Senta-te na máquina e impulsiona com as pernas', 'Máquina segura para iniciantes', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Leg Curl', 'Leg Curl (sentado)', '{isquiotibiais}', '{~}', '{machine}', 1, 'Senta-te e curva as pernas contra a resistência', 'Isolamento puro para posteriores', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Leg Extension', 'Leg Extension', '{quadríceps}', '{~}', '{machine}', 1, 'Estende as pernas contra a resistência', 'Ótimo para isolamento de quad', 'https://example.com', false, NULL, false),
 
 -- Peito
-('bench-press', 'Supino com Barra', 'chest', '{peito, tríceps, ombro_anterior}', 'intermediate', 'Exercício clássico de peito', 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=400', 'https://example.com'),
-('incline-bench', 'Supino Inclinado', 'chest', '{peito_superior, ombro_anterior}', 'intermediate', 'Ênfase no peito superior', 'https://images.unsplash.com/photo-1574680178050-55c6a6be0220?w=400', 'https://example.com'),
-('dumbbell-press', 'Supino com Halteres', 'chest', '{peito, tríceps, ombro_anterior}', 'intermediate', 'Variação com maior amplitude de movimento', 'https://images.unsplash.com/photo-1516906736482-18ba36b8d5e8?w=400', 'https://example.com'),
-('cable-fly', 'Pec Deck / Fly na Máquina', 'chest', '{peito}', 'beginner', 'Isolamento seguro para peito', 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400', 'https://example.com'),
+(gen_random_uuid(), 'Barbell Bench Press', 'Supino com Barra', '{peito}', '{tríceps, ombro_anterior}', '{barbell, bench}', 2, 'Deita-te no banco, baixa a barra até ao peito, impulsiona para cima', 'Exercício clássico fundamental', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Incline Bench Press', 'Supino Inclinado', '{peito_superior}', '{ombro_anterior}', '{barbell, bench}', 2, 'Supino com banco inclinado 30-45 graus', 'Ênfase no peito superior', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Dumbbell Bench Press', 'Supino com Halteres', '{peito}', '{tríceps, ombro_anterior}', '{dumbbells, bench}', 2, 'Supino com halteres em vez de barra', 'Maior amplitude de movimento', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Pec Deck', 'Pec Deck / Fly na Máquina', '{peito}', '{~}', '{machine}', 1, 'Máquina de fly para isolamento puro', 'Isolamento seguro e eficiente', 'https://example.com', false, NULL, false),
 
 -- Costas
-('bent-row', 'Linha Curvada (Barbell Row)', 'back', '{costas, bíceps}', 'intermediate', 'Exercício composto para costas', 'https://images.unsplash.com/photo-1541534227411-a320f32b9f50?w=400', 'https://example.com'),
-('dumbbell-row', 'Remada com Halteres', 'back', '{costas, bíceps}', 'intermediate', 'Unilateral, maior mobilidade', 'https://images.unsplash.com/photo-1520127562621-d2f6a39c4f0d?w=400', 'https://example.com'),
-('pulldown', 'Lat Pulldown (Puxada Alta)', 'back', '{costas, bíceps}', 'beginner', 'Máquina acessível para lats', 'https://images.unsplash.com/photo-1565373880347-60c6f5c5cb39?w=400', 'https://example.com'),
-('face-pull', 'Face Pull', 'back', '{ombro_posterior, costas}', 'beginner', 'Excelente para ombro posterior', 'https://images.unsplash.com/photo-1599058917212-d217de713b42?w=400', 'https://example.com'),
+(gen_random_uuid(), 'Barbell Bent Over Row', 'Linha Curvada (Barbell Row)', '{costas}', '{bíceps}', '{barbell}', 2, 'Dobra na cintura e puxa a barra em direção ao abdómen', 'Exercício composto essencial', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Dumbbell Row', 'Remada com Halteres', '{costas}', '{bíceps}', '{dumbbells, bench}', 2, 'Remada unilateral com haltere', 'Treina cada lado independentemente', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Lat Pulldown', 'Lat Pulldown (Puxada Alta)', '{costas}', '{bíceps}', '{machine, cable}', 1, 'Puxa o cabo de cima para baixo até ao peito', 'Máquina acessível para iniciantes', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Face Pull', 'Face Pull', '{ombro_posterior}', '{costas}', '{cable}', 1, 'Puxa o cabo em direção à face', 'Excelente para saúde do ombro', 'https://example.com', false, NULL, false),
 
 -- Ombros
-('military-press', 'Militar Press (Standing Press)', 'shoulders', '{ombro_anterior, ombro_lateral, tríceps}', 'intermediate', 'Exercício clássico para ombro', 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400', 'https://example.com'),
-('lateral-raise', 'Elevação Lateral', 'shoulders', '{ombro_lateral}', 'beginner', 'Isolamento para ombro lateral', 'https://images.unsplash.com/photo-1538805060514-3995066f55cc?w=400', 'https://example.com'),
-('rear-delt-fly', 'Reverse Pec Deck', 'shoulders', '{ombro_posterior}', 'beginner', 'Isolamento para ombro posterior', 'https://images.unsplash.com/photo-1516906736482-18ba36b8d5e8?w=400', 'https://example.com'),
+(gen_random_uuid(), 'Overhead Press', 'Militar Press (Standing Press)', '{ombro_anterior}', '{ombro_lateral, tríceps}', '{barbell, dumbbells}', 3, 'De pé ou sentado, impulsiona peso acima da cabeça', 'Exercício clássico composto', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Lateral Raise', 'Elevação Lateral', '{ombro_lateral}', '{~}', '{dumbbells, cable}', 1, 'Levanta os halteres lateralmente até à altura do ombro', 'Isolamento para ombro lateral', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Reverse Pec Deck', 'Reverse Pec Deck', '{ombro_posterior}', '{~}', '{machine}', 1, 'Máquina de fly ao contrário para ombro posterior', 'Isolamento posterior crucial', 'https://example.com', false, NULL, false),
 
 -- Braços
-('barbell-curl', 'Rosca Direta (Barbell Curl)', 'arms', '{bíceps}', 'beginner', 'Exercício principal para bíceps', 'https://images.unsplash.com/photo-1538805060514-3995066f55cc?w=400', 'https://example.com'),
-('dumbbell-curl', 'Rosca Halteres', 'arms', '{bíceps}', 'beginner', 'Variação clássica de rosca', 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400', 'https://example.com'),
-('tricep-pushdown', 'Tricep Pushdown (Corda)', 'arms', '{tríceps}', 'beginner', 'Isolamento para tríceps', 'https://images.unsplash.com/photo-1541534227411-a320f32b9f50?w=400', 'https://example.com'),
-('overhead-extension', 'Extensão Aérea', 'arms', '{tríceps}', 'beginner', 'Extensão para tríceps', 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400', 'https://example.com'),
+(gen_random_uuid(), 'Barbell Curl', 'Rosca Direta (Barbell Curl)', '{bíceps}', '{~}', '{barbell}', 1, 'Em pé, curva os braços trazendo a barra ao queixo', 'Exercício principal para bíceps', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Dumbbell Curl', 'Rosca Halteres', '{bíceps}', '{~}', '{dumbbells}', 1, 'Rosca com halteres', 'Variação clássica e versátil', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Rope Pushdown', 'Tricep Pushdown (Corda)', '{tríceps}', '{~}', '{cable}', 1, 'Puxa a corda para baixo contra resistência', 'Isolamento eficivo para tríceps', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Overhead Tricep Extension', 'Extensão Aérea', '{tríceps}', '{~}', '{dumbbells, cable}', 1, 'Extensão do braço acima da cabeça', 'Isolamento completo de tríceps', 'https://example.com', false, NULL, false),
 
--- Núcleo
-('deadlift', 'Levantamento Terra', 'compound', '{costas_inferior, glúteos, isquiotibiais, perna}', 'advanced', 'Exercício composto mais completo', 'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=400', 'https://example.com'),
-('plank', 'Prancha', 'core', '{abdominais, núcleo}', 'beginner', 'Exercício de estática para núcleo', 'https://images.unsplash.com/photo-1566241142559-40e1dbb51d75?w=400', 'https://example.com'),
-('crunch', 'Crunch', 'core', '{abdominais}', 'beginner', 'Isolamento para abdominais', 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400', 'https://example.com')
-ON CONFLICT (id) DO NOTHING;
+-- Compostos/Núcleo
+(gen_random_uuid(), 'Deadlift', 'Levantamento Terra', '{costas_inferior, glúteos}', '{isquiotibiais, perna}', '{barbell}', 5, 'Levanta a barra do chão até à altura da cintura', 'Exercício mais completo do corpo', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Plank', 'Prancha', '{abdominais}', '{~}', '{}', 1, 'Posição de estática mantendo o corpo reto', 'Exercício isométrico excelente', 'https://example.com', false, NULL, false),
+(gen_random_uuid(), 'Crunch', 'Crunch', '{abdominais}', '{~}', '{}', 1, 'Levanta o tronco contra a contração abdominal', 'Isolamento básico de abs', 'https://example.com', false, NULL, false);
