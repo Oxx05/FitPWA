@@ -62,37 +62,51 @@ export function SessionScreen() {
       try {
         if (!planId) throw new Error('Plan ID missing')
 
-        const { data: plan, error: planError } = await supabase
+        const { error: planError } = await supabase
           .from('workout_plans')
-          .select('*, workout_plan_exercises(*)')
+          .select('id')
           .eq('id', planId)
           .single()
 
         if (planError) throw planError
 
+        // Load exercises via the correct junction table
+        const { data: planExercises, error: peError } = await supabase
+          .from('plan_exercises')
+          .select(`
+            id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg,
+            exercises ( id, name, name_pt, muscle_groups )
+          `)
+          .eq('plan_id', planId)
+          .order('order_index', { ascending: true })
+
+        if (peError) throw peError
+
         // Transform to session format
-        const sessionExercises = (plan.workout_plan_exercises || []).map((ex: any, idx: number) => ({
-          id: ex.id,
-          order: idx,
-          exerciseId: ex.exercise_id,
-          name: ex.exercise_name,
-          sets: Array.from({ length: ex.sets }, (_, i) => ({
-            id: `${ex.id}-${i}`,
-            setNumber: i + 1,
-            reps: null,
-            weight: null,
-            completed: false
-          })),
-          muscleGroups: ex.muscle_groups || [],
-          repsMin: ex.reps_min,
-          repsMax: ex.reps_max,
-          restSeconds: ex.rest_seconds || 90
-        }))
+        const sessionExercises = (planExercises || []).map((pe: Record<string, unknown>, idx: number) => {
+          const ex = pe.exercises as Record<string, unknown> | null
+          return {
+            id: pe.id as string,
+            order: idx,
+            exerciseId: ex?.id as string ?? '',
+            name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
+            sets: Array.from({ length: (pe.sets as number) || 3 }, (_, i) => ({
+              id: `${pe.id}-${i}`,
+              setNumber: i + 1,
+              reps: null,
+              weight: (pe.weight_kg as number) || null,
+              completed: false
+            })),
+            muscleGroups: (ex?.muscle_groups as string[]) || [],
+            repsMin: (pe.reps_min as number) || 8,
+            repsMax: (pe.reps_max as number) || 12,
+            restSeconds: (pe.rest_seconds as number) || 90
+          }
+        })
 
         setExercises(sessionExercises)
       } catch (error) {
         console.error('Failed to load plan:', error)
-        // TODO: Show error toast
       } finally {
         setIsLoading(false)
       }

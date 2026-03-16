@@ -102,21 +102,21 @@ export class OfflineSyncService {
    * Get all unsynced workouts
    */
   static async getUnsyncedWorkouts(): Promise<OfflineWorkout[]> {
-    return await db.workouts.where('synced').equals(0 as any).toArray()
+    return await db.workouts.where('synced').equals(0).toArray()
   }
 
   /**
    * Get all unsynced PRs
    */
   static async getUnsyncedPRs(): Promise<OfflinePersonalRecord[]> {
-    return await db.personalRecords.where('synced').equals(0 as any).toArray()
+    return await db.personalRecords.where('synced').equals(0).toArray()
   }
 
   /**
    * Get all unsynced plans
    */
   static async getUnsyncedPlans(): Promise<OfflinePlan[]> {
-    return await db.plans.where('synced').equals(0 as any).toArray()
+    return await db.plans.where('synced').equals(0).toArray()
   }
 
   /**
@@ -220,18 +220,18 @@ export class OfflineSyncService {
    * Clear all local data (after successful sync)
    */
   static async clearSyncedData(): Promise<void> {
-    await db.workouts.where('synced').equals(1 as any).delete()
-    await db.personalRecords.where('synced').equals(1 as any).delete()
-    await db.plans.where('synced').equals(1 as any).delete()
+    await db.workouts.where('synced').equals(1).delete()
+    await db.personalRecords.where('synced').equals(1).delete()
+    await db.plans.where('synced').equals(1).delete()
   }
 
   /**
    * Check if there is unsynced data
    */
   static async hasUnsyncedData(): Promise<boolean> {
-    const workoutsCount = await db.workouts.where('synced').equals(0 as any).count()
-    const prsCount = await db.personalRecords.where('synced').equals(0 as any).count()
-    const plansCount = await db.plans.where('synced').equals(0 as any).count()
+    const workoutsCount = await db.workouts.where('synced').equals(0).count()
+    const prsCount = await db.personalRecords.where('synced').equals(0).count()
+    const plansCount = await db.plans.where('synced').equals(0).count()
 
     return workoutsCount > 0 || prsCount > 0 || plansCount > 0
   }
@@ -245,9 +245,9 @@ export class OfflineSyncService {
     plans: number
   }> {
     return {
-      workouts: await db.workouts.where('synced').equals(0 as any).count(),
-      prs: await db.personalRecords.where('synced').equals(0 as any).count(),
-      plans: await db.plans.where('synced').equals(0 as any).count(),
+      workouts: await db.workouts.where('synced').equals(0).count(),
+      prs: await db.personalRecords.where('synced').equals(0).count(),
+      plans: await db.plans.where('synced').equals(0).count(),
     }
   }
 }
@@ -264,9 +264,9 @@ export function initializeOfflineSync(userId: string): void {
 
     // Clear synced data
     if (result.workoutsSynced > 0 || result.prsSynced > 0 || result.plansSynced > 0) {
-      await db.workouts.where('synced').equals(1 as any).delete()
-      await db.personalRecords.where('synced').equals(1 as any).delete()
-      await db.plans.where('synced').equals(1 as any).delete()
+      await db.workouts.where('synced').equals(1).delete()
+      await db.personalRecords.where('synced').equals(1).delete()
+      await db.plans.where('synced').equals(1).delete()
     }
 
     if (result.errors.length > 0) {

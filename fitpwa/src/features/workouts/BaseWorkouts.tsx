@@ -107,13 +107,6 @@ export const BASE_WORKOUTS: BaseWorkout[] = [
   }
 ]
 
-interface BaseWorkout {
-  id: string
-  name: string
-  description: string
-  daysPerWeek: number
-  exercises: BaseWorkoutExercise[]
-}
 
 export function BaseWorkouts() {
   const navigate = useNavigate()
