@@ -1,16 +1,33 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Dumbbell, ChevronRight } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
-import { BASE_WORKOUTS, type BaseWorkout } from './baseWorkouts'
+import { supabase } from '@/shared/lib/supabase'
 
+interface TemplatePlan {
+  id: string
+  name: string
+  description: string | null
+  type: string | null
+  days_per_week: number | null
+}
+
+const getDifficulty = (plan: TemplatePlan) => {
+  const name = plan.name.toLowerCase()
+  if (name.includes('iniciante')) return 'beginner'
+  if (name.includes('intermédio') || name.includes('intermedio')) return 'intermediate'
+  if (name.includes('avançado') || name.includes('avancado')) return 'advanced'
+  if (name.includes('strength') || name.includes('power') || name.includes('athletic')) return 'advanced'
+  return 'intermediate'
+}
 
 export function BaseWorkouts() {
   const navigate = useNavigate()
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null)
-  const [selectedWorkout, setSelectedWorkout] = useState<BaseWorkout | null>(null)
+  const [selectedWorkout, setSelectedWorkout] = useState<TemplatePlan | null>(null)
   const [showModal, setShowModal] = useState(false)
 
   const difficulties = {
@@ -19,11 +36,25 @@ export function BaseWorkouts() {
     advanced: { label: 'Avançado', color: 'text-red-400 border-red-400/30 bg-red-400/10' }
   }
 
-  const filtered = selectedDifficulty 
-    ? BASE_WORKOUTS.filter(w => w.difficulty === selectedDifficulty)
-    : BASE_WORKOUTS
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ['template-plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workout_plans')
+        .select('id,name,description,type,days_per_week')
+        .eq('is_template', true)
+        .order('name')
+      if (error) throw error
+      return (data || []) as TemplatePlan[]
+    }
+  })
 
-  const handleSelect = (workout: typeof BASE_WORKOUTS[0]) => {
+  const filtered = useMemo(() => {
+    if (!selectedDifficulty) return templates
+    return templates.filter(t => getDifficulty(t) === selectedDifficulty)
+  }, [templates, selectedDifficulty])
+
+  const handleSelect = (workout: TemplatePlan) => {
     setSelectedWorkout(workout)
     setShowModal(true)
   }
@@ -32,10 +63,8 @@ export function BaseWorkouts() {
     if (!selectedWorkout) return
     
     try {
-      // Navigate to workout editor with base template
-      navigate(`/workouts/new?baseTemplate=${selectedWorkout.id}`, {
-        state: { baseWorkout: selectedWorkout }
-      })
+      // Navigate to workout editor with template
+      navigate(`/workouts/new?templateId=${selectedWorkout.id}`)
     } catch (error) {
       console.error('Error loading base workout:', error)
     }
@@ -77,6 +106,16 @@ export function BaseWorkouts() {
 
       {/* Workouts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isLoading && (
+          <div className="col-span-full flex justify-center p-8 text-gray-400">
+            A carregar planos...
+          </div>
+        )}
+        {!isLoading && filtered.length === 0 && (
+          <div className="col-span-full text-center text-gray-400 bg-surface-100 rounded-2xl border border-surface-200 p-8">
+            Nenhum plano disponível.
+          </div>
+        )}
         {filtered.map((workout, idx) => (
           <motion.div
             key={workout.id}
@@ -93,21 +132,21 @@ export function BaseWorkouts() {
                     <Dumbbell className="w-5 h-5" />
                   </div>
                   <span
-                    className={`text-xs font-bold px-2 py-1 rounded border ${difficulties[workout.difficulty as keyof typeof difficulties].color}`}
+                    className={`text-xs font-bold px-2 py-1 rounded border ${difficulties[getDifficulty(workout)].color}`}
                   >
-                    {difficulties[workout.difficulty as keyof typeof difficulties].label}
+                    {difficulties[getDifficulty(workout)].label}
                   </span>
                 </div>
 
                 <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">
                   {workout.name}
                 </h3>
-                <p className="text-sm text-gray-400 mt-2">{workout.description}</p>
+                <p className="text-sm text-gray-400 mt-2">{workout.description || 'Plano base para customizar'}</p>
               </div>
 
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-surface-100">
                 <span className="text-sm bg-surface-100 px-3 py-1 rounded text-gray-300">
-                  {workout.daysPerWeek}x / semana
+                  {workout.days_per_week || 0}x / semana
                 </span>
                 <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
               </div>
@@ -133,13 +172,13 @@ export function BaseWorkouts() {
             <div className="flex justify-between">
               <span className="text-gray-400">Dificuldade:</span>
               <span className="text-white font-medium capitalize">
-                {selectedWorkout && difficulties[selectedWorkout.difficulty as keyof typeof difficulties].label}
+                {selectedWorkout && difficulties[getDifficulty(selectedWorkout)].label}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Frequência:</span>
               <span className="text-white font-medium">
-                {selectedWorkout?.daysPerWeek}x por semana
+                {selectedWorkout?.days_per_week || 0}x por semana
               </span>
             </div>
           </div>

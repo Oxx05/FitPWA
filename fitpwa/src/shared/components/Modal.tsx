@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
@@ -25,7 +26,10 @@ export function Modal({
     lg: 'max-w-lg'
   }
 
-  return (
+  if (!isOpen) return null
+  if (typeof document === 'undefined') return null
+
+  const content = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -44,28 +48,30 @@ export function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className={`${sizes[size]} w-full max-h-full flex flex-col pointer-events-auto`}
             >
-            <div className="bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-              <div className="flex justify-between items-center p-6 border-b border-surface-100 shrink-0">
-                <h2 className="text-xl font-bold text-white">{title || 'Dialog'}</h2>
-                {closeButton && (
-                  <button
-                    onClick={onClose}
-                    className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-gray-400 hover:text-white"
-                    aria-label="Fechar"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
+              <div className="bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center p-6 border-b border-surface-100 shrink-0">
+                  <h2 className="text-xl font-bold text-white">{title || 'Dialog'}</h2>
+                  {closeButton && (
+                    <button
+                      onClick={onClose}
+                      className="p-1 hover:bg-surface-100 rounded-lg transition-colors text-gray-400 hover:text-white"
+                      aria-label="Fechar"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="p-6 overflow-y-auto">
+                  {children}
+                </div>
               </div>
-              
-              <div className="p-6 overflow-y-auto">
-                {children}
-              </div>
-            </div>
             </motion.div>
           </div>
         </>
       )}
     </AnimatePresence>
   )
+
+  return createPortal(content, document.body)
 }

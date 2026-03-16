@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -157,7 +157,9 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
 export function WorkoutEditor() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
+  const templateId = searchParams.get('templateId')
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -258,10 +260,62 @@ export function WorkoutEditor() {
     }
   }, [id])
 
+  const loadTemplate = useCallback(async () => {
+    if (!templateId || id) return
+    try {
+      setLoading(true)
+      const { data: plan, error: planErr } = await supabase
+        .from('workout_plans')
+        .select('*')
+        .eq('id', templateId)
+        .single()
+
+      if (planErr) throw planErr
+      if (plan) {
+        setTitle(plan.name)
+        setDescription(plan.description || '')
+
+        const { data: planExercises, error: exErr } = await supabase
+          .from('plan_exercises')
+          .select(`
+            id, exercise_id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg, is_superset,
+            exercises (id, name, name_pt, muscle_groups, equipment, difficulty)
+          `)
+          .eq('plan_id', templateId)
+          .order('order_index', { ascending: true })
+        
+        if (exErr) throw exErr
+        
+        if (planExercises && planExercises.length > 0) {
+          const exerciseList: PlanExercise[] = planExercises.map((pe: Record<string, unknown>, idx: number) => {
+            const ex = pe.exercises as Record<string, unknown> | null
+            return {
+              id: `${pe.id}-${idx}`,
+              exercise_id: (ex?.id as string) || (pe.exercise_id as string),
+              name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
+              sets: (pe.sets as number) || 3,
+              reps_min: (pe.reps_min as number) || 8,
+              reps_max: (pe.reps_max as number) || 12,
+              rest_seconds: (pe.rest_seconds as number) || 90,
+              weight_kg: (pe.weight_kg as number) || null,
+              is_superset: (pe.is_superset as boolean) || false,
+            }
+          })
+          setExercises(exerciseList)
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar plano base')
+    } finally {
+      setLoading(false)
+    }
+  }, [templateId, id])
+
   useEffect(() => {
     if (id) loadPlan()
+    if (!id) loadTemplate()
     loadExercises()
-  }, [id, loadPlan, loadExercises])
+  }, [id, loadPlan, loadTemplate, loadExercises])
 
   const handleAddExercise = (exercise: Exercise) => {
     const newExercise: PlanExercise = {
@@ -418,7 +472,7 @@ export function WorkoutEditor() {
     ex.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  if (loading && id) {
+  if (loading && (id || templateId)) {
     return (
       <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-4 pb-24 animate-pulse">
         <div className="h-10 bg-surface-200 rounded-lg w-2/3" />
