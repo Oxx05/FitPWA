@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import confetti from 'canvas-confetti'
 import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
+import { calculateEstimated1RM } from '@/shared/lib/calculations'
 import { OfflineSyncService } from '@/shared/lib/offlineSync'
 import { useAuthStore } from '@/features/auth/authStore'
 import { XP_PER_EXERCISE, XP_PER_SET, XP_PER_WORKOUT, XP_STREAK_MULTIPLIER } from '@/shared/utils/gamification'
@@ -27,6 +30,7 @@ interface SetRecord {
   reps: number | null
   weight: number | null
   completed: boolean
+  notes?: string
   rpe?: number
 }
 
@@ -46,6 +50,7 @@ export function SessionScreen() {
   const navigate = useNavigate()
   const { id: planId } = useParams<{ id?: string }>()
   const { user, profile, addXp } = useAuthStore()
+  const { t } = useTranslation()
 
   const [exercises, setExercises] = useState<ExerciseInSession[]>([])
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
@@ -54,6 +59,7 @@ export function SessionScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [restTimer, setRestTimer] = useState<number | null>(null)
+  const [sessionNotes, setSessionNotes] = useState('')
   const [planName, setPlanName] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'treino' | 'controlo'>('treino')
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null)
@@ -79,6 +85,16 @@ export function SessionScreen() {
     if (restTimer === null) return
     if (restTimer <= 0) {
       setRestTimer(null)
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification(t('session.restFinished'), {
+          body: t('session.restFinishedBody'),
+          icon: '/favicon.ico'
+        })
+      }
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')
+        audio.play().catch(() => {})
+      } catch { /* audio playback can fail silently on mobile */ }
       return
     }
     const interval = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
@@ -100,6 +116,13 @@ export function SessionScreen() {
         if (planError) throw planError
         setPlanName(planData?.name ?? null)
 
+        // Load profile XP stats for the daily cap
+        const today = new Date().toISOString().split('T')[0]
+        if (profile?.last_xp_date !== today) {
+          // Reset daily XP if it's a new day
+          await supabase.from('profiles').update({ daily_xp_earned: 0, last_xp_date: today }).eq('id', user?.id)
+        }
+
         // Load exercises via the correct junction table
         const { data: planExercises, error: peError } = await supabase
           .from('plan_exercises')
@@ -120,17 +143,18 @@ export function SessionScreen() {
             order: idx,
             exerciseId: ex?.id as string ?? '',
             name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
-            sets: Array.from({ length: (pe.sets as number) || 3 }, (_, i) => ({
+            sets: Array.from({ length: (pe.sets as number) || profile?.default_sets || 3 }, (_, i) => ({
               id: `${pe.id}-${i}`,
               setNumber: i + 1,
               reps: null,
               weight: (pe.weight_kg as number) || null,
-              completed: false
+              completed: false,
+              notes: ''
             })),
             muscleGroups: (ex?.muscle_groups as string[]) || [],
-            repsMin: (pe.reps_min as number) || 8,
-            repsMax: (pe.reps_max as number) || 12,
-            restSeconds: (pe.rest_seconds as number) || 90
+            repsMin: (pe.reps_min as number) || profile?.default_reps_min || 8,
+            repsMax: (pe.reps_max as number) || profile?.default_reps_max || 12,
+            restSeconds: (pe.rest_seconds as number) || profile?.default_rest_seconds || 90
           }
         })
 
@@ -143,7 +167,7 @@ export function SessionScreen() {
     }
 
     loadPlanData()
-  }, [planId])
+  }, [planId, user?.id, profile?.default_sets, profile?.default_reps_min, profile?.default_reps_max, profile?.default_rest_seconds, profile?.last_xp_date])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -222,12 +246,12 @@ export function SessionScreen() {
       : `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleSetChange = (setId: string, field: 'weight' | 'reps', value: string) => {
+  const handleSetChange = (setId: string, field: 'weight' | 'reps' | 'notes', value: string) => {
     setExercises(prev => prev.map(ex => ({
       ...ex,
       sets: ex.sets.map(set =>
         set.id === setId
-          ? { ...set, [field]: value ? parseFloat(value) : null }
+          ? { ...set, [field]: field === 'notes' ? value : (value ? parseFloat(value) : null) }
           : set
       )
     })))
@@ -322,9 +346,30 @@ export function SessionScreen() {
       const streakBonus = profile?.login_streak
         ? Math.min(1 + ((profile.login_streak - 1) * (XP_STREAK_MULTIPLIER - 1)), 1.5)
         : 1
-      const xpGained = Math.round(
-        (XP_PER_WORKOUT + (stats.exercisesCount * XP_PER_EXERCISE) + (stats.setsCount * XP_PER_SET)) * streakBonus
-      )
+      
+      // ANTI-CHEAT LOGIC
+      // 1. Minimum duration: 5 minutes (300s)
+      // 2. Minimum sets: 3
+      // 3. XP Cap per workout: 500
+      // 4. Daily XP Cap: 1500 (handled via DB)
+      
+      let xpGained = 0
+      if (stats.duration >= 300 && stats.setsCount >= 3) {
+        xpGained = Math.round(
+          (XP_PER_WORKOUT + (stats.exercisesCount * XP_PER_EXERCISE) + (stats.setsCount * XP_PER_SET)) * streakBonus
+        )
+      } else {
+        // Partial XP for short workouts? Let's be strict as requested.
+        xpGained = Math.round((stats.setsCount * XP_PER_SET) * streakBonus)
+      }
+
+      // Cap at 500 XP
+      xpGained = Math.min(xpGained, 500)
+
+      // Daily cap check (1500 XP)
+      const dailyXpLimit = 1500
+      const remainingDailyXp = Math.max(0, dailyXpLimit - (profile?.daily_xp_earned || 0))
+      xpGained = Math.min(xpGained, remainingDailyXp)
 
       if (user?.id) {
         const workoutId = (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`)
@@ -345,7 +390,8 @@ export function SessionScreen() {
               exerciseName: ex.name,
               setNumber: s.setNumber,
               reps: s.reps,
-              weight: s.weight
+              weight: s.weight,
+              notes: s.notes || null
             }))
         )
 
@@ -371,7 +417,10 @@ export function SessionScreen() {
                 plan_id: planId || null,
                 plan_name: planName,
                 duration_seconds: duration,
-                total_volume_kg: totalVolume
+                total_volume_kg: totalVolume,
+                notes: sessionNotes || null,
+                finished_at: new Date().toISOString(),
+                xp_earned: xpGained
               })
               .select('id')
               .single()
@@ -386,7 +435,8 @@ export function SessionScreen() {
                   exercise_name: s.exerciseName,
                   set_number: s.setNumber,
                   reps: s.reps,
-                  weight_kg: s.weight
+                  weight_kg: s.weight,
+                  notes: s.notes
                 }))
               )
             }
@@ -418,10 +468,14 @@ export function SessionScreen() {
 
               const toUpsert = bestSets
                 .map(b => {
-                  const oneRepMax = (b.weight ?? 0) * (1 + (b.reps ?? 0) / 30)
+                  const oneRepMax = calculateEstimated1RM(b.weight, b.reps)
                   const current = existingMap.get(b.exerciseId)
-                  const currentOrm = current?.one_rep_max ?? ((current?.weight_kg ?? 0) * (1 + (current?.reps ?? 0) / 30))
+                  
+                  // Calculate existing ORM safely
+                  const currentOrm = current?.one_rep_max || calculateEstimated1RM(current?.weight_kg || 0, current?.reps || 0)
+                  
                   if (oneRepMax <= currentOrm) return null
+                  
                   newPrs.push({
                     exerciseName: exerciseNameMap.get(b.exerciseId) || 'Exercício',
                     weight: b.weight ?? 0,
@@ -452,40 +506,99 @@ export function SessionScreen() {
                     achieved_at: new Date().toISOString()
                   }))
                 )
+                
+                // CELEBRATION! 🎉
+                confetti({
+                  particleCount: 150,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: ['#00ff87', '#ffffff', '#00e5ff']
+                })
               }
             }
             showToast('Treino guardado na cloud.', 'success')
           } else {
-            for (const ex of completedExercises) {
-              await OfflineSyncService.saveWorkoutOffline({
-                workoutId,
+            // New Robust Offline Saving
+            await OfflineSyncService.saveSessionOffline(
+              {
+                sessionId: workoutId,
                 userId: user.id,
                 planId: planId || undefined,
-                exerciseId: ex.exerciseId,
-                setsCompleted: ex.setsCompleted,
-                durationSeconds: ex.durationSeconds,
+                planName: planName || undefined,
+                durationSeconds: duration,
+                totalVolumeKg: totalVolume,
+                notes: sessionNotes || undefined,
                 createdAt: new Date().toISOString(),
+                synced: false
+              },
+              completedSets.map(s => ({
+                sessionId: workoutId,
+                exerciseId: s.exerciseId,
+                exerciseName: s.exerciseName,
+                setNumber: s.setNumber,
+                reps: s.reps,
+                weightKg: s.weight,
+                notes: s.notes || undefined,
+                synced: false
+              }))
+            )
+            
+            // Save PRs offline too
+            for (const pr of newPrs) {
+              await OfflineSyncService.savePROffline({
+                prId: crypto.randomUUID(),
+                userId: user.id,
+                exerciseId: pr.exerciseId,
+                weightKg: pr.weight,
+                reps: pr.reps,
+                oneRepMax: pr.oneRepMax,
+                dateSet: new Date().toISOString(),
                 synced: false
               })
             }
+
             showToast('Sem internet. Treino guardado localmente.', 'info')
           }
         } catch (saveError) {
           console.error('Error saving workout:', saveError)
-          for (const ex of completedExercises) {
-            await OfflineSyncService.saveWorkoutOffline({
-              workoutId,
+          // Fallback to offline even on error
+          await OfflineSyncService.saveSessionOffline(
+            {
+              sessionId: workoutId,
               userId: user.id,
               planId: planId || undefined,
-              exerciseId: ex.exerciseId,
-              setsCompleted: ex.setsCompleted,
-              durationSeconds: ex.durationSeconds,
+              planName: planName || undefined,
+              durationSeconds: duration,
+              totalVolumeKg: totalVolume,
+              notes: sessionNotes || undefined,
               createdAt: new Date().toISOString(),
               synced: false
-            })
-          }
+            },
+            completedSets.map(s => ({
+              sessionId: workoutId,
+              exerciseId: s.exerciseId,
+              exerciseName: s.exerciseName,
+              setNumber: s.setNumber,
+              reps: s.reps,
+              weightKg: s.weight,
+              notes: s.notes || undefined,
+              synced: false
+            }))
+          )
           showToast('Falha ao guardar online. Guardado localmente.', 'info')
         }
+        
+        // Update daily XP in profile
+        if (xpGained > 0) {
+          await supabase
+            .from('profiles')
+            .update({ 
+              daily_xp_earned: (profile?.daily_xp_earned || 0) + xpGained,
+              xp_total: (profile?.xp_total || 0) + xpGained 
+            })
+            .eq('id', user.id)
+        }
+
         addXp(xpGained)
         navigate('/session/summary', { state: { stats, duration, xpGained, newPrs } })
         return
@@ -583,9 +696,21 @@ export function SessionScreen() {
             <p className="text-sm text-gray-400">{currentExerciseIndex + 1} / {exercises.length}</p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-primary font-mono font-bold">{formatTime(duration)}</p>
-              <p className="text-xs text-gray-400">Duração</p>
+            <div className="text-right flex items-center gap-3">
+              {restTimer !== null && (
+                <div 
+                  onClick={() => setRestTimer(null)}
+                  className="bg-primary/20 px-2 py-1 rounded border border-primary/30 animate-pulse cursor-pointer hover:bg-primary/30 transition-colors flex flex-col items-center"
+                  title="Pular descanso"
+                >
+                   <p className="text-primary font-mono font-bold leading-none">{formatTime(restTimer)}</p>
+                   <p className="text-[8px] text-primary/70 uppercase">Pular</p>
+                </div>
+              )}
+              <div>
+                <p className="text-white font-mono font-bold leading-none">{formatTime(duration)}</p>
+                <p className="text-[8px] text-gray-400 uppercase">Duração</p>
+              </div>
             </div>
             <Button 
               variant="danger" 
@@ -621,6 +746,7 @@ export function SessionScreen() {
           </button>
         </div>
 
+
         {activeTab === 'treino' ? (
           <>
             {/* Exercise Card */}
@@ -637,72 +763,88 @@ export function SessionScreen() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-[48px_1fr_1fr_120px] gap-2 text-xs text-gray-400 px-1 mb-2">
-                <span>Set</span>
-                <span>Kg</span>
-                <span>Reps</span>
-                <span className="text-right">Ações</span>
+              <div className="grid grid-cols-[32px_1fr_1fr_64px] gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider px-2 mb-2 items-center">
+                <span className="text-center">Set</span>
+                <span className="text-center">Kg</span>
+                <span className="text-center">Reps</span>
+                <span className="text-center">Feito</span>
               </div>
 
               {/* Sets List */}
-              <div className="space-y-2 mb-4">
+              <div className="space-y-3 mb-4">
                 {currentExercise.sets.map((set, idx) => (
                   <div 
                     key={set.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                    className={`flex flex-col gap-2 p-3 sm:p-4 rounded-xl transition-colors shadow-sm ${
                       set.completed 
-                        ? 'bg-primary/10 border border-primary/30' 
-                        : 'bg-surface-100 border border-surface-100'
+                        ? 'bg-primary/10 border border-primary/30 shadow-primary/5' 
+                        : 'bg-surface-100 border border-surface-100/50 hover:border-surface-100 hover:bg-surface-100/80'
                     }`}
                   >
-                    <span className="font-bold text-gray-400 w-8 text-center">
-                      {set.setNumber}
-                    </span>
+                    {/* Main Row */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className={`font-black w-6 sm:w-8 text-center text-lg sm:text-xl ${set.completed ? 'text-primary/80' : 'text-gray-500'}`}>
+                        {set.setNumber}
+                      </span>
 
-                    <input
-                      type="number"
-                      placeholder="kg"
-                      value={set.weight || ''}
-                      onChange={e => handleSetChange(set.id, 'weight', e.target.value)}
-                      className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                      <div className="flex-1 flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            value={set.weight || ''}
+                            onChange={e => handleSetChange(set.id, 'weight', e.target.value)}
+                            className={`w-full h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-lg sm:text-xl placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
+                            placeholder="kg"
+                          />
+                        </div>
+                        <div className="flex items-center justify-center text-gray-500 font-bold opacity-50">×</div>
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            value={set.reps || ''}
+                            onChange={e => handleSetChange(set.id, 'reps', e.target.value)}
+                            className={`w-full h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-lg sm:text-xl placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
+                            placeholder="reps"
+                          />
+                        </div>
+                      </div>
 
-                    <span className="text-gray-500">×</span>
-
-                    <input
-                      type="number"
-                      placeholder="reps"
-                      value={set.reps || ''}
-                      onChange={e => handleSetChange(set.id, 'reps', e.target.value)}
-                      className="w-20 h-10 bg-background border border-surface-200 rounded text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-
-                    <button
-                      onClick={() => handleCompleteSet(set.id)}
-                      className={`ml-auto w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-                        set.completed
-                          ? 'bg-primary text-black'
-                          : 'bg-gray-700 text-gray-400 hover:bg-primary hover:text-black'
-                      }`}
-                    >
-                      {set.completed ? '✓' : '○'}
-                    </button>
-
-                    {idx > 0 && (
                       <button
-                        onClick={() => handleCopyPreviousSet(set.id)}
-                        className="text-xs text-gray-400 hover:text-white border border-surface-200 rounded px-2 py-1"
+                        onClick={() => handleCompleteSet(set.id)}
+                        className={`w-14 sm:w-16 h-12 sm:h-14 flex items-center justify-center rounded-xl transition-all font-bold text-lg sm:text-xl shadow-sm ${
+                          set.completed
+                            ? 'bg-primary text-black shadow-primary/20 scale-[0.98]'
+                            : 'bg-surface-200 border border-surface-100 text-gray-400 hover:bg-primary/20 hover:text-primary hover:border-primary/30'
+                        }`}
                       >
-                        Copiar
+                        {set.completed ? '✓' : '○'}
                       </button>
-                    )}
+                    </div>
 
-                    <button
-                      onClick={() => handleRemoveSet(set.id)}
-                      className="text-gray-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Secondary Row (Notes & Actions) */}
+                    <div className="flex items-center gap-2 pl-8 sm:pl-11 mt-1">
+                      <input
+                        type="text"
+                        value={set.notes || ''}
+                        onChange={e => handleSetChange(set.id, 'notes', e.target.value)}
+                        placeholder="Adicionar nota (ex: mais devagar)..."
+                        className="flex-1 bg-transparent border-b border-surface-200 focus:border-primary text-xs sm:text-sm text-gray-400 placeholder-gray-600 pb-1 focus:outline-none transition-colors"
+                      />
+                      {idx > 0 && (
+                        <button
+                          onClick={() => handleCopyPreviousSet(set.id)}
+                          className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white bg-surface-200 rounded-md px-2 py-1 transition-colors"
+                        >
+                          Copiar Ant.
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRemoveSet(set.id)}
+                        className="text-gray-500 hover:text-red-400 p-1.5 rounded-md hover:bg-red-400/10 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -716,26 +858,19 @@ export function SessionScreen() {
               </button>
             </div>
 
-            {/* Rest Timer */}
-            {restTimer !== null && (
-              <div className="bg-surface-200 border-2 border-primary/50 p-6 rounded-2xl text-center">
-                <p className="text-gray-400 text-sm mb-2">Tempo de Descanso</p>
-                <p className="text-6xl font-bold text-primary font-mono">
-                  {restTimer}
-                </p>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setRestTimer(null)}
-                  className="mt-4 text-gray-400"
-                >
-                  Pular
-                </Button>
-              </div>
-            )}
           </>
         ) : (
           <div className="space-y-6">
+            <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+              <h3 className="text-gray-400 text-sm font-medium mb-2">Notas do Treino</h3>
+              <textarea
+                value={sessionNotes}
+                onChange={e => setSessionNotes(e.target.value)}
+                placeholder="Anota aqui tudo o que for importante sobre o treino em geral..."
+                className="w-full bg-surface-100 border border-surface-200 rounded-lg p-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-primary resize-none h-24 shadow-inner mt-2"
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
                 <p className="text-gray-400 text-sm">Tempo Total</p>
@@ -771,10 +906,10 @@ export function SessionScreen() {
                     >
                       <div>
                         <p className="font-semibold text-white">{idx + 1}. {ex.name}</p>
-                        <p className="text-xs text-gray-400">{completed}/{total} sets completados</p>
+                        <p className="text-xs text-gray-400">{completed}/{total} {t('session.setsCompleted')}</p>
                       </div>
                       {isCurrent && (
-                        <span className="text-xs text-primary font-bold">Agora</span>
+                        <span className="text-xs text-primary font-bold">{t('session.now')}</span>
                       )}
                     </div>
                   )
@@ -788,11 +923,11 @@ export function SessionScreen() {
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                   spotifyConnected ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-300'
                 }`}>
-                  {spotifyConnected ? 'Conectado' : 'Desconectado'}
+                  {spotifyConnected ? t('session.connected') : t('session.disconnected')}
                 </span>
               </div>
               <p className="text-sm text-gray-400 mb-4">
-                Liga a tua conta para controlar a música durante o treino.
+                {t('session.spotifyDescription')}
               </p>
               {spotifyConnected && (
                 <div className="flex items-center gap-3 bg-surface-100 border border-surface-100 rounded-xl p-3 mb-4">
@@ -863,7 +998,7 @@ export function SessionScreen() {
             className="flex-1 gap-2"
           >
             <ChevronLeft className="w-5 h-5" />
-            Anterior
+            {t('common.back')}
           </Button>
 
           <Button
@@ -874,12 +1009,12 @@ export function SessionScreen() {
             {isRunning ? (
               <>
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Em progresso
+                {t('session.inProgress')}
               </>
             ) : (
               <>
                 <Play className="w-4 h-4" />
-                Retomar
+                {t('session.resume')}
               </>
             )}
           </Button>
@@ -889,7 +1024,7 @@ export function SessionScreen() {
             onClick={() => setCurrentExerciseIndex(i => i + 1)}
             className="flex-1 gap-2"
           >
-            Próximo
+            {t('common.next')}
             <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
@@ -899,26 +1034,26 @@ export function SessionScreen() {
       <Modal
         isOpen={showFinishModal}
         onClose={() => setShowFinishModal(false)}
-        title="Terminar Sessão?"
+        title={t('session.finishWorkoutTitle')}
         size="sm"
         closeButton
       >
         <div className="space-y-4">
           <p className="text-gray-400">
-            Tens a certeza que deseja terminar esta sessão? Isso vai registar toda a actividade.
+            {t('session.finishWorkoutConfirm')}
           </p>
 
           <div className="space-y-2 bg-surface-100 p-4 rounded-lg">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Duração:</span>
+              <span className="text-gray-400">{t('session.duration')}:</span>
               <span className="text-white font-medium">{formatTime(duration)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Exercícios:</span>
+              <span className="text-gray-400">{t('session.exercises')}:</span>
               <span className="text-white font-medium">{exercises.length}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Séries totais:</span>
+              <span className="text-gray-400">{t('session.totalSets')}:</span>
               <span className="text-white font-medium">
                 {exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}
               </span>
@@ -931,14 +1066,14 @@ export function SessionScreen() {
               onClick={() => setShowFinishModal(false)}
               className="flex-1"
             >
-              Continuar
+              {t('session.continueTraining')}
             </Button>
             <Button
               variant="danger"
               onClick={finishWorkout}
               className="flex-1"
             >
-              Sim, Terminar
+              {t('session.yesFinish')}
             </Button>
           </div>
         </div>

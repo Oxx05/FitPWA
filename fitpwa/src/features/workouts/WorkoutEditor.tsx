@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -23,6 +23,8 @@ import { Input } from '@/shared/components/Input'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
+import { useTranslation } from 'react-i18next'
+import Fuse from 'fuse.js'
 
 interface PlanExercise {
   id: string
@@ -62,6 +64,7 @@ interface SortableExerciseItemProps {
 }
 
 function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemProps) {
+  const { t } = useTranslation()
   const {
     attributes,
     listeners,
@@ -89,7 +92,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Séries</label>
+          <label className="block text-xs text-gray-500 mb-1">{t('editor.sets')}</label>
           <input
             type="number"
             min={1}
@@ -100,7 +103,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Reps (min-max)</label>
+          <label className="block text-xs text-gray-500 mb-1">{t('editor.repsMinMax')}</label>
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -122,7 +125,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
           </div>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Peso (kg)</label>
+          <label className="block text-xs text-gray-500 mb-1">{t('editor.weight')}</label>
           <input
             type="number"
             min={0}
@@ -134,7 +137,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Descanso</label>
+          <label className="block text-xs text-gray-500 mb-1">{t('editor.rest')}</label>
           <div className="relative">
             <input
               type="number"
@@ -159,6 +162,7 @@ export function WorkoutEditor() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const { user } = useAuthStore()
+  const { t, i18n } = useTranslation()
   const templateId = searchParams.get('templateId')
 
   const [title, setTitle] = useState('')
@@ -254,7 +258,7 @@ export function WorkoutEditor() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar plano')
+      setError(err instanceof Error ? err.message : t('editor.errorLoadingPlan'))
     } finally {
       setLoading(false)
     }
@@ -305,7 +309,7 @@ export function WorkoutEditor() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar plano base')
+      setError(err instanceof Error ? err.message : t('editor.errorLoadingBase'))
     } finally {
       setLoading(false)
     }
@@ -321,7 +325,7 @@ export function WorkoutEditor() {
     const newExercise: PlanExercise = {
       id: `${Date.now()}-${Math.random()}`,
       exercise_id: exercise.id,
-      name: exercise.name_pt || exercise.name,
+      name: i18n.language.startsWith('pt') ? (exercise.name_pt || exercise.name) : exercise.name,
       sets: 3,
       reps_min: 8,
       reps_max: 12,
@@ -399,11 +403,11 @@ export function WorkoutEditor() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      setError('Nome do plano é obrigatório')
+      setError(t('editor.planNameRequired'))
       return
     }
     if (exercises.length === 0) {
-      setError('Adiciona pelo menos um exercício')
+      setError(t('editor.addAtLeastOne'))
       return
     }
 
@@ -434,7 +438,7 @@ export function WorkoutEditor() {
           .insert([planData])
           .select()
         if (err) throw err
-        if (!newPlan?.[0]) throw new Error('Falha ao criar plano')
+        if (!newPlan?.[0]) throw new Error(t('editor.failedToCreatePlan'))
         
         planId = newPlan[0].id
       }
@@ -461,16 +465,22 @@ export function WorkoutEditor() {
 
       navigate('/workouts')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao guardar')
+      setError(err instanceof Error ? err.message : t('editor.errorSaving'))
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredExercises = availableExercises.filter(ex =>
-    (ex.name_pt || ex.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ex.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const fuse = useMemo(() => new Fuse<Exercise>(availableExercises, {
+    keys: ['name', 'name_pt'],
+    threshold: 0.3, // Fuzzy matching
+    ignoreLocation: true,
+  }), [availableExercises])
+
+  const filteredExercises = useMemo(() => {
+    if (!searchTerm.trim()) return availableExercises
+    return fuse.search(searchTerm).map(result => result.item)
+  }, [searchTerm, availableExercises, fuse])
 
   if (loading && (id || templateId)) {
     return (
@@ -496,41 +506,41 @@ export function WorkoutEditor() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Nome do Plano</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">{t('editor.planName')}</label>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ex: Perna 5x/semana"
+            placeholder={t('editor.planNamePlaceholder')}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Descrição</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">{t('editor.description')}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descreve o objetivo deste plano..."
+            placeholder={t('editor.descriptionPlaceholder')}
             className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
             rows={3}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Dificuldade</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">{t('editor.difficulty')}</label>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
             className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
           >
-            <option value="beginner">Iniciante</option>
-            <option value="intermediate">Intermédio</option>
-            <option value="advanced">Avançado</option>
+            <option value="beginner">{t('editor.beginner')}</option>
+            <option value="intermediate">{t('editor.intermediate')}</option>
+            <option value="advanced">{t('editor.advanced')}</option>
           </select>
         </div>
       </div>
 
       <div>
-        <h2 className="text-xl font-bold mb-4">Exercícios</h2>
+        <h2 className="text-xl font-bold mb-4">{t('editor.exercisesTitle')}</h2>
         {exercises.length > 0 ? (
           <div className="space-y-4">
             <DndContext 
@@ -556,8 +566,8 @@ export function WorkoutEditor() {
         ) : (
           <div className="text-center py-8 text-gray-400 bg-surface-100 rounded-xl border border-surface-200">
             <Dumbbell className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Nenhum exercício adicionado ainda</p>
-            <p className="text-sm text-gray-500 mt-1">Clica no botão abaixo para adicionar o primeiro exercício</p>
+            <p>{t('editor.noExercisesYet')}</p>
+            <p className="text-sm text-gray-500 mt-1">{t('editor.clickToAddFirst')}</p>
           </div>
         )}
       </div>
@@ -568,7 +578,7 @@ export function WorkoutEditor() {
         onClick={() => setShowExerciseModal(true)}
       >
         <Plus className="w-5 h-5 mr-2 text-primary" />
-        Adicionar Exercício
+        {t('editor.addExercise')}
       </Button>
 
       <div className="flex gap-4">
@@ -578,14 +588,14 @@ export function WorkoutEditor() {
           onClick={() => navigate(-1)}
           disabled={loading}
         >
-          Cancelar
+          {t('common.cancel')}
         </Button>
         <Button 
           className="flex-1"
           onClick={handleSave}
           disabled={loading}
         >
-          {loading ? 'Guardando...' : 'Guardar Plano'}
+          {loading ? t('editor.saving') : t('editor.savePlan')}
         </Button>
       </div>
 
@@ -593,12 +603,12 @@ export function WorkoutEditor() {
       <Modal
         isOpen={showExerciseModal}
         onClose={() => { setShowExerciseModal(false); setSearchTerm('') }}
-        title="Seleciona Exercício"
+        title={t('editor.selectExercise')}
         size="lg"
       >
         <div className="space-y-4">
           <Input
-            placeholder="Procura ou cria exercício..."
+            placeholder={t('editor.searchOrCreate')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -615,9 +625,9 @@ export function WorkoutEditor() {
               </div>
               <div>
                 <h4 className="font-semibold text-primary">
-                  {creatingCustom ? 'Criando...' : `Criar "${searchTerm.trim()}"`}
+                  {creatingCustom ? t('editor.creating') : t('editor.createCustom', { name: searchTerm.trim() })}
                 </h4>
-                <p className="text-xs text-gray-400">Adicionar como exercício customizado</p>
+                <p className="text-xs text-gray-400">{t('editor.addAsCustom')}</p>
               </div>
             </button>
           )}
@@ -630,7 +640,9 @@ export function WorkoutEditor() {
                   onClick={() => handleAddExercise(ex)}
                   className="w-full text-left p-3 bg-surface-100 hover:bg-surface-100/80 rounded-lg transition-colors border border-surface-100 hover:border-primary"
                 >
-                  <h4 className="font-semibold text-white">{ex.name_pt || ex.name}</h4>
+                  <h4 className="font-semibold text-white">
+                    {i18n.language.startsWith('pt') && ex.name_pt ? ex.name_pt : ex.name}
+                  </h4>
                   <div className="flex gap-2 text-xs text-gray-400 mt-1">
                     {ex.muscle_groups && ex.muscle_groups.length > 0 && (
                       <span>{ex.muscle_groups.join(', ')}</span>
@@ -638,16 +650,16 @@ export function WorkoutEditor() {
                     {ex.difficulty && (
                       <>
                         <span>•</span>
-                        <span>Nível {ex.difficulty}</span>
+                        <span>{t('common.level')} {ex.difficulty}</span>
                       </>
                     )}
                   </div>
                 </button>
               ))
             ) : searchTerm.trim().length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Escreve para procurar exercícios</p>
+              <p className="text-center text-gray-500 py-8">{t('editor.typeToSearch')}</p>
             ) : (
-              <p className="text-center text-gray-500 py-4">Nenhum exercício encontrado. Usa o botão acima para criar.</p>
+              <p className="text-center text-gray-500 py-4">{t('editor.noExerciseFound')}</p>
             )}
           </div>
         </div>

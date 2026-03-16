@@ -7,23 +7,25 @@ import { supabase } from '@/shared/lib/supabase'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
 import { useAuthStore } from './authStore'
-
-const registerSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Password deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "As passwords não coincidem",
-  path: ["confirmPassword"]
-})
-
-type RegisterForm = z.infer<typeof registerSchema>
+import { useTranslation } from 'react-i18next'
 
 export function RegisterPage() {
   const navigate = useNavigate()
   const { session } = useAuthStore()
+  const { t } = useTranslation()
   const [error, setError] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
+
+  const registerSchema = z.object({
+    email: z.string().email(t('auth.invalidEmail')),
+    password: z.string().min(6, t('auth.passwordMinLength')),
+    confirmPassword: z.string()
+  }).refine(data => data.password === data.confirmPassword, {
+    message: t('auth.passwordsDontMatch'),
+    path: ["confirmPassword"]
+  })
+
+  type RegisterForm = z.infer<typeof registerSchema>
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema)
@@ -46,10 +48,6 @@ export function RegisterPage() {
 
     if (error) {
       setError(error.message)
-    } else {
-      // Typically signUp with autoConfirm=true will immediately sign in
-      // If email confirmation is required, you might need a different flow.
-      // Assuming auto login for now, which triggers useEffect above.
     }
     setIsLoading(false)
   }
@@ -62,13 +60,13 @@ export function RegisterPage() {
     <div className="min-h-screen flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-sm flex flex-col gap-6 bg-surface-200 p-8 rounded-2xl shadow-xl">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-primary mb-2">Criar Conta</h1>
-          <p className="text-gray-400">Junta-te ao FitPWA e transforma o teu treino.</p>
+          <h1 className="text-3xl font-bold text-primary mb-2">{t('auth.registerTitle')}</h1>
+          <p className="text-gray-400">{t('auth.registerSubtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <Input 
-            label="Email" 
+            label={t('auth.email')}
             type="email" 
             placeholder="exemplo@fitpwa.com"
             {...register('email')}
@@ -76,7 +74,7 @@ export function RegisterPage() {
           />
           
           <Input 
-            label="Password" 
+            label={t('auth.password')}
             type="password" 
             placeholder="••••••••"
             {...register('password')}
@@ -84,7 +82,7 @@ export function RegisterPage() {
           />
 
           <Input 
-            label="Confirmar Password" 
+            label={t('auth.confirmPassword')}
             type="password" 
             placeholder="••••••••"
             {...register('confirmPassword')}
@@ -94,13 +92,13 @@ export function RegisterPage() {
           {error && <div className="text-error text-sm text-center">{error}</div>}
 
           <Button type="submit" isLoading={isLoading} className="mt-2">
-            Registar
+            {t('auth.register')}
           </Button>
         </form>
 
         <div className="relative flex items-center py-2">
           <div className="flex-grow border-t border-surface-100"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-500 text-sm">ou continua com</span>
+          <span className="flex-shrink-0 mx-4 text-gray-500 text-sm">{t('auth.orContinueWith')}</span>
           <div className="flex-grow border-t border-surface-100"></div>
         </div>
 
@@ -109,7 +107,7 @@ export function RegisterPage() {
         </Button>
 
         <p className="text-center text-sm text-gray-400">
-          Já tens conta? <Link to="/login" className="text-primary hover:underline">Entra aqui</Link>
+          {t('auth.hasAccount')} <Link to="/login" className="text-primary hover:underline">{t('auth.loginHere')}</Link>
         </p>
       </div>
     </div>

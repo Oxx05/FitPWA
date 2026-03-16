@@ -14,6 +14,7 @@ const LoginPage = React.lazy(() => import('@/features/auth/LoginPage').then(m =>
 const RegisterPage = React.lazy(() => import('@/features/auth/RegisterPage').then(m => ({ default: m.RegisterPage })))
 const OnboardingFlow = React.lazy(() => import('@/features/auth/OnboardingFlow').then(m => ({ default: m.OnboardingFlow })))
 const Dashboard = React.lazy(() => import('@/features/dashboard/Dashboard').then(m => ({ default: m.Dashboard })))
+const LevelUpOverlay = React.lazy(() => import('@/features/auth/LevelUpOverlay').then(m => ({ default: m.LevelUpOverlay })))
 const SessionScreen = React.lazy(() => import('@/features/session/SessionScreen').then(m => ({ default: m.SessionScreen })))
 const SessionSummary = React.lazy(() => import('@/features/session/SessionSummary').then(m => ({ default: m.SessionSummary })))
 const WorkoutsList = React.lazy(() => import('@/features/workouts/WorkoutsList').then(m => ({ default: m.WorkoutsList })))
@@ -24,7 +25,7 @@ const ExerciseLibrary = React.lazy(() => import('@/features/exercises/ExerciseLi
 const ProgressDashboard = React.lazy(() => import('@/features/progress/ProgressDashboard').then(m => ({ default: m.ProgressDashboard })))
 const RecordsPage = React.lazy(() => import('@/features/progress/RecordsPage').then(m => ({ default: m.RecordsPage })))
 const PremiumPage = React.lazy(() => import('@/features/premium/PremiumPage').then(m => ({ default: m.PremiumPage })))
-const CommunityPage = React.lazy(() => import('@/features/community/CommunityPage').then(m => ({ default: m.CommunityPage })))
+const FriendsPage = React.lazy(() => import('@/features/social/FriendsPage').then(m => ({ default: m.FriendsPage })))
 const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
 
 const PageLoader = () => (
@@ -42,6 +43,7 @@ function App() {
           <Router>
             <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-20 md:pb-0 md:pl-24">
               <Navbar />
+              <LevelUpOverlay />
               <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public Routes */}
@@ -89,8 +91,10 @@ function App() {
                 <Route path="/session/summary" element={
                   <ProtectedRoute><SessionSummary /></ProtectedRoute>
                 } />
-                <Route path="/community" element={
-                  <ProtectedRoute><CommunityPage /></ProtectedRoute>
+                <Route path="/community" element={<Navigate to="/friends" replace />} />
+                <Route path="/leaderboard" element={<Navigate to="/friends" replace />} />
+                <Route path="/friends" element={
+                  <ProtectedRoute><FriendsPage /></ProtectedRoute>
                 } />
                 <Route path="/premium" element={
                   <ProtectedRoute><PremiumPage /></ProtectedRoute>

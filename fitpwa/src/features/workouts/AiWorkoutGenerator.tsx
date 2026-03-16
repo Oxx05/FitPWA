@@ -6,21 +6,34 @@ import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
+import { useTranslation } from 'react-i18next'
 
-const SUGGESTION_CHIPS = [
-  'Treino de peito e tríceps, 45 min',
-  'Sessão rápida de corpo inteiro, 30 min',
-  'Pernas para hipertrofia',
-  'Costas e bíceps, intermédio',
-  'HIIT cardio, 20 min',
-  'Ombros e core, iniciante',
-  'Braços, avançado',
-  'Glúteos e posterior',
+const SUGGESTION_CHIPS_PT = [
+  'Costas e tríceps, apenas halteres e elásticos, 30 min',
+  'Pernas para hipertrofia, mas tenho dores nos joelhos',
+  'Treino de 20 min sem equipamento (apenas peso corporal)',
+  'Peito e ombros pesados, 45 min, num ginásio completo',
+  'Cardio e abdominais intensos para suar rápido',
+  'Corpo inteiro avançado, 60 min, focado em força',
+  'Braços e glúteos, iniciante, tenho dores nas costas',
+]
+
+const SUGGESTION_CHIPS_EN = [
+  'Back and triceps, only dumbbells and bands, 30 min',
+  'Legs for hypertrophy, but I have knee pain',
+  '20 min workout bodyweight only (no equipment)',
+  'Heavy chest and shoulders, 45 min, full gym access',
+  'Intense cardio and abs to sweat fast',
+  'Full body advanced, 60 min, strength focused',
+  'Arms and glutes, beginner, I have back pain',
 ]
 
 export function AiWorkoutGenerator() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { t, i18n } = useTranslation()
+
+  const chips = i18n.language?.startsWith('en') ? SUGGESTION_CHIPS_EN : SUGGESTION_CHIPS_PT
 
   const [isOpen, setIsOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
@@ -36,7 +49,7 @@ export function AiWorkoutGenerator() {
       const plan = generateWorkoutPlan(prompt)
       setGeneratedPlan(plan)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao gerar plano')
+      setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
   }
 
@@ -47,7 +60,7 @@ export function AiWorkoutGenerator() {
       const plan = generateWorkoutPlan(prompt)
       setGeneratedPlan(plan)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao gerar plano')
+      setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
   }
 
@@ -73,13 +86,11 @@ export function AiWorkoutGenerator() {
       if (planErr) throw planErr
 
       if (newPlan && generatedPlan.exercises.length > 0) {
-        // Look up UUIDs for exercise slugs
         const { data: dbExercises } = await supabase
           .from('exercises')
           .select('id, name')
           .limit(500)
 
-        // Build a name→UUID map from the DB
         const nameToUuid = new Map<string, string>()
         if (dbExercises) {
           dbExercises.forEach((e: Record<string, unknown>) => {
@@ -108,7 +119,7 @@ export function AiWorkoutGenerator() {
           const { error: exErr } = await supabase
             .from('plan_exercises')
             .insert(planExercises)
-          if (exErr) console.error('Erro ao guardar exercícios:', exErr)
+          if (exErr) console.error('Error saving exercises:', exErr)
         }
       }
 
@@ -117,13 +128,19 @@ export function AiWorkoutGenerator() {
       setPrompt('')
       navigate('/workouts')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao guardar plano')
+      setError(err instanceof Error ? err.message : t('ai.errorSaving'))
     } finally {
       setSaving(false)
     }
   }
 
   const formatRest = (s: number) => s >= 60 ? `${Math.floor(s / 60)}m${s % 60 ? ` ${s % 60}s` : ''}` : `${s}s`
+
+  const getDifficultyLabel = (diff: string) => {
+    if (diff === 'beginner') return t('editor.beginner')
+    if (diff === 'advanced') return t('editor.advanced')
+    return t('editor.intermediate')
+  }
 
   return (
     <>
@@ -136,9 +153,9 @@ export function AiWorkoutGenerator() {
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">Gerador de Treinos</h3>
+            <h3 className="text-white font-bold text-lg">{t('ai.title')}</h3>
             <p className="text-gray-400 text-sm mt-0.5">
-              Diz-me o que queres treinar e eu crio o plano perfeito para ti
+              {t('ai.subtitle')}
             </p>
           </div>
         </div>
@@ -147,7 +164,7 @@ export function AiWorkoutGenerator() {
       <Modal
         isOpen={isOpen}
         onClose={() => { setIsOpen(false); setGeneratedPlan(null); setError(null) }}
-        title="⚡ Gerador de Treinos"
+        title={`⚡ ${t('ai.title')}`}
         size="lg"
         closeButton
       >
@@ -157,12 +174,12 @@ export function AiWorkoutGenerator() {
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  O que queres treinar hoje?
+                  {t('ai.whatToTrain')}
                 </label>
                 <textarea
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
-                  placeholder="Ex: Quero destruir peito e tríceps, tenho 45 minutos..."
+                  placeholder={t('ai.placeholder')}
                   className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary resize-none"
                   rows={3}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleGenerate() }}}
@@ -170,7 +187,7 @@ export function AiWorkoutGenerator() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {SUGGESTION_CHIPS.map(chip => (
+                {chips.map(chip => (
                   <button
                     key={chip}
                     onClick={() => { setPrompt(chip); }}
@@ -187,7 +204,7 @@ export function AiWorkoutGenerator() {
                 className="w-full gap-2"
               >
                 <Sparkles className="w-5 h-5" />
-                Gerar Plano
+                {t('ai.generate')}
               </Button>
             </>
           )}
@@ -207,10 +224,10 @@ export function AiWorkoutGenerator() {
                 <p className="text-gray-400 text-sm mt-1">{generatedPlan.description}</p>
                 <div className="flex gap-2 mt-2">
                   <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full capitalize">
-                    {generatedPlan.difficulty === 'beginner' ? 'Iniciante' : generatedPlan.difficulty === 'advanced' ? 'Avançado' : 'Intermédio'}
+                    {getDifficultyLabel(generatedPlan.difficulty)}
                   </span>
                   <span className="text-xs bg-surface-100 text-gray-300 px-2 py-0.5 rounded-full">
-                    {generatedPlan.exercises.length} exercícios
+                    {generatedPlan.exercises.length} {t('workouts.exercises')}
                   </span>
                 </div>
               </div>
@@ -224,7 +241,7 @@ export function AiWorkoutGenerator() {
                     <div className="flex-grow min-w-0">
                       <h4 className="font-medium text-white text-sm truncate">{ex.name}</h4>
                       <p className="text-xs text-gray-400">
-                        {ex.sets} × {ex.reps_min === ex.reps_max ? ex.reps_min : `${ex.reps_min}-${ex.reps_max}`} reps · {formatRest(ex.rest_seconds)} descanso
+                        {ex.sets} × {ex.reps_min === ex.reps_max ? ex.reps_min : `${ex.reps_min}-${ex.reps_max}`} {t('session.reps')} · {formatRest(ex.rest_seconds)} {t('session.restTimer').toLowerCase()}
                       </p>
                     </div>
                     <Dumbbell className="w-4 h-4 text-gray-600 shrink-0" />
@@ -237,7 +254,7 @@ export function AiWorkoutGenerator() {
                   variant="secondary"
                   onClick={handleRegenerate}
                   className="gap-2"
-                  title="Gerar novamente com exercícios diferentes"
+                  title={t('ai.regenerate')}
                 >
                   <RotateCw className="w-4 h-4" />
                 </Button>
@@ -247,7 +264,7 @@ export function AiWorkoutGenerator() {
                   className="flex-1 gap-2"
                 >
                   <X className="w-4 h-4" />
-                  Alterar Pedido
+                  {t('common.back')}
                 </Button>
                 <Button
                   onClick={handleSavePlan}
@@ -259,7 +276,7 @@ export function AiWorkoutGenerator() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  Guardar Plano
+                  {t('ai.saveAndUse')}
                 </Button>
               </div>
             </div>

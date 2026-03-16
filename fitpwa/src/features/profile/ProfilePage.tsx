@@ -8,9 +8,11 @@ import { supabase } from '@/shared/lib/supabase'
 import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 
 export function ProfilePage() {
   const { profile, user, signOut, isPremium } = useAuthStore()
+  const { t, i18n } = useTranslation()
   const [showPublishModal, setShowPublishModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null)
@@ -18,8 +20,37 @@ export function ProfilePage() {
 
   // Editable profile fields
   const [editName, setEditName] = useState(profile?.full_name || '')
+  const [defaultRest, setDefaultRest] = useState(profile?.default_rest_seconds || 90)
+  const [defaultMinReps, setDefaultMinReps] = useState(profile?.default_reps_min || 8)
+  const [defaultMaxReps, setDefaultMaxReps] = useState(profile?.default_reps_max || 12)
+  const [defaultSets, setDefaultSets] = useState(profile?.default_sets || 3)
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState<string | null>(null)
+
+  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  )
+
+  const currentLang = i18n.language?.startsWith('en') ? 'en' : 'pt'
+
+  const toggleLanguage = () => {
+    const newLang = currentLang === 'pt' ? 'en' : 'pt'
+    i18n.changeLanguage(newLang)
+  }
+
+  const requestNotificationPermission = async () => {
+    if (typeof Notification === 'undefined') {
+      alert(t('profile.browserNoNotifications'))
+      return
+    }
+    const status = await Notification.requestPermission()
+    setNotificationStatus(status)
+    if (status === 'granted') {
+      new Notification(t('profile.notificationsActivated'), {
+        body: t('profile.notificationsBody')
+      })
+    }
+  }
 
   // Fetch workout plans from the correct table
   const { data: workouts, refetch } = useQuery({
@@ -60,14 +91,16 @@ export function ProfilePage() {
       if (!profile?.id) return { totalWorkouts: 0, totalMinutes: 0 }
 
       const { count } = await supabase
-        .from('workout_history')
+        .from('workout_sessions')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', profile.id)
+        .not('finished_at', 'is', null)
 
       const { data: durations, error } = await supabase
-        .from('workout_history')
+        .from('workout_sessions')
         .select('duration_seconds')
         .eq('user_id', profile.id)
+        .not('finished_at', 'is', null)
 
       if (error) console.error('Error fetching history:', error)
 
@@ -116,12 +149,18 @@ export function ProfilePage() {
       setProfileMsg(null)
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: editName.trim() })
+        .update({ 
+          full_name: editName.trim(),
+          default_rest_seconds: defaultRest,
+          default_reps_min: defaultMinReps,
+          default_reps_max: defaultMaxReps,
+          default_sets: defaultSets
+        })
         .eq('id', user.id)
       if (error) throw error
-      setProfileMsg('Perfil atualizado!')
+      setProfileMsg(t('profile.profileUpdated'))
     } catch {
-      setProfileMsg('Erro ao guardar perfil')
+      setProfileMsg(t('profile.profileError'))
     } finally {
       setSavingProfile(false)
     }
@@ -142,18 +181,18 @@ export function ProfilePage() {
           <User className="w-12 h-12" />
         </div>
         <div className="text-center md:text-left flex-grow">
-          <h1 className="text-3xl font-black text-white">{profile?.full_name || 'Atleta'}</h1>
+          <h1 className="text-3xl font-black text-white">{profile?.full_name || t('common.athlete')}</h1>
           <p className="text-gray-400 flex items-center justify-center md:justify-start gap-2">
             <Mail className="w-4 h-4" /> {user?.email}
           </p>
           {isPremium && (
             <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-              <Shield className="w-3.5 h-3.5" /> PRO Member
+              <Shield className="w-3.5 h-3.5" /> {t('profile.proMember')}
             </div>
           )}
         </div>
         <Button variant="ghost" className="text-gray-500 hover:text-white" onClick={signOut}>
-          <LogOut className="w-5 h-5 mr-2" /> Sair
+          <LogOut className="w-5 h-5 mr-2" /> {t('auth.logout')}
         </Button>
       </div>
 
@@ -163,47 +202,71 @@ export function ProfilePage() {
           <p className="text-2xl font-bold text-primary">
             {workouts?.filter(w => w.isPublic).length || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Publicados</p>
+          <p className="text-xs text-gray-400 mt-1">{t('common.published')}</p>
         </div>
         <div className="bg-surface-200 p-4 rounded-2xl text-center border border-surface-100">
           <p className="text-2xl font-bold text-red-400">
             {workouts?.reduce((sum, w) => sum + w.likes, 0) || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Likes</p>
+          <p className="text-xs text-gray-400 mt-1">{t('common.likes')}</p>
         </div>
         <div className="bg-surface-200 p-4 rounded-2xl text-center border border-surface-100">
           <p className="text-2xl font-bold text-blue-400">
             {workouts?.reduce((sum, w) => sum + w.saves, 0) || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Guardados</p>
+          <p className="text-xs text-gray-400 mt-1">{t('common.saved')}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 space-y-4">
-          <h3 className="text-lg font-bold text-white mb-4">Conta</h3>
+          <h3 className="text-lg font-bold text-white mb-4">{t('profile.account')}</h3>
           <button
-            onClick={() => { setEditName(profile?.full_name || ''); setShowSettingsModal(true); setProfileMsg(null) }}
+            onClick={() => { 
+              setEditName(profile?.full_name || ''); 
+              setDefaultRest(profile?.default_rest_seconds || 90);
+              setDefaultMinReps(profile?.default_reps_min || 8);
+              setDefaultMaxReps(profile?.default_reps_max || 12);
+              setDefaultSets(profile?.default_sets || 3);
+              setShowSettingsModal(true); 
+              setProfileMsg(null);
+            }}
             className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200"
           >
             <div className="flex items-center gap-3 text-gray-300">
               <Settings className="w-5 h-5" />
-              <span className="font-medium text-white">Definições da Conta</span>
+              <span className="font-medium text-white">{t('profile.accountSettings')}</span>
             </div>
             <span className="text-gray-500">→</span>
           </button>
-          <ProfileLink icon={<Bell />} label="Notificações" />
-          <ProfileLink icon={<CreditCard />} label="Pagamentos" to="/premium" />
+          <button onClick={requestNotificationPermission} className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200">
+            <div className="flex items-center gap-3 text-gray-300">
+              <Bell className="w-5 h-5" />
+              <span className="font-medium text-white">{t('profile.notifications')}</span>
+            </div>
+            <span className="text-xs text-gray-400">
+              {notificationStatus === 'granted' ? t('profile.notificationsEnabled') : notificationStatus === 'denied' ? t('profile.notificationsBlocked') : t('profile.notificationsEnable')}
+            </span>
+          </button>
+          {/* Language Switcher */}
+          <button onClick={toggleLanguage} className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200">
+            <div className="flex items-center gap-3 text-gray-300">
+              <Globe className="w-5 h-5" />
+              <span className="font-medium text-white">{currentLang === 'pt' ? 'Idioma' : 'Language'}</span>
+            </div>
+            <span className="text-xs text-gray-400 uppercase font-bold">{currentLang === 'pt' ? '🇵🇹 PT' : '🇬🇧 EN'}</span>
+          </button>
+          <ProfileLink icon={<CreditCard />} label={t('profile.payments')} to="/premium" />
         </div>
 
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 space-y-4">
-          <h3 className="text-lg font-bold text-white mb-4">Treino</h3>
+          <h3 className="text-lg font-bold text-white mb-4">{t('profile.training')}</h3>
           <div className="flex justify-between items-center p-3 bg-surface-100 rounded-xl">
-            <span className="text-gray-400">Total de Treinos</span>
+            <span className="text-gray-400">{t('profile.totalWorkouts')}</span>
             <span className="text-white font-bold">{stats?.totalWorkouts ?? '—'}</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-surface-100 rounded-xl">
-            <span className="text-gray-400">Tempo de Atividade</span>
+            <span className="text-gray-400">{t('profile.activityTime')}</span>
             <span className="text-white font-bold">{stats ? formatDuration(stats.totalMinutes) : '—'}</span>
           </div>
         </div>
@@ -211,7 +274,7 @@ export function ProfilePage() {
 
       {/* My Plans */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Meus Planos</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('profile.myPlans')}</h2>
         <div className="space-y-3">
           {workouts && workouts.length > 0 ? (
             workouts.map((workout, idx) => (
@@ -232,9 +295,9 @@ export function ProfilePage() {
                         <Lock className="w-4 h-4 text-gray-500" />
                       )}
                     </div>
-                    <p className="text-sm text-gray-400 mt-1">{workout.daysPerWeek}x/semana • {workout.exercisesCount} exercícios</p>
+                    <p className="text-sm text-gray-400 mt-1">{t('workouts.perWeek', { count: workout.daysPerWeek })} • {workout.exercisesCount} {t('workouts.exercises')}</p>
                     <p className="text-xs text-gray-500 mt-2">
-                      {new Date(workout.createdAt).toLocaleDateString('pt-PT')} • {workout.likes} likes • {workout.saves} guardados
+                      {new Date(workout.createdAt).toLocaleDateString(currentLang === 'pt' ? 'pt-PT' : 'en-GB')} • {workout.likes} {t('common.likes')} • {workout.saves} {t('common.saved')}
                     </p>
                   </div>
 
@@ -248,14 +311,14 @@ export function ProfilePage() {
                         }}
                         className="bg-primary/20 hover:bg-primary/30 text-primary"
                       >
-                        Publicar
+                        {t('profile.publish')}
                       </Button>
                     )}
                     <button
                       onClick={() => togglePrivacy(workout.id, workout.isPublic)}
                       className="p-2 hover:bg-surface-100 rounded-lg transition-colors text-xs text-gray-400"
                     >
-                      {workout.isPublic ? 'Privado' : 'Público'}
+                      {workout.isPublic ? t('profile.private') : t('profile.public')}
                     </button>
                   </div>
                 </div>
@@ -263,10 +326,10 @@ export function ProfilePage() {
             ))
           ) : (
             <div className="text-center py-8 text-gray-400">
-              <p>Nenhum plano criado ainda</p>
+              <p>{t('profile.noPlansCreated')}</p>
               <Link to="/workouts/new">
                 <Button className="mt-4 bg-primary hover:bg-primary/90 text-black">
-                  Criar Primeiro Plano
+                  {t('profile.createFirstPlan')}
                 </Button>
               </Link>
             </div>
@@ -282,19 +345,19 @@ export function ProfilePage() {
           setSelectedPlan(null)
           setPublishDescription('')
         }}
-        title="Publicar Plano na Comunidade"
+        title={t('profile.publishTitle')}
         closeButton
       >
         <div className="space-y-4">
           <p className="text-gray-300 text-sm">
-            Torna o teu plano público para que outros utilizadores possam encontrá-lo, dar likes e guardá-lo.
+            {t('profile.publishDescription')}
           </p>
           <div>
-            <label className="text-sm font-medium text-gray-300">Descrição</label>
+            <label className="text-sm font-medium text-gray-300">{t('editor.description')}</label>
             <textarea
               value={publishDescription}
               onChange={(e) => setPublishDescription(e.target.value)}
-              placeholder="Descreve o teu plano de treino..."
+              placeholder={t('profile.publishPlaceholder')}
               className="w-full mt-2 bg-surface-100 border border-surface-200 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
               rows={3}
             />
@@ -308,14 +371,14 @@ export function ProfilePage() {
               }}
               className="flex-1 bg-surface-100 hover:bg-surface-200 text-white"
             >
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => publishMutation.mutate()}
               disabled={!publishDescription.trim() || publishMutation.isPending}
               className="flex-1 bg-primary hover:bg-primary/90 text-black disabled:opacity-50"
             >
-              {publishMutation.isPending ? 'Publicando...' : 'Publicar'}
+              {publishMutation.isPending ? t('profile.publishing') : t('profile.publish')}
             </Button>
           </div>
         </div>
@@ -325,28 +388,62 @@ export function ProfilePage() {
       <Modal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
-        title="Definições da Conta"
+        title={t('profile.accountSettings')}
         closeButton
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Nome</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.name')}</label>
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              placeholder="O teu nome"
+              placeholder={t('profile.namePlaceholder')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t('auth.email')}</label>
             <div className="bg-surface-100 border border-surface-200 rounded-lg px-4 py-2.5 text-gray-400 cursor-not-allowed">
               {user?.email}
             </div>
-            <p className="text-xs text-gray-500 mt-1">O email não pode ser alterado aqui.</p>
+            <p className="text-xs text-gray-500 mt-1">{t('profile.emailCannotChange')}</p>
           </div>
-
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.defaultRestTime')}</label>
+            <Input
+              type="number"
+              value={defaultRest}
+              onChange={(e) => setDefaultRest(Number(e.target.value) || 0)}
+              placeholder="ex: 90"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Reps (Min)</label>
+              <Input
+                type="number"
+                value={defaultMinReps}
+                onChange={(e) => setDefaultMinReps(Number(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Reps (Max)</label>
+              <Input
+                type="number"
+                value={defaultMaxReps}
+                onChange={(e) => setDefaultMaxReps(Number(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.defaultSets')}</label>
+            <Input
+              type="number"
+              value={defaultSets}
+              onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
+            />
+          </div>
           {profileMsg && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${profileMsg.includes('Erro') ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'}`}>
+            <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${profileMsg.includes(t('common.error')) ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'}`}>
               <Check className="w-4 h-4" />
               {profileMsg}
             </div>
@@ -357,10 +454,10 @@ export function ProfilePage() {
             disabled={savingProfile || !editName.trim()}
             className="w-full gap-2"
           >
-            {savingProfile ? 'Guardando...' : (
+            {savingProfile ? t('profile.savingProfile') : (
               <>
                 <Pencil className="w-4 h-4" />
-                Guardar Alterações
+                {t('profile.saveChanges')}
               </>
             )}
           </Button>

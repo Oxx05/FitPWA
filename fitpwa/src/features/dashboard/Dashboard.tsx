@@ -7,9 +7,11 @@ import { AiWorkoutGenerator } from '@/features/workouts/AiWorkoutGenerator'
 import { Crown, TrendingUp, Flame, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { FeatureGate } from '../premium/FeatureGate'
+import { useTranslation } from 'react-i18next'
 
 export function Dashboard() {
   const { profile, signOut } = useAuthStore()
+  const { t } = useTranslation()
 
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
 
@@ -19,15 +21,15 @@ export function Dashboard() {
       <div className="flex justify-between items-center bg-surface-200 p-6 rounded-2xl shadow-lg border border-surface-100">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            Olá, {profile?.full_name?.split(' ')[0] || 'Atleta'}!
+            {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.athlete') })}
           </h1>
-          <p className="text-gray-400 mt-1">Pronto para mais um treino?</p>
+          <p className="text-gray-400 mt-1">{t('dashboard.readyForWorkout')}</p>
         </div>
         <div className="flex flex-col items-end gap-3">
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-primary" />
-              <span className="text-primary font-bold text-sm">Nível {profile?.level || 1}</span>
+              <span className="text-primary font-bold text-sm">{t('common.level')} {profile?.level || 1}</span>
               <span className="text-gray-400 text-xs">{profile?.xp_total || 0} XP</span>
             </div>
             <div className="w-32 h-2 bg-surface-100 rounded-full overflow-hidden border border-surface-200">
@@ -38,7 +40,7 @@ export function Dashboard() {
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-white h-auto py-0">
-            Sair
+            {t('auth.logout')}
           </Button>
         </div>
       </div>
@@ -51,12 +53,12 @@ export function Dashboard() {
               <Crown className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm">Desbloqueia o FitPWA PRO</p>
-              <p className="text-gray-400 text-xs">Acede a estatísticas avançadas e planos exclusivos.</p>
+              <p className="text-white font-bold text-sm">{t('dashboard.unlockPro')}</p>
+              <p className="text-gray-400 text-xs">{t('dashboard.proDescription')}</p>
             </div>
           </div>
           <Link to="/premium">
-            <Button size="sm" className="font-bold">Saber Mais</Button>
+            <Button size="sm" className="font-bold">{t('dashboard.learnMore')}</Button>
           </Link>
         </div>
       )}
@@ -66,26 +68,26 @@ export function Dashboard() {
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 shadow-md transform transition-transform hover:-translate-y-1">
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-5 h-5 text-orange-400" />
-            <h3 className="text-gray-400 font-medium">Streak Atual</h3>
+            <h3 className="text-gray-400 font-medium">{t('dashboard.currentStreak')}</h3>
           </div>
           <div className="flex items-end gap-2">
             <span className="text-4xl font-bold text-white">{profile?.login_streak || 0}</span>
-            <span className="text-primary font-medium mb-1">dias 🔥</span>
+            <span className="text-primary font-medium mb-1">{t('common.days')} 🔥</span>
           </div>
         </div>
         
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 shadow-md md:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5 text-primary" />
-            <h3 className="text-white font-medium">Treino de Hoje</h3>
+            <h3 className="text-white font-medium">{t('dashboard.todayWorkout')}</h3>
           </div>
           <div className="bg-surface-100 rounded-xl p-4 flex justify-between items-center">
             <div>
-              <h4 className="font-bold text-lg text-primary">Seleçiona um Plano</h4>
-              <p className="text-sm text-gray-400">Escolhe uma sessão para começar</p>
+              <h4 className="font-bold text-lg text-primary">{t('dashboard.selectPlan')}</h4>
+              <p className="text-sm text-gray-400">{t('dashboard.chooseSession')}</p>
             </div>
             <Link to="/workouts">
-              <Button>Começar Treino</Button>
+              <Button>{t('dashboard.startWorkout')}</Button>
             </Link>
           </div>
         </div>
@@ -96,10 +98,10 @@ export function Dashboard() {
 
       {/* Muscle Volume Analysis */}
       <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 shadow-md">
-        <h3 className="text-white font-bold mb-6">Análise de Volume por Grupo Muscular</h3>
-        <FeatureGate featureName="Análise Muscular Avançada">
+        <h3 className="text-white font-bold mb-6">{t('dashboard.muscleVolumeAnalysis')}</h3>
+        <FeatureGate featureName={t('dashboard.advancedMuscleAnalysis')}>
           <div className="h-64 flex items-center justify-center text-gray-500 italic">
-            Gráfico de Distribuição Muscular (Premium Only)
+            {t('dashboard.muscleDistributionChart')}
           </div>
         </FeatureGate>
       </div>

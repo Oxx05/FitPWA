@@ -13,6 +13,12 @@ export interface Profile {
   xp_total?: number
   login_streak?: number
   last_login_date?: string
+  daily_xp_earned?: number
+  last_xp_date?: string
+  default_rest_seconds?: number
+  default_reps_min?: number
+  default_reps_max?: number
+  default_sets?: number
 }
 
 interface AuthState {

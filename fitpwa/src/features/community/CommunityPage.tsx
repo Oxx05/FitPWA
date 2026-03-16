@@ -21,19 +21,24 @@ interface PublicWorkout {
   is_saved?: boolean
 }
 
-export function CommunityPage() {
+export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { profile } = useAuthStore()
   const [selectedSort, setSelectedSort] = useState<'trending' | 'recent' | 'saves'>('trending')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { data: workouts, isLoading } = useQuery({
-    queryKey: ['public-workouts', selectedSort],
+    queryKey: ['public-workouts', selectedSort, searchQuery],
     queryFn: async () => {
       let query = supabase
-        .from('workspace_plans')
+        .from('workout_plans')
         .select(
-          'id, name, description, user_id, difficulty, days_per_week, likes, saves, comments, created_at, is_public'
+          'id, name, description, user_id, difficulty, days_per_week, likes, saves, created_at, is_public'
         )
         .eq('is_public', true)
+
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`)
+      }
 
       if (selectedSort === 'trending') {
         query = query.order('likes', { ascending: false })
@@ -50,13 +55,13 @@ export function CommunityPage() {
         id: w.id,
         name: w.name,
         description: w.description || '',
-        author_name: 'Utilizador',
+        author_name: 'Utilizador', // Em fase futura podemos fazer join com profiles
         author_id: w.user_id,
         difficulty: w.difficulty || 'intermediate',
         days_per_week: w.days_per_week || 0,
         likes: w.likes || 0,
         saves: w.saves || 0,
-        comments: w.comments || 0,
+        comments: 0, // Removido temporariamente até migrar tabela de comentários
         created_at: w.created_at
       })) as PublicWorkout[]
     }
@@ -73,7 +78,7 @@ export function CommunityPage() {
       
       // Increment like count
       await supabase
-        .from('workspace_plans')
+        .from('workout_plans')
         .update({ likes: (workouts?.find(w => w.id === workoutId)?.likes || 0) + 1 })
         .eq('id', workoutId)
     } catch (error) {
@@ -92,7 +97,7 @@ export function CommunityPage() {
       
       // Increment saves count
       await supabase
-        .from('workspace_plans')
+        .from('workout_plans')
         .update({ saves: (workouts?.find(w => w.id === workoutId)?.saves || 0) + 1 })
         .eq('id', workoutId)
     } catch (error) {
@@ -101,10 +106,23 @@ export function CommunityPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24">
-      <div>
-        <h1 className="text-3xl font-bold">Comunidade</h1>
-        <p className="text-gray-400">Descobre planos criados por outros utilizadores.</p>
+    <div className={`max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24 ${hideHeader ? '!pt-0 !px-0' : ''}`}>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-3xl font-bold italic uppercase tracking-tighter">Comunidade</h1>
+          <p className="text-gray-400">Descobre planos criados por outros utilizadores.</p>
+        </div>
+      )}
+
+      {/* Search Bar */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Procurar treinos ou autores..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-surface-200 border border-surface-100 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-primary transition-colors"
+        />
       </div>
 
       {/* Sort Options */}

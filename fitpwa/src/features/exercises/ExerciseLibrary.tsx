@@ -1,28 +1,17 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Search, Filter } from 'lucide-react'
-import { supabase } from '@/shared/lib/supabase'
 import { ExerciseCard } from './ExerciseCard'
 import { Input } from '@/shared/components/Input'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { SearchIcon } from 'lucide-react'
 
+import { useOfflineExercises } from '@/shared/hooks/useOfflineData'
+
 export function ExerciseLibrary() {
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState<string>('all')
 
-  const { data: exercises, isLoading } = useQuery({
-    queryKey: ['exercises'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .order('name')
-      
-      if (error) throw error
-      return data
-    }
-  })
+  const { data: exercises, isLoading } = useOfflineExercises()
 
   const filteredExercises = useMemo(() => exercises?.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase())

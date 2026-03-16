@@ -1,15 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { FeatureGate } from '../premium/FeatureGate'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { startOfWeek, subWeeks, isSameWeek, format } from 'date-fns'
 import { pt } from 'date-fns/locale'
+import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export function ProgressDashboard() {
   const { profile } = useAuthStore()
+  const queryClient = useQueryClient()
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ['progress-stats', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null
@@ -18,27 +21,47 @@ export function ProgressDashboard() {
       const eightWeeksAgo = startOfWeek(subWeeks(new Date(), 8))
       
       const { data: history } = await supabase
-        .from('workout_history')
+        .from('workout_sessions')
         .select(`
-          created_at,
-          total_volume,
+          id,
+          plan_name,
+          started_at,
+          finished_at,
+          total_volume_kg,
           duration_seconds
         `)
         .eq('user_id', profile.id)
-        .gte('created_at', eightWeeksAgo.toISOString())
-        .order('created_at', { ascending: true })
+        .not('finished_at', 'is', null)
+        .gte('started_at', eightWeeksAgo.toISOString())
+        .order('started_at', { ascending: true })
+
+      // Fetch Personal Records
+      const { data: prsData } = await supabase
+        .from('personal_records')
+        .select(`
+          exercise_id,
+          weight_kg,
+          reps,
+          one_rep_max,
+          exercises (
+            name,
+            name_pt
+          )
+        `)
+        .eq('user_id', profile.id)
+        .order('one_rep_max', { ascending: false })
 
       if (!history) return null
 
       const now = new Date()
-      const currentWeekWorkouts = history.filter(h => isSameWeek(new Date(h.created_at), now))
+      const currentWeekWorkouts = history.filter(h => isSameWeek(new Date(h.started_at), now))
       
       // Calculate total volume for current week
-      const currentWeekVolume = currentWeekWorkouts.reduce((sum, h) => sum + ((h.total_volume as number) || 0), 0)
+      const currentWeekVolume = currentWeekWorkouts.reduce((sum, h) => sum + (Number(h.total_volume_kg) || 0), 0)
       
       // Calculate total volume for previous week
-      const previousWeekWorkouts = history.filter(h => isSameWeek(new Date(h.created_at), subWeeks(now, 1)))
-      const prevWeekVolume = previousWeekWorkouts.reduce((sum, h) => sum + ((h.total_volume as number) || 0), 0)
+      const previousWeekWorkouts = history.filter(h => isSameWeek(new Date(h.started_at), subWeeks(now, 1)))
+      const prevWeekVolume = previousWeekWorkouts.reduce((sum, h) => sum + (Number(h.total_volume_kg) || 0), 0)
 
       let volumeChange = 0
       if (prevWeekVolume > 0) {
@@ -58,26 +81,24 @@ export function ProgressDashboard() {
       }
 
       history.forEach(h => {
-        const weekKey = format(startOfWeek(new Date(h.created_at)), "dd MMM", { locale: pt })
+        const weekKey = format(startOfWeek(new Date(h.started_at)), "dd MMM", { locale: pt })
         if (chartDataMap.has(weekKey)) {
           const entry = chartDataMap.get(weekKey)
-          entry.volume += ((h.total_volume as number) || 0)
+          entry.volume += (Number(h.total_volume_kg) || 0)
         }
       })
 
       // Try to determine consecutive days workout streak
       let streak = 0
       const dates = history
-        .map(h => format(new Date(h.created_at), 'yyyy-MM-dd'))
+        .map(h => format(new Date(h.started_at), 'yyyy-MM-dd'))
         .filter((v, i, a) => a.indexOf(v) === i) // Unique dates
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // Descending
 
       if (dates.length > 0) {
         const currentDate = new Date()
         const todayStr = format(currentDate, 'yyyy-MM-dd')
-        
-        // If they haven't worked out today or yesterday, streak is 0
-        const yesterdayStr = format(new Date(currentDate.setDate(currentDate.getDate() - 1)), 'yyyy-MM-dd')
+        const yesterdayStr = format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd')
         
         if (dates[0] === todayStr || dates[0] === yesterdayStr) {
           streak = 1
@@ -99,8 +120,29 @@ export function ProgressDashboard() {
         currentWeekVolume,
         volumeChange,
         streak,
-        chartData: Array.from(chartDataMap.values())
+        chartData: Array.from(chartDataMap.values()),
+        history: [...history].reverse(),
+        prs: (prsData || []).map(pr => ({
+          exercise_name: (pr as any).exercises?.name_pt || (pr as any).exercises?.name || 'Exercício',
+          one_rep_max: pr.one_rep_max || 0,
+          weight_kg: pr.weight_kg || 0,
+          reps: pr.reps || 0
+        }))
       }
+    }
+  })
+
+  const deleteSession = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error } = await supabase
+        .from('workout_sessions')
+        .delete()
+        .eq('id', sessionId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['progress-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['profile-stats'] })
     }
   })
 
@@ -109,25 +151,43 @@ export function ProgressDashboard() {
     currentWeekVolume: 0,
     volumeChange: 0,
     streak: 0,
-    chartData: [] as Array<{ week: string; volume: number }>
+    chartData: [] as Array<{ week: string; volume: number }>,
+    history: [] as Array<{ id: string; plan_name: string | null; started_at: string; finished_at: string | null; total_volume_kg: number; duration_seconds: number }>,
+    prs: [] as Array<{ exercise_name: string; one_rep_max: number; weight_kg: number; reps: number }>
   }
 
-  const safeStats = stats ?? defaultStats
+  const safeStats = stats || defaultStats
 
-  // Format volume from kg to Toneladas (T)
   const formatVolume = (kg: number) => {
     if (kg >= 1000) return (kg / 1000).toFixed(1)
-    return kg.toString()
+    return Math.round(kg).toString()
+  }
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    if (mins < 60) return `${mins}m`
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return `${h}h${m > 0 ? ` ${m}m` : ''}`
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-24 space-y-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-400 font-medium">A carregar progresso...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8 pb-24">
+    <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8 pb-32">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-white">Progresso</h1>
         <p className="text-gray-400">Analisa a tua evolução ao longo do tempo.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
           <h3 className="text-gray-400 text-sm font-medium mb-1">Treinos esta semana</h3>
           <p className="text-3xl font-bold text-primary">
@@ -135,7 +195,7 @@ export function ProgressDashboard() {
           </p>
         </div>
         
-        <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
+        <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm md:col-span-2">
           <h3 className="text-gray-400 text-sm font-medium mb-1">Volume Semanal</h3>
           <p className="text-3xl font-bold text-white">
             {formatVolume(safeStats.currentWeekVolume)} <span className="text-base font-normal text-gray-500">{safeStats.currentWeekVolume >= 1000 ? 'toneladas' : 'kg'}</span>
@@ -154,6 +214,39 @@ export function ProgressDashboard() {
         </div>
       </div>
 
+      {/* 1RM Records Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" /> Recordes Pessoais (1RM)
+          </h3>
+          <Link to="/records" className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
+            Ver todos <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {safeStats.prs.slice(0, 3).map((pr, idx) => (
+            <div key={idx} className="bg-surface-200 border border-surface-100 p-5 rounded-xl hover:border-primary/30 transition-all flex justify-between items-center group">
+              <div>
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{pr.exercise_name}</p>
+                <p className="text-2xl font-bold text-white">{Math.round(pr.one_rep_max)} <span className="text-sm font-normal text-gray-500">kg</span></p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Baseado em</p>
+                <p className="text-xs font-medium text-gray-300">{pr.weight_kg}kg × {pr.reps}</p>
+              </div>
+            </div>
+          ))}
+          {safeStats.prs.length === 0 && (
+            <div className="col-span-full bg-surface-200/50 border border-dashed border-surface-100 p-8 rounded-xl text-center">
+              <p className="text-gray-500 italic text-sm">Ainda não tens recordes registados.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chart Section */}
       <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">Volume de Treino (8 semanas)</h3>
@@ -193,6 +286,58 @@ export function ProgressDashboard() {
             </ResponsiveContainer>
           </FeatureGate>
         </div>
+      </div>
+
+      {/* History Section */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-white">Histórico de Treinos</h3>
+        {safeStats.history.length > 0 ? (
+          <div className="space-y-3">
+            {safeStats.history.map((session) => (
+              <div 
+                key={session.id}
+                className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">{session.plan_name || 'Treino Personalizado'}</h4>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {formatDuration(session.duration_seconds)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Weight className="w-3 h-3" /> {formatVolume(session.total_volume_kg)}kg
+                      </span>
+                      <span>{format(new Date(session.started_at), "dd MMM, HH:mm", { locale: pt })}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      if (confirm('Tens a certeza que queres apagar este treino?')) {
+                        deleteSession.mutate(session.id)
+                      }
+                    }}
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    title="Apagar treino"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-surface-200 border border-dashed border-surface-100 p-8 rounded-2xl text-center">
+            <p className="text-gray-500">Ainda não completaste nenhum treino.</p>
+          </div>
+        )}
       </div>
 
     </div>
