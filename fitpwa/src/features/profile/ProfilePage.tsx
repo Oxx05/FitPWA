@@ -29,7 +29,7 @@ export function ProfilePage() {
       const { data, error } = await supabase
         .from('workout_plans')
         .select(`
-          id, name, description, days_per_week, is_public, likes, saves, created_at,
+          id, name, description, days_per_week, is_public, created_at,
           plan_exercises (id)
         `)
         .eq('user_id', profile.id)
@@ -46,8 +46,8 @@ export function ProfilePage() {
         daysPerWeek: (w.days_per_week as number) || 0,
         exercisesCount: Array.isArray(w.plan_exercises) ? w.plan_exercises.length : 0,
         isPublic: (w.is_public as boolean) || false,
-        likes: (w.likes as number) || 0,
-        saves: (w.saves as number) || 0,
+        likes: 0,
+        saves: 0,
         createdAt: w.created_at as string,
       })) as WorkoutPlan[]
     },
@@ -64,17 +64,19 @@ export function ProfilePage() {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', profile.id)
 
-      const { data: durations } = await supabase
+      const { data: durations, error } = await supabase
         .from('workout_history')
-        .select('duration_minutes')
+        .select('duration_seconds')
         .eq('user_id', profile.id)
 
-      const totalMinutes = (durations || []).reduce(
-        (sum: number, w: Record<string, unknown>) => sum + ((w.duration_minutes as number) || 0),
+      if (error) console.error('Error fetching history:', error)
+
+      const totalSeconds = (durations || []).reduce(
+        (sum: number, w: Record<string, unknown>) => sum + ((w.duration_seconds as number) || 0),
         0
       )
 
-      return { totalWorkouts: count || 0, totalMinutes }
+      return { totalWorkouts: count || 0, totalMinutes: Math.floor(totalSeconds / 60) }
     },
   })
 
