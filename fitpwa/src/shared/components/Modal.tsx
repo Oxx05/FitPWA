@@ -41,10 +41,10 @@ export function Modal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 ${sizes[size]} w-full mx-4`}
+            className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 ${sizes[size]} w-[calc(100%-2rem)]`}
           >
-            <div className="bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex justify-between items-center p-6 border-b border-surface-100">
+            <div className="bg-surface-200 border border-surface-100 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center p-6 border-b border-surface-100 shrink-0">
                 <h2 className="text-xl font-bold text-white">{title || 'Dialog'}</h2>
                 {closeButton && (
                   <button
@@ -57,7 +57,7 @@ export function Modal({
                 )}
               </div>
               
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto">
                 {children}
               </div>
             </div>
