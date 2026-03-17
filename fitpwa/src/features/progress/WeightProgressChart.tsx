@@ -22,14 +22,19 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
       if (!acc[record.exercise_id]) {
         acc[record.exercise_id] = []
       }
+      
+      const recordDate = record.date_set || record.created_at
+      const dateObj = recordDate ? new Date(recordDate) : new Date()
+      const finalDate = isNaN(dateObj.getTime()) ? new Date() : dateObj
+
       acc[record.exercise_id].push({
-        date: new Date(record.date_set).toLocaleDateString('pt-PT', {
+        date: finalDate.toLocaleDateString('pt-PT', {
           day: '2-digit',
           month: 'short',
         }),
         weight: record.weight_kg,
         exercise: record.exercise_id,
-        fullDate: new Date(record.date_set),
+        fullDate: finalDate,
       })
       return acc
     },

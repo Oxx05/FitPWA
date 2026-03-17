@@ -31,20 +31,24 @@ export function SmartInsights() {
       
       // Insight 1: Consistency
       const lastSession = sessions?.[0]
-      if (lastSession) {
+      if (lastSession?.finished_at) {
         const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.finished_at).getTime()) / (1000 * 3600 * 24))
-        if (daysSince === 0) {
+        
+        // Ensure distance isn't negative or extreme (Unix epoch fallback protection)
+        if (daysSince >= 0 && daysSince < 10000) {
+          if (daysSince === 0) {
             list.push({
-                icon: <CheckCircle2 className="text-green-500" />,
-                title: t('insights.doneTitle'),
-                desc: t('insights.doneDesc')
+              icon: <CheckCircle2 className="text-green-500" />,
+              title: t('insights.doneTitle'),
+              desc: t('insights.doneDesc')
             })
-        } else if (daysSince > 3) {
+          } else if (daysSince > 3) {
             list.push({
-                icon: <AlertCircle className="text-orange-500" />,
-                title: t('insights.comebackTitle'),
-                desc: t('insights.comebackDesc', { days: daysSince })
+              icon: <AlertCircle className="text-orange-500" />,
+              title: t('insights.comebackTitle'),
+              desc: t('insights.comebackDesc', { days: daysSince })
             })
+          }
         }
       }
 

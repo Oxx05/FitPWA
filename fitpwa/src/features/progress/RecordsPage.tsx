@@ -56,7 +56,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('personal_records')
-        .select('*')
+        .select('*, exercises:exercise_id(name, name_pt)')
         .eq('user_id', profile.id)
         .order('weight_kg', { ascending: false })
         .limit(50)
@@ -67,15 +67,19 @@ export function RecordsPage() {
       }
 
       return (data || []).map(pr => {
-        const exercise = EXERCISES.find(e => e.id === pr.exercise_id)
+        // Try to get name from hardcoded list first (slugs), then fallback to DB join name, then ID
+        const exerciseData = EXERCISES.find(e => e.id === pr.exercise_id)
+        const dbExercise = pr.exercises as unknown as { name: string; name_pt: string }
+        const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || pr.exercise_id
+
         return {
           id: pr.id,
           user_id: pr.user_id,
           exercise_id: pr.exercise_id,
-          exercise_name: exercise?.name || pr.exercise_id,
+          exercise_name: exerciseName,
           weight_kg: pr.weight_kg || 0,
           reps: pr.reps || 0,
-          date_set: pr.date_set
+          date_set: pr.date_set || pr.created_at || new Date().toISOString()
         }
       }) as PR[]
     }
@@ -87,7 +91,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('workout_history')
-        .select('*')
+        .select('*, exercises:exercise_id(name, name_pt)')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(100)
@@ -98,14 +102,17 @@ export function RecordsPage() {
       }
 
       return (data || []).map(h => {
-        const exercise = EXERCISES.find(e => e.id === h.exercise_id)
+        const exerciseData = EXERCISES.find(e => e.id === h.exercise_id)
+        const dbExercise = h.exercises as unknown as { name: string; name_pt: string }
+        const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || h.exercise_id
+
         return {
           id: h.id,
           exercise_id: h.exercise_id,
-          exercise_name: exercise?.name || h.exercise_id,
+          exercise_name: exerciseName,
           sets_completed: h.sets_completed || 0,
           duration_seconds: h.duration_seconds || 0,
-          created_at: h.created_at
+          created_at: h.created_at || new Date().toISOString()
         }
       }) as WorkoutHistory[]
     }
@@ -117,7 +124,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('personal_record_history')
-        .select('*')
+        .select('*, exercises:exercise_id(name, name_pt)')
         .eq('user_id', profile.id)
         .order('achieved_at', { ascending: false })
         .limit(50)
@@ -128,15 +135,18 @@ export function RecordsPage() {
       }
 
       return (data || []).map(pr => {
-        const exercise = EXERCISES.find(e => e.id === pr.exercise_id)
+        const exerciseData = EXERCISES.find(e => e.id === pr.exercise_id)
+        const dbExercise = pr.exercises as unknown as { name: string; name_pt: string }
+        const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || pr.exercise_id
+
         return {
           id: pr.id,
           exercise_id: pr.exercise_id,
-          exercise_name: exercise?.name || pr.exercise_id,
+          exercise_name: exerciseName,
           weight_kg: pr.weight_kg || 0,
           reps: pr.reps || 0,
           one_rep_max: pr.one_rep_max ?? null,
-          achieved_at: pr.achieved_at
+          achieved_at: pr.achieved_at || new Date().toISOString()
         }
       }) as PRHistory[]
     }
