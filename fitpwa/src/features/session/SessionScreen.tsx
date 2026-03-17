@@ -302,6 +302,7 @@ export function SessionScreen() {
     const exercise = exercises[currentExerciseIndex]
     if (exercise && shouldStartRest) {
       setRestTimer(exercise.restSeconds)
+      showToast(t('session.setCompletedSuccess'), 'success')
     }
   }
 
@@ -319,6 +320,7 @@ export function SessionScreen() {
         }
       })
     })))
+    showToast(t('session.copySetSuccess'), 'success')
   }
 
   const handleAddSet = () => {
@@ -340,6 +342,7 @@ export function SessionScreen() {
           }
         : ex
     ))
+    showToast(t('session.setAdded'), 'info')
   }
 
   const handleRemoveSet = (setId: string) => {
@@ -351,6 +354,7 @@ export function SessionScreen() {
           }
         : ex
     ))
+    showToast(t('session.setRemoved'), 'info')
   }
 
   const finishWorkout = async () => {
@@ -855,7 +859,7 @@ export function SessionScreen() {
 
                       <button
                         onClick={() => handleCompleteSet(set.id)}
-                        className={`w-14 sm:w-16 h-12 sm:h-14 flex items-center justify-center rounded-xl transition-all font-bold text-lg sm:text-xl shadow-sm ${
+                        className={`w-14 sm:w-16 h-12 sm:h-14 flex items-center justify-center rounded-xl transition-all font-bold text-lg sm:text-xl shadow-sm active:scale-95 ${
                           set.completed
                             ? 'bg-primary text-black shadow-primary/20 scale-[0.98]'
                             : 'bg-surface-200 border border-surface-100 text-gray-400 hover:bg-primary/20 hover:text-primary hover:border-primary/30'
@@ -895,7 +899,7 @@ export function SessionScreen() {
 
               <button
                 onClick={handleAddSet}
-                className="w-full h-10 border border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                className="w-full h-10 border border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar Série
@@ -1026,9 +1030,10 @@ export function SessionScreen() {
             initial={{ opacity: 0, scale: 0.9, y: 50 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 50 }}
-            className="fixed bottom-28 left-4 right-4 z-50 pointer-events-none"
+            className="fixed bottom-28 left-4 right-4 z-[70] pointer-events-none"
           >
-            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex flex-col gap-4 pointer-events-auto border-2 border-white/20">
+            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex flex-col gap-4 pointer-events-auto border-2 border-white/20 active:scale-[1.01] transition-transform"
+>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="bg-black/10 p-2 rounded-xl">
@@ -1056,7 +1061,7 @@ export function SessionScreen() {
                     <button
                       key={val}
                       onClick={() => setRestTimer(prev => Math.max(0, (prev ?? 0) + val))}
-                      className="flex-1 py-1 bg-black/10 hover:bg-black/20 rounded-lg text-xs font-bold transition-all active:scale-95"
+                      className="flex-1 py-1 bg-black/10 hover:bg-black/20 rounded-lg text-xs font-bold transition-all active:scale-90"
                     >
                       {val > 0 ? `+${val}` : val}s
                     </button>
@@ -1087,7 +1092,7 @@ export function SessionScreen() {
             variant="secondary"
             disabled={currentExerciseIndex === 0}
             onClick={() => setCurrentExerciseIndex(i => i - 1)}
-            className="flex-1 gap-2"
+            className="flex-1 gap-2 active:scale-95 transition-transform"
           >
             <ChevronLeft className="w-5 h-5" />
             {t('common.back')}
@@ -1096,7 +1101,7 @@ export function SessionScreen() {
           <Button
             variant={isRunning ? 'secondary' : 'ghost'}
             onClick={() => setIsRunning(!isRunning)}
-            className="flex-1 gap-2"
+            className="flex-1 gap-2 active:scale-95 transition-transform shadow-lg"
           >
             {isRunning ? (
               <>
@@ -1114,7 +1119,7 @@ export function SessionScreen() {
           <Button
             disabled={currentExerciseIndex === exercises.length - 1}
             onClick={() => setCurrentExerciseIndex(i => i + 1)}
-            className="flex-1 gap-2"
+            className="flex-1 gap-2 active:scale-95 transition-transform"
           >
             {t('common.next')}
             <ChevronRight className="w-5 h-5" />
@@ -1150,7 +1155,7 @@ export function SessionScreen() {
                 </button>
                 <button 
                   onClick={() => setIsFocusMode(false)}
-                  className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20"
+                  className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20 active:scale-90 transition-all"
                 >
                   <Minimize2 className="w-6 h-6" />
                 </button>
@@ -1211,7 +1216,7 @@ export function SessionScreen() {
                         <Button 
                           size="lg"
                           variant={activeSet.completed ? "secondary" : "primary"}
-                          className="h-20 rounded-3xl text-2xl font-black uppercase italic tracking-tighter"
+                          className="h-20 rounded-3xl text-2xl font-black uppercase italic tracking-tighter active:scale-95 transition-transform"
                           onClick={() => handleCompleteSet(activeSet.id)}
                         >
                           {activeSet.completed ? t('session.setCompleted') : t('session.completeSet')}

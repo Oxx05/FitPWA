@@ -218,9 +218,12 @@ const en = {
     nextSet: 'Next Set',
     remainingTime: 'Remaining Time',
     setsDone: 'Sets Completed',
-    trainingNow: 'Training now',
     completeSet: 'Complete Set',
     setCompleted: 'Set Completed ✓',
+    setCompletedSuccess: 'Set completed! Rest well.',
+    copySetSuccess: 'Previous set data copied.',
+    setAdded: 'New set added.',
+    setRemoved: 'Set removed.',
     startingVoice: 'Voice guide activated',
     cancelWorkout: 'Cancel Workout',
     cancelReason: {

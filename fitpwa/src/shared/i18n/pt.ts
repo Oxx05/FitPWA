@@ -221,6 +221,10 @@ const pt = {
     trainingNow: 'A treinar agora',
     completeSet: 'Completar Série',
     setCompleted: 'Série Concluída ✓',
+    setCompletedSuccess: 'Série completada! Descansa bem.',
+    copySetSuccess: 'Dados da série anterior copiados.',
+    setAdded: 'Nova série adicionada.',
+    setRemoved: 'Série removida.',
     startingVoice: 'Guia de voz activado',
     cancelWorkout: 'Cancelar Treino',
     cancelReason: {
