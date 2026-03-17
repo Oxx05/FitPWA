@@ -8,16 +8,6 @@ import { LeaderboardPage } from './LeaderboardPage'
 import { CommunityPage } from '../community/CommunityPage'
 import { motion, AnimatePresence } from 'framer-motion'
 
-interface SocialUser {
-  id: string
-  username: string
-  full_name?: string
-  avatar_url?: string
-  level?: number
-  is_following?: boolean
-  is_favorite?: boolean
-}
-
 export function FriendsPage() {
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
