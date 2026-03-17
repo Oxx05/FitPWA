@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Trophy, TrendingUp, Calendar, Zap, Bell } from 'lucide-react'
+import { Trophy, TrendingUp, Calendar, Zap, Bell, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { supabase } from '@/shared/lib/supabase'
@@ -247,7 +247,7 @@ export function RecordsPage() {
         <h2 className="text-2xl font-bold mb-4">Personal Records 🏆</h2>
         {prsLoading ? (
           <div className="flex justify-center p-12">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : prs && prs.length > 0 ? (
           <div className="space-y-3">
@@ -294,7 +294,7 @@ export function RecordsPage() {
         <h2 className="text-2xl font-bold mb-4">Histórico de PRs</h2>
         {prHistoryLoading ? (
           <div className="flex justify-center p-12">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : prHistory && prHistory.length > 0 ? (
           <div className="space-y-3">
@@ -335,7 +335,7 @@ export function RecordsPage() {
         <h2 className="text-2xl font-bold mb-4">Histórico de Treinos</h2>
         {historyLoading ? (
           <div className="flex justify-center p-12">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : history && history.length > 0 ? (
           <div className="space-y-3">

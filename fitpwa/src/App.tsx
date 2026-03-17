@@ -7,6 +7,8 @@ import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { ActiveSessionProvider } from '@/features/session/ActiveSessionProvider'
 import { Navbar } from '@/shared/components/Navbar'
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary'
+import { Loader2 } from 'lucide-react'
+import { ToastProvider } from '@/shared/contexts/ToastContext'
 
 const queryClient = new QueryClient()
 
@@ -30,7 +32,7 @@ const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').th
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background text-white">
-    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    <Loader2 className="w-8 h-8 text-primary animate-spin" />
   </div>
 )
 
@@ -38,6 +40,7 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+      <ToastProvider>
       <AuthProvider>
         <ActiveSessionProvider>
           <Router>
@@ -108,6 +111,7 @@ function App() {
           </Router>
         </ActiveSessionProvider>
       </AuthProvider>
+      </ToastProvider>
     </QueryClientProvider>
     </ErrorBoundary>
   )

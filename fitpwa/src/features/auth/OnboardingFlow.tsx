@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuthStore } from './authStore'
 import { supabase } from '@/shared/lib/supabase'
 
@@ -170,18 +171,21 @@ export function OnboardingFlow() {
             variant="ghost" 
             onClick={handleBack} 
             disabled={step === 1 || isLoading}
-            className={step === 1 ? 'invisible' : ''}
+            className={`gap-2 ${step === 1 ? 'invisible' : ''}`}
           >
+            <ChevronLeft className="w-4 h-4" />
             Voltar
           </Button>
 
           {step < 4 ? (
-            <Button onClick={handleNext} disabled={step === 1 && !name}>
+            <Button onClick={handleNext} disabled={step === 1 && !name} className="gap-2">
               Continuar
+              <ChevronRight className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={finishOnboarding} isLoading={isLoading}>
+            <Button onClick={finishOnboarding} isLoading={isLoading} className="gap-2">
               Começar a Treinar!
+              <ChevronRight className="w-4 h-4" />
             </Button>
           )}
         </div>

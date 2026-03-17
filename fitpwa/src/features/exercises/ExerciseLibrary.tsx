@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Search, Filter, SearchIcon } from 'lucide-react'
+import { Search, Filter, SearchIcon, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ExerciseCard } from './ExerciseCard'
 import { Input } from '@/shared/components/Input'
@@ -68,7 +68,7 @@ export function ExerciseLibrary() {
 
       {isLoading ? (
         <div className="flex justify-center p-12">
-          <span className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,7 +1,7 @@
 import { useAuthStore } from './authStore'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
-import { Trophy, Zap, Star, Gift } from 'lucide-react'
+import { Trophy, Zap, Star, Gift, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useEffect } from 'react'
@@ -69,9 +69,10 @@ export function LevelUpOverlay() {
 
         <Button 
           onClick={clearPendingLevelUp}
-          className="w-full bg-primary hover:bg-primary/90 text-black font-black uppercase italic"
+          className="w-full bg-primary hover:bg-primary/90 text-black font-black uppercase italic gap-2"
         >
           Continuar Jornada
+          <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
     </Modal>

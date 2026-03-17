@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Heart, Share2, Save, MessageCircle, Dumbbell } from 'lucide-react'
+import { Heart, Share2, Save, MessageCircle, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
@@ -140,12 +140,13 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
           <button
             key={sort}
             onClick={() => setSelectedSort(sort)}
-            className={`px-4 py-2 rounded-lg border transition-all capitalize ${
+            className={`px-4 py-2 rounded-xl border transition-all capitalize flex items-center gap-2 font-bold ${
               selectedSort === sort
                 ? 'bg-primary text-black border-primary'
                 : 'bg-surface-200 border-surface-100 text-white hover:border-primary/50'
             }`}
           >
+            {sort === 'trending' ? <Zap className="w-4 h-4" /> : sort === 'recent' ? <Clock className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             {sort === 'trending' ? 'Trending' : sort === 'recent' ? 'Recente' : 'Guardados'}
           </button>
         ))}
@@ -154,7 +155,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
       {/* Workouts Feed */}
       {isLoading ? (
         <div className="flex justify-center p-12">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : workouts && workouts.length > 0 ? (
         <div className="space-y-4">

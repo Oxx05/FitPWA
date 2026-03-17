@@ -10,10 +10,12 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { CustomSelect } from '@/shared/components/CustomSelect'
+import { useToast } from '@/shared/contexts/ToastContext'
 
 export function ProfilePage() {
   const { profile, user, signOut, isPremium } = useAuthStore()
   const { t, i18n } = useTranslation()
+  const { showToast } = useToast()
   const [showPublishModal, setShowPublishModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null)
@@ -37,7 +39,7 @@ export function ProfilePage() {
 
   const requestNotificationPermission = async () => {
     if (typeof Notification === 'undefined') {
-      alert(t('profile.browserNoNotifications'))
+      showToast(t('profile.browserNoNotifications'), 'error')
       return
     }
     const status = await Notification.requestPermission()

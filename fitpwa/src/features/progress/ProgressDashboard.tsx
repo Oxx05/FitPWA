@@ -6,7 +6,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { startOfWeek, subWeeks, isSameWeek, format } from 'date-fns'
 import { pt } from 'date-fns/locale'
-import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap, TrendingUp, TrendingDown } from 'lucide-react'
+import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap, TrendingUp, TrendingDown, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
@@ -222,7 +222,7 @@ export function ProgressDashboard() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-24 space-y-4">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
         <p className="text-gray-400 font-medium">A carregar progresso...</p>
       </div>
     )
@@ -501,7 +501,7 @@ export function ProgressDashboard() {
       >
         {isLoadingDetails ? (
           <div className="flex justify-center p-12">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : sessionDetails ? (
           <div className="space-y-6">

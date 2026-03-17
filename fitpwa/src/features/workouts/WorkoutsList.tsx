@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom'
-import { Plus, ChevronRight, Zap, Dumbbell, Layers } from 'lucide-react'
+import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { motion } from 'framer-motion'
@@ -80,7 +80,7 @@ export function WorkoutsList() {
       {/* My Workouts */}
       {isLoading ? (
         <div className="flex justify-center p-12">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent flex rounded-full animate-spin"></div>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (plans && plans.length > 0) ? (
         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">

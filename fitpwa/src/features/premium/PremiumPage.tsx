@@ -6,9 +6,11 @@ import { useAuthStore } from '../auth/authStore'
 import { createCheckoutSession } from '@/shared/lib/stripe'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useToast } from '@/shared/contexts/ToastContext'
 
 export function PremiumPage() {
   const { user, isPremium } = useAuthStore()
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const [useModal, setUseModal] = useState(() => (
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -22,6 +24,7 @@ export function PremiumPage() {
 
   const handleSubscribe = () => {
     if (!user) return
+    showToast('A redirecionar para o checkout... (Mock)', 'info')
     createCheckoutSession(user.id)
   }
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Maximize2, Minimize2, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Maximize2, Minimize2, Zap, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -693,7 +693,7 @@ export function SessionScreen() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     )
   }
@@ -703,7 +703,10 @@ export function SessionScreen() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold text-white mb-2">Sem exercícios</h1>
         <p className="text-gray-400 mb-4">Este plano não tem exercícios configurados.</p>
-        <Button onClick={() => navigate('/workouts')}>Voltar</Button>
+        <Button onClick={() => navigate('/workouts')} className="gap-2">
+          <ChevronLeft className="w-4 h-4" />
+          Voltar
+        </Button>
       </div>
     )
   }

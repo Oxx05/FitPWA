@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
-import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User, Share2 } from 'lucide-react'
+import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User, Share2, Loader2 } from 'lucide-react'
 import { LeaderboardPage } from './LeaderboardPage'
 import { CommunityPage } from '../community/CommunityPage'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useToast } from '@/shared/contexts/ToastContext'
 
 import { SocialFeed } from './components/SocialFeed'
 
@@ -25,6 +26,7 @@ export function FriendsPage() {
   const { t } = useTranslation()
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'mural' | 'social' | 'leaderboard' | 'community'>('mural')
 
@@ -109,7 +111,7 @@ export function FriendsPage() {
 
   if (isLoading) return (
     <div className="flex justify-center p-24">
-      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <Loader2 className="w-12 h-12 text-primary animate-spin" />
     </div>
   )
 
@@ -134,7 +136,7 @@ export function FriendsPage() {
                   navigator.share({ title: 'FitPWA', text, url })
                 } else {
                   navigator.clipboard.writeText(`${text} ${url}`)
-                  alert(t('social.inviteCopied'))
+                  showToast(t('social.inviteCopied'), 'success')
                 }
               }}
               className="bg-primary/10 border-primary/20 text-primary hover:bg-primary hover:text-black rounded-2xl px-6"

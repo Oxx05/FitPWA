@@ -11,7 +11,4 @@ export const PREMIUM_PRICE_ID = 'price_placeholder'
 export async function createCheckoutSession(userId: string) {
   // In a real app, this would call a Supabase Edge Function to create the session
   console.log('Redirecting to checkout for user:', userId)
-  
-  // Mocking the behavior for the prototype
-  alert('A redirecionar para o checkout do Stripe... (Mock)')
 }

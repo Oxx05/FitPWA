@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trophy, Star } from 'lucide-react'
+import { Trophy, Star, ChevronRight } from 'lucide-react'
 import type { Achievement } from './useAchievementsStore'
 
 interface LevelUpModalProps {
@@ -39,9 +39,10 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
 
             <button
               onClick={onClose}
-              className="w-full h-12 bg-primary text-black font-bold rounded-xl hover:bg-primary-hover active:scale-95 transition-all"
+              className="w-full h-12 bg-primary text-black font-bold rounded-xl hover:bg-primary-hover active:scale-95 transition-all flex items-center justify-center gap-2"
             >
               Continuar
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>
