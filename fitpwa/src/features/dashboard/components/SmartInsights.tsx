@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
 import { Lightbulb, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 
 export function SmartInsights() {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: insights, isLoading } = useQuery({
@@ -28,14 +30,14 @@ export function SmartInsights() {
         if (daysSince === 0) {
             list.push({
                 icon: <CheckCircle2 className="text-green-500" />,
-                title: 'Treino Concluído!',
-                desc: 'Estás no caminho certo. Descansa bem hoje.'
+                title: t('insights.doneTitle'),
+                desc: t('insights.doneDesc')
             })
         } else if (daysSince > 3) {
             list.push({
                 icon: <AlertCircle className="text-orange-500" />,
-                title: 'Hora de Voltar?',
-                desc: `Já não treinas há ${daysSince} dias. Vamos a isso!`
+                title: t('insights.comebackTitle'),
+                desc: t('insights.comebackDesc', { days: daysSince })
             })
         }
       }
@@ -52,8 +54,8 @@ export function SmartInsights() {
       if (!recentMuscles.has('Pernas') && !recentMuscles.has('Quadríceps')) {
           list.push({
               icon: <TrendingUp className="text-primary" />,
-              title: 'Sugestão: Pernas',
-              desc: 'Não treinaste pernas recentemente. Que tal um Leg Day?'
+              title: t('insights.legsTitle'),
+              desc: t('insights.legsDesc')
           })
       }
 
@@ -61,8 +63,8 @@ export function SmartInsights() {
       if (list.length === 0) {
           list.push({
               icon: <Lightbulb className="text-yellow-500" />,
-              title: 'Dica do Coach',
-              desc: 'Tenta manter a consistência de pelo menos 3x por semana.'
+              title: t('insights.genericTitle'),
+              desc: t('insights.genericDesc')
           })
       }
 
@@ -77,7 +79,7 @@ export function SmartInsights() {
     <div className="space-y-3">
       <div className="flex items-center gap-2 px-2">
         <Lightbulb className="w-4 h-4 text-primary" />
-        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Insights do Coach</h3>
+        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('insights.coachInsights')}</h3>
       </div>
       
       <div className="flex flex-col gap-3">

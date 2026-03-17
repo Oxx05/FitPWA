@@ -221,6 +221,53 @@ const pt = {
     friendRequests: 'Pedidos de Amizade',
     accept: 'Aceitar',
     reject: 'Rejeitar',
+    invite: 'Convidar',
+    inviteText: 'Junta-te a mim no FitPWA! @{{username}}. Vamos treinar juntos?',
+    inviteCopied: 'Link de convite copiado para o clipboard!',
+    feed: {
+      empty: 'O muro está vazio...',
+      followMore: 'Segue mais atletas para veres as suas conquistas!',
+      highlight: 'Destaque do Treino',
+      sessionFinished: 'Treino Concluído',
+      sessionCompleted: 'Sessão Concluída',
+      valueWeight: 'PESO (KG)',
+      valueVolume: 'VOLUME TOTAL (KG)',
+      inspiring: 'Inspirador',
+      congrats: 'Parabéns',
+    }
+  },
+
+  // ─── Evolution ───
+  evolution: {
+    history: 'Histórico de Performance',
+    max1rm: 'Max 1RM Atual',
+    xpEstimated: 'XP Estimado',
+    proPrediction: 'Previsão Pro',
+    proPredictionDesc: 'Com base no teu ritmo, atingirás os 100kg em 3-4 semanas se mantiveres a consistência.',
+    noData: 'Sem dados históricos',
+    completeWorkouts: 'Completa treinos com este exercício para veres a evolução!',
+  },
+
+  // ─── Challenge ───
+  challenge: {
+    title: 'Desafio Global',
+    subtitle: 'Unidos pelo Ferro',
+    weeklyVolume: 'Volume Coletivo Semanal',
+    yourContribution: 'O teu contributo',
+    motivation: 'Cada kg conta! Continua a treinar para batermos a meta.',
+  },
+
+  // ─── Insights ───
+  insights: {
+    coachInsights: 'Insights do Coach',
+    doneTitle: 'Treino Concluído!',
+    doneDesc: 'Estás no caminho certo. Descansa bem hoje.',
+    comebackTitle: 'Hora de Voltar?',
+    comebackDesc: 'Já não treinas há {{days}} dias. Vamos a isso!',
+    legsTitle: 'Sugestão: Pernas',
+    legsDesc: 'Não treinaste pernas recentemente. Que tal um Leg Day?',
+    genericTitle: 'Dica do Coach',
+    genericDesc: 'Tenta manter a consistência de pelo menos 3x por semana.',
   },
 
   // ─── Progress ───

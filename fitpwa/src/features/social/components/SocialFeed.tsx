@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Trophy, TrendingUp, Calendar, Heart } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { ConquestCard } from '@/shared/components/ConquestCard'
 
 export function SocialFeed() {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: feedItems, isLoading } = useQuery({
@@ -59,8 +61,8 @@ export function SocialFeed() {
     return (
       <div className="text-center py-20 bg-surface-200/20 rounded-[2.5rem] border-2 border-dashed border-white/5">
         <Trophy className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-        <p className="text-gray-500 font-bold italic uppercase tracking-widest text-sm">O muro está vazio...</p>
-        <p className="text-xs text-gray-600 mt-2">Segue mais atletas para veres as suas conquistas!</p>
+        <p className="text-gray-500 font-bold italic uppercase tracking-widest text-sm">{t('social.feed.empty')}</p>
+        <p className="text-xs text-gray-600 mt-2">{t('social.feed.followMore')}</p>
       </div>
     )
   }
@@ -76,10 +78,10 @@ export function SocialFeed() {
         })[0]
 
         const hasBest = !!bestSet
-        const title = hasBest ? "Destaque do Treino" : "Treino Concluído"
-        const subtitle = bestSet?.exercise_name || "Sessão Concluída"
+        const title = hasBest ? t('social.feed.highlight') : t('social.feed.sessionFinished')
+        const subtitle = bestSet?.exercise_name || t('social.feed.sessionCompleted')
         const value = bestSet?.weight_kg ? `${bestSet.weight_kg}` : `${Math.round(session.total_volume)}`
-        const label = bestSet?.weight_kg ? "PESO (KG)" : "VOLUME TOTAL (KG)"
+        const label = bestSet?.weight_kg ? t('social.feed.valueWeight') : t('social.feed.valueVolume')
 
         return (
           <motion.div
@@ -115,11 +117,11 @@ export function SocialFeed() {
               <div className="flex gap-4 mt-6">
                  <button className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95 group">
                     <Heart className="w-4 h-4 group-hover:fill-primary group-hover:stroke-primary" />
-                    <span>Inspirador</span>
+                    <span>{t('social.feed.inspiring')}</span>
                  </button>
                  <button className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95">
                     <TrendingUp className="w-4 h-4" />
-                    <span>Parabéns</span>
+                    <span>{t('social.feed.congrats')}</span>
                  </button>
               </div>
             </div>

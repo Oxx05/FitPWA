@@ -221,6 +221,53 @@ const en = {
     friendRequests: 'Friend Requests',
     accept: 'Accept',
     reject: 'Reject',
+    invite: 'Invite',
+    inviteText: 'Join me on FitPWA! @{{username}}. Shall we train together?',
+    inviteCopied: 'Invite link copied to clipboard!',
+    feed: {
+      empty: 'The wall is empty...',
+      followMore: 'Follow more athletes to see their achievements!',
+      highlight: 'Workout Highlight',
+      sessionFinished: 'Workout Completed',
+      sessionCompleted: 'Session Completed',
+      valueWeight: 'WEIGHT (KG)',
+      valueVolume: 'TOTAL VOLUME (KG)',
+      inspiring: 'Inspiring',
+      congrats: 'Congrats',
+    }
+  },
+
+  // ─── Evolution ───
+  evolution: {
+    history: 'Performance History',
+    max1rm: 'Current Max 1RM',
+    xpEstimated: 'Estimated XP',
+    proPrediction: 'Pro Prediction',
+    proPredictionDesc: 'Based on your pace, you will hit 100kg in 3-4 weeks if you stay consistent.',
+    noData: 'No historical data',
+    completeWorkouts: 'Complete workouts with this exercise to see evolution!',
+  },
+
+  // ─── Challenge ───
+  challenge: {
+    title: 'Global Challenge',
+    subtitle: 'United by Iron',
+    weeklyVolume: 'Weekly Collective Volume',
+    yourContribution: 'Your contribution',
+    motivation: 'Every kg counts! Keep training to hit the goal.',
+  },
+
+  // ─── Insights ───
+  insights: {
+    coachInsights: 'Coach Insights',
+    doneTitle: 'Workout Completed!',
+    doneDesc: "You're on the right track. Rest well today.",
+    comebackTitle: 'Time to Come Back?',
+    comebackDesc: "You haven't trained for {{days}} days. Let's go!",
+    legsTitle: 'Suggestion: Legs',
+    legsDesc: "You haven't trained legs recently. How about a Leg Day?",
+    genericTitle: 'Coach Tip',
+    genericDesc: 'Try to maintain consistency of at least 3x per week.',
   },
 
   // ─── Progress ───

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
@@ -21,6 +22,7 @@ interface SocialProfile {
 }
 
 export function FriendsPage() {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
@@ -126,19 +128,19 @@ export function FriendsPage() {
               variant="secondary"
               size="sm"
               onClick={() => {
-                const text = `Junta-te a mim no FitPWA! @${profile?.username}. Vamos treinar juntos?`
+                const text = t('social.inviteText', { username: profile?.username })
                 const url = window.location.origin
                 if (navigator.share) {
                   navigator.share({ title: 'FitPWA', text, url })
                 } else {
                   navigator.clipboard.writeText(`${text} ${url}`)
-                  alert('Link de convite copiado para o clipboard!')
+                  alert(t('social.inviteCopied'))
                 }
               }}
               className="bg-primary/10 border-primary/20 text-primary hover:bg-primary hover:text-black rounded-2xl px-6"
             >
               <Share2 className="w-4 h-4 mr-2" />
-              <span className="uppercase text-[10px] font-black">Convidar</span>
+              <span className="uppercase text-[10px] font-black">{t('social.invite')}</span>
             </Button>
           </div>
         </motion.div>

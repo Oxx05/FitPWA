@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Trophy, Users, Zap, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 
 export function CommunityChallenge() {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: challengeData, isLoading } = useQuery({
@@ -54,8 +56,8 @@ export function CommunityChallenge() {
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white italic uppercase tracking-tighter">Desafio Global</h3>
-              <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Unidos pelo Ferro</p>
+              <h3 className="text-lg font-black text-white italic uppercase tracking-tighter">{t('challenge.title')}</h3>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest">{t('challenge.subtitle')}</p>
             </div>
           </div>
           <div className="text-right">
@@ -67,7 +69,7 @@ export function CommunityChallenge() {
 
         <div className="space-y-4">
           <div>
-            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Volume Coletivo Semanal</p>
+            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">{t('challenge.weeklyVolume')}</p>
             <p className="text-3xl font-black text-white italic tracking-tighter">
               {Math.round((challengeData?.totalValue || 0) / 1000)}k <span className="text-sm text-gray-500">/ 1M kg</span>
             </p>
@@ -86,14 +88,14 @@ export function CommunityChallenge() {
              <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 <div>
-                   <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest">O teu contributo</p>
+                   <p className="text-[8px] text-gray-500 font-black uppercase tracking-widest">{t('challenge.yourContribution')}</p>
                    <p className="text-sm font-black text-white italic">{Math.round(challengeData?.userContribution || 0)} kg</p>
                 </div>
              </div>
              <div className="flex items-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/5">
                 <Zap className="w-5 h-5 text-primary animate-pulse" />
                 <p className="text-[10px] text-gray-400 font-medium leading-tight">
-                  Cada kg conta! Continua a treinar para batermos a meta.
+                  {t('challenge.motivation')}
                 </p>
              </div>
           </div>

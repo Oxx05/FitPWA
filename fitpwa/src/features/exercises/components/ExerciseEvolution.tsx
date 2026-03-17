@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { TrendingUp, Award, Zap } from 'lucide-react'
@@ -16,6 +17,7 @@ interface ExerciseEvolutionProps {
 }
 
 export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutionProps) {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: evolutionData, isLoading } = useQuery({
@@ -65,8 +67,8 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
     return (
       <div className="text-center py-12 bg-surface-200/20 rounded-3xl border border-dashed border-white/5">
         <TrendingUp className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs italic">Sem dados históricos</p>
-        <p className="text-[10px] text-gray-600 mt-2">Completa treinos com este exercício para veres a evolução!</p>
+        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs italic">{t('evolution.noData')}</p>
+        <p className="text-[10px] text-gray-600 mt-2">{t('evolution.completeWorkouts')}</p>
       </div>
     )
   }
@@ -81,13 +83,13 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
          <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-1">{exerciseName}</h3>
          <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-primary" />
-            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Histórico de Performance</span>
+            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{t('evolution.history')}</span>
          </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-surface-200/50 p-4 rounded-2xl border border-white/5">
-          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">Max 1RM Atual</p>
+          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{t('evolution.max1rm')}</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-white italic">{latest.oneRepMax}</span>
             <span className="text-xs text-gray-500 font-bold">kg</span>
@@ -100,7 +102,7 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
           )}
         </div>
         <div className="bg-surface-200/50 p-4 rounded-2xl border border-white/5">
-          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">XP Estimado</p>
+          <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{t('evolution.xpEstimated')}</p>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-primary italic">{Math.round(latest.volume / 10)}</span>
             <Zap className="w-3 h-3 text-primary" />
@@ -141,8 +143,8 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
              <Award className="w-6 h-6" />
           </div>
           <div>
-             <p className="text-xs font-black text-white italic uppercase tracking-tight">Previsão Pro</p>
-             <p className="text-[10px] text-gray-400 font-medium">Com base no teu ritmo, atingirás os 100kg em 3-4 semanas se mantiveres a consistência.</p>
+             <p className="text-xs font-black text-white italic uppercase tracking-tight">{t('evolution.proPrediction')}</p>
+             <p className="text-[10px] text-gray-400 font-medium">{t('evolution.proPredictionDesc')}</p>
           </div>
       </div>
     </div>
