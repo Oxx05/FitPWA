@@ -17,6 +17,7 @@ export interface AchievementStats {
   streakDays: number
   sessionVolume: number
   isEarly: boolean
+  totalXP?: number
 }
 
 interface AchievementsState {
@@ -69,11 +70,16 @@ export const useAchievementsStore = create<AchievementsState>()(
 
           if (met) {
             newUnlocks.push(achievement)
-            // Persist to Supabase
-            await supabase.from('user_achievements').insert({
-              user_id: userId,
-              achievement_id: achievement.id
-            })
+            // Persist to Supabase and handle errors
+            try {
+              const { error } = await supabase.from('user_achievements').insert({
+                user_id: userId,
+                achievement_id: achievement.id
+              })
+              if (error) console.error('Error saving achievement:', error)
+            } catch (e) {
+              console.error('Failed to persist achievement:', e)
+            }
           }
         }
 

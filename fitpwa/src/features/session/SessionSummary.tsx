@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { CheckCircle, Share2, TrendingUp } from 'lucide-react'
+import { CheckCircle, Share2, TrendingUp, Trophy } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
+import { Modal } from '@/shared/components/Modal'
+import { ConquestCard } from '@/shared/components/ConquestCard'
 
 export function SessionSummary() {
   const location = useLocation()
@@ -11,11 +13,14 @@ export function SessionSummary() {
   const newPrs = (location.state?.newPrs || []) as Array<{ exerciseName: string; weight: number; reps: number; oneRepMax?: number; exerciseId?: string }>
 
   const [mood, setMood] = useState<string | null>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
   
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
     return `${m} min`
   }
+
+  const bestPr = newPrs.length > 0 ? newPrs.sort((a, b) => (b.oneRepMax || 0) - (a.oneRepMax || 0))[0] : null
   
   return (
     <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-8 pb-24 text-center mt-12 animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -27,37 +32,38 @@ export function SessionSummary() {
       </div>
 
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent italic">
           Treino Concluído!
         </h1>
-        <p className="text-primary font-bold mt-2 text-xl">+ {xpGained} XP</p>
+        <p className="text-primary font-bold mt-2 text-xl tracking-tighter italic">+ {xpGained} XP</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-left">
-        <div className="bg-surface-200 p-4 rounded-xl border border-surface-100">
-          <p className="text-gray-400 text-sm">Duração</p>
-          <p className="text-2xl font-bold text-white">{formatTime(duration)}</p>
+        <div className="bg-surface-200 p-4 rounded-xl border border-white/5 shadow-lg">
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Duração</p>
+          <p className="text-2xl font-black text-white italic">{formatTime(duration)}</p>
         </div>
-        <div className="bg-surface-200 p-4 rounded-xl border border-surface-100">
-          <p className="text-gray-400 text-sm">Volume Total</p>
-          <p className="text-2xl font-bold text-white">{stats.volume.toLocaleString()} kg</p>
+        <div className="bg-surface-200 p-4 rounded-xl border border-white/5 shadow-lg">
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Volume Total</p>
+          <p className="text-2xl font-black text-white italic">{stats.volume.toLocaleString()} kg</p>
         </div>
       </div>
 
-      <div className="bg-surface-200 p-6 rounded-2xl border border-pr/50 text-left">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="text-pr w-6 h-6" />
-          <h3 className="font-bold text-lg text-white">Novos PRs!</h3>
+      <div className="bg-surface-200 p-6 rounded-3xl border border-primary/20 text-left relative overflow-hidden group">
+        <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
+        <div className="flex items-center gap-2 mb-4 relative z-10">
+          <TrendingUp className="text-primary w-6 h-6" />
+          <h3 className="font-black text-lg text-white italic uppercase tracking-tighter">Novos PRs!</h3>
         </div>
         {newPrs.length > 0 ? (
-          <ul className="space-y-3">
+          <ul className="space-y-3 relative z-10">
             {newPrs.map((pr, idx) => (
               <li
                 key={`${pr.exerciseName}-${idx}`}
-                className={`flex justify-between items-center text-sm ${idx < newPrs.length - 1 ? 'border-b border-surface-100 pb-2' : ''}`}
+                className={`flex justify-between items-center text-sm ${idx < newPrs.length - 1 ? 'border-b border-white/5 pb-2' : ''}`}
               >
-                <span className="text-gray-300">{pr.exerciseName}</span>
-                <span className="font-bold text-pr">
+                <span className="text-gray-300 font-bold">{pr.exerciseName}</span>
+                <span className="font-black text-primary italic">
                   {pr.weight}kg x {pr.reps}
                   {pr.oneRepMax ? ` · 1RM ${Math.round(pr.oneRepMax)}kg` : ''}
                 </span>
@@ -65,18 +71,18 @@ export function SessionSummary() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400">Sem novos PRs nesta sessão.</p>
+          <p className="text-sm text-gray-500 font-medium italic">Sem novos PRs nesta sessão.</p>
         )}
       </div>
 
-      <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100">
-        <h3 className="text-white font-medium mb-4">Como te sentiste hoje?</h3>
+      <div className="bg-surface-200 p-6 rounded-3xl border border-white/5 shadow-md">
+        <h3 className="text-white font-black italic uppercase tracking-tighter mb-4">Como te sentiste hoje?</h3>
         <div className="flex justify-around text-4xl">
           {['😫', '😕', '😐', '🙂', '🤩'].map(emoji => (
             <button
               key={emoji}
               onClick={() => setMood(emoji)}
-              className={`hover:scale-125 transition-transform ${mood === emoji ? 'scale-125 drop-shadow-md' : 'opacity-50 grayscale'}`}
+              className={`hover:scale-125 transition-transform ${mood === emoji ? 'scale-125 drop-shadow-md drop-shadow-primary/50' : 'opacity-30 grayscale'}`}
             >
               {emoji}
             </button>
@@ -85,17 +91,40 @@ export function SessionSummary() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <Button className="w-full text-black font-bold h-14">
+        <Button 
+          onClick={() => setShowShareModal(true)}
+          className="w-full text-black font-black h-14 uppercase tracking-tighter italic text-lg"
+        >
           <Share2 className="w-5 h-5 mr-2" />
           Partilhar Resultado
         </Button>
         <Link to="/dashboard">
-          <Button variant="ghost" className="w-full text-gray-400 hover:text-white">
+          <Button variant="ghost" className="w-full text-gray-500 hover:text-white font-black uppercase tracking-tight">
             Finalizar
           </Button>
         </Link>
       </div>
 
+      <Modal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title="Partilhar Conquista"
+        size="md"
+        closeButton
+      >
+        <div className="flex flex-col items-center">
+          <ConquestCard 
+            title={bestPr ? "Novo Recorde!" : "Treino Concluído"}
+            subtitle={bestPr ? bestPr.exerciseName : "FitPWA Session"}
+            value={bestPr ? `${Math.round(bestPr.oneRepMax || 0)}` : `${stats.volume}`}
+            label={bestPr ? "1RM ESTIMADO (kg)" : "VOLUME TOTAL (kg)"}
+            achievementIcon={bestPr ? <Trophy className="w-10 h-10" /> : <TrendingUp className="w-10 h-10" />}
+          />
+          <p className="text-[10px] text-gray-500 mt-4 uppercase font-black tracking-widest">
+            Dica: Guarda a imagem para partilhar no Instagram Stories!
+          </p>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Maximize2, Minimize2, Zap } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
+import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
+import { useVoiceGuide } from '@/shared/hooks/useVoiceGuide'
 import { supabase } from '@/shared/lib/supabase'
 import { calculateEstimated1RM } from '@/shared/lib/calculations'
 import { OfflineSyncService } from '@/shared/lib/offlineSync'
 import { useAuthStore } from '@/features/auth/authStore'
 import { XP_PER_EXERCISE, XP_PER_SET, XP_PER_WORKOUT, XP_STREAK_MULTIPLIER } from '@/shared/utils/gamification'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   clearSpotifyToken,
   exchangeSpotifyCode,
@@ -67,6 +70,23 @@ export function SessionScreen() {
   const [spotifyPlaying, setSpotifyPlaying] = useState<boolean | null>(null)
   const [spotifyTrack, setSpotifyTrack] = useState<{ name: string; artist: string; albumArt?: string } | null>(null)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const { speak } = useVoiceGuide()
+
+  // Effect to announce rest end or new exercise
+  useEffect(() => {
+    if (!voiceEnabled) return
+
+    if (restTimer === 0) {
+      speak('Descanso terminado. Próxima série agora!')
+    }
+  }, [restTimer, voiceEnabled, speak])
+
+  useEffect(() => {
+    if (!voiceEnabled) return
+    speak(`Próximo exercício: ${currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`)
+  }, [currentExerciseIndex, voiceEnabled, speak])
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ type, message })
@@ -99,7 +119,7 @@ export function SessionScreen() {
     }
     const interval = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
     return () => clearInterval(interval)
-  }, [restTimer])
+  }, [restTimer, t])
 
   // Load plan data
   useEffect(() => {
@@ -246,12 +266,12 @@ export function SessionScreen() {
       : `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleSetChange = (setId: string, field: 'weight' | 'reps' | 'notes', value: string) => {
+  const handleSetChange = (setId: string, field: 'weight' | 'reps' | 'notes', value: number | string | null) => {
     setExercises(prev => prev.map(ex => ({
       ...ex,
       sets: ex.sets.map(set =>
         set.id === setId
-          ? { ...set, [field]: field === 'notes' ? value : (value ? parseFloat(value) : null) }
+          ? { ...set, [field]: value }
           : set
       )
     })))
@@ -696,6 +716,13 @@ export function SessionScreen() {
             <p className="text-sm text-gray-400">{currentExerciseIndex + 1} / {exercises.length}</p>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsFocusMode(!isFocusMode)}
+              className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
+              title={isFocusMode ? "Sair Modo Foco" : "Modo Foco Imersivo"}
+            >
+              {isFocusMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
             <div className="text-right flex items-center gap-3">
               {restTimer !== null && (
                 <div 
@@ -789,20 +816,18 @@ export function SessionScreen() {
 
                       <div className="flex-1 flex gap-2">
                         <div className="relative flex-1">
-                          <input
-                            type="number"
-                            value={set.weight || ''}
-                            onChange={e => handleSetChange(set.id, 'weight', e.target.value)}
+                          <DebouncedNumericInput
+                            value={set.weight}
+                            onChange={val => handleSetChange(set.id, 'weight', val)}
                             className={`w-full h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-lg sm:text-xl placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
                             placeholder="kg"
                           />
                         </div>
                         <div className="flex items-center justify-center text-gray-500 font-bold opacity-50">×</div>
                         <div className="relative flex-1">
-                          <input
-                            type="number"
-                            value={set.reps || ''}
-                            onChange={e => handleSetChange(set.id, 'reps', e.target.value)}
+                          <DebouncedNumericInput
+                            value={set.reps}
+                            onChange={val => handleSetChange(set.id, 'reps', val)}
                             className={`w-full h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-lg sm:text-xl placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
                             placeholder="reps"
                           />
@@ -976,6 +1001,37 @@ export function SessionScreen() {
         )}
       </main>
 
+      <AnimatePresence>
+        {restTimer !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 50 }}
+            className="fixed bottom-28 left-4 right-4 z-50 pointer-events-none"
+          >
+            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex items-center justify-between pointer-events-auto border-2 border-white/20">
+              <div className="flex items-center gap-4">
+                <div className="bg-black/10 p-2 rounded-xl">
+                  <Clock className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-widest opacity-60">Descanso em curso</p>
+                  <p className="text-3xl font-black italic tabular-nums leading-none">
+                    {formatTime(restTimer)}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setRestTimer(null)}
+                className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-xl font-black uppercase text-xs transition-colors"
+              >
+                Ignorar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {toast && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border ${
           toast.type === 'success'
@@ -1029,6 +1085,128 @@ export function SessionScreen() {
           </Button>
         </div>
       </div>
+
+      {/* Focus Mode Overlay */}
+      <AnimatePresence>
+        {isFocusMode && (
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-[60] bg-[#0A0A0B] flex flex-col p-6"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-black font-black text-sm">FP</div>
+                <span className="text-xs font-black text-white uppercase tracking-widest italic">MODO FOCO</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    const next = !voiceEnabled
+                    setVoiceEnabled(next)
+                    if (next) speak('Guia de voz activado')
+                  }}
+                  className={`p-3 rounded-2xl transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
+                  title="Guia de Voz"
+                >
+                  <Zap className={`w-6 h-6 ${voiceEnabled ? 'animate-pulse' : ''}`} />
+                </button>
+                <button 
+                  onClick={() => setIsFocusMode(false)}
+                  className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20"
+                >
+                  <Minimize2 className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-grow flex flex-col justify-center gap-8 max-w-lg mx-auto w-full">
+              <div className="text-center space-y-2">
+                <p className="text-primary font-black uppercase tracking-widest text-xs">A treinar agora</p>
+                <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">
+                  {currentExercise.name}
+                </h2>
+                <div className="inline-flex bg-surface-200 px-6 py-2 rounded-full border border-white/10 gap-6">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">Objetivo</span>
+                      <span className="text-sm text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} reps</span>
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">Resto</span>
+                      <span className="text-sm text-white font-black">{currentExercise.restSeconds}s</span>
+                   </div>
+                </div>
+              </div>
+
+              {/* Huge Active Set Display */}
+              <div className="bg-surface-200 border-2 border-primary/20 p-8 rounded-[40px] shadow-2xl shadow-primary/5 flex flex-col gap-8">
+                 {(() => {
+                    const activeSet = currentExercise.sets.find(s => !s.completed) || currentExercise.sets[currentExercise.sets.length - 1]
+                    return (
+                      <>
+                        <div className="flex justify-between items-center px-4">
+                          <span className="text-gray-500 font-black text-sm uppercase">Série {activeSet.setNumber}</span>
+                          {restTimer !== null && (
+                            <span className="text-primary font-black animate-pulse">DESCANSO: {formatTime(restTimer)}</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                           <div className="flex-1 space-y-2">
+                             <p className="text-xs font-bold text-gray-500 uppercase text-center">Peso (kg)</p>
+                             <DebouncedNumericInput
+                                value={activeSet.weight}
+                                onChange={val => handleSetChange(activeSet.id, 'weight', val)}
+                                className="w-full h-24 bg-background border-2 border-surface-100 rounded-3xl text-center text-5xl font-black text-white focus:border-primary transition-all"
+                             />
+                           </div>
+                           <div className="text-4xl font-black text-gray-700 mt-6">×</div>
+                           <div className="flex-1 space-y-2">
+                             <p className="text-xs font-bold text-gray-500 uppercase text-center">Reps</p>
+                             <DebouncedNumericInput
+                                value={activeSet.reps}
+                                onChange={val => handleSetChange(activeSet.id, 'reps', val)}
+                                className="w-full h-24 bg-background border-2 border-surface-100 rounded-3xl text-center text-5xl font-black text-white focus:border-primary transition-all"
+                             />
+                           </div>
+                        </div>
+
+                        <Button 
+                          size="lg"
+                          variant={activeSet.completed ? "secondary" : "primary"}
+                          className="h-20 rounded-3xl text-2xl font-black uppercase italic tracking-tighter"
+                          onClick={() => handleCompleteSet(activeSet.id)}
+                        >
+                          {activeSet.completed ? "Série Concluída ✓" : "Completar Série"}
+                        </Button>
+                      </>
+                    )
+                 })()}
+              </div>
+            </div>
+
+            <div className="mt-auto flex justify-between gap-4 pt-8">
+              <Button 
+                variant="ghost" 
+                className="flex-1 h-16 rounded-2xl text-gray-400 font-black uppercase"
+                disabled={currentExerciseIndex === 0}
+                onClick={() => setCurrentExerciseIndex(i => i - 1)}
+              >
+                Anterior
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="flex-1 h-16 rounded-2xl text-white font-black uppercase border border-white/10"
+                disabled={currentExerciseIndex === exercises.length - 1}
+                onClick={() => setCurrentExerciseIndex(i => i + 1)}
+              >
+                Próximo Exercício
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Finish Modal */}
       <Modal

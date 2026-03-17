@@ -3,16 +3,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
-import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User } from 'lucide-react'
+import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User, Share2 } from 'lucide-react'
 import { LeaderboardPage } from './LeaderboardPage'
 import { CommunityPage } from '../community/CommunityPage'
 import { motion, AnimatePresence } from 'framer-motion'
+
+import { SocialFeed } from './components/SocialFeed'
+
+interface SocialProfile {
+  id: string
+  username: string
+  full_name?: string
+  avatar_url?: string
+  level?: number
+  is_following?: boolean
+  is_favorite?: boolean
+}
 
 export function FriendsPage() {
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'social' | 'leaderboard' | 'community'>('social')
+  const [activeTab, setActiveTab] = useState<'mural' | 'social' | 'leaderboard' | 'community'>('mural')
 
   // Fetch following, followers, and favorites
   const { data: socialData, isLoading } = useQuery({
@@ -28,15 +40,15 @@ export function FriendsPage() {
 
       const favoritesSet = new Set((favoritesRes.data || []).map(f => f.favorite_profile_id))
 
-      const following = (followingRes.data || []).map(f => ({
-        ...(f.profiles as any),
+      const following: SocialProfile[] = (followingRes.data || []).map(f => ({
+        ...(f.profiles as unknown as SocialProfile),
         is_following: true,
-        is_favorite: favoritesSet.has((f.profiles as any).id)
+        is_favorite: favoritesSet.has((f.profiles as unknown as { id: string }).id)
       }))
 
-      const followers = (followersRes.data || []).map(f => ({
-        ...(f.profiles as any),
-        is_following: following.some(fol => fol.id === (f.profiles as any).id)
+      const followers: SocialProfile[] = (followersRes.data || []).map(f => ({
+        ...(f.profiles as unknown as SocialProfile),
+        is_following: following.some(fol => fol.id === (f.profiles as unknown as { id: string }).id)
       }))
 
       return { following, followers, favorites: following.filter(f => f.is_favorite) }
@@ -103,23 +115,46 @@ export function FriendsPage() {
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
       <div className="flex flex-col gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
-            Social
-          </h1>
-          <p className="text-gray-400 mt-2">Segue outros atletas e compara o teu progresso.</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-black italic uppercase tracking-tighter bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
+                Social Hub
+              </h1>
+              <p className="text-gray-400 mt-2">Segue outros atletas e celebra as suas conquistas.</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const text = `Junta-te a mim no FitPWA! @${profile?.username}. Vamos treinar juntos?`
+                const url = window.location.origin
+                if (navigator.share) {
+                  navigator.share({ title: 'FitPWA', text, url })
+                } else {
+                  navigator.clipboard.writeText(`${text} ${url}`)
+                  alert('Link de convite copiado para o clipboard!')
+                }
+              }}
+              className="bg-primary/10 border-primary/20 text-primary hover:bg-primary hover:text-black rounded-2xl px-6"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              <span className="uppercase text-[10px] font-black">Convidar</span>
+            </Button>
+          </div>
         </motion.div>
         
         {/* Modern Tabs */}
-        <div className="flex bg-surface-200/50 backdrop-blur-md p-1.5 rounded-2xl w-fit border border-white/5">
+        <div className="flex flex-wrap gap-2 bg-surface-200/50 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-fit border border-white/5">
           {[
-            { id: 'social', label: 'Seguidores', icon: Users },
+            { id: 'mural', label: 'Feed Mural', icon: Globe },
+            { id: 'social', label: 'Amigos', icon: Users },
             { id: 'leaderboard', label: 'Ranking', icon: Trophy },
             { id: 'community', label: 'Comunidade', icon: Globe }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all uppercase tracking-tighter ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all uppercase tracking-tighter whitespace-nowrap ${
                 activeTab === tab.id ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -131,6 +166,17 @@ export function FriendsPage() {
       </div>
 
       <AnimatePresence mode="wait">
+        {activeTab === 'mural' && (
+          <motion.div
+            key="mural"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+          >
+            <SocialFeed />
+          </motion.div>
+        )}
+
         {activeTab === 'social' && (
           <motion.div 
             key="social"
@@ -158,7 +204,7 @@ export function FriendsPage() {
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute top-full left-0 right-0 mt-3 bg-surface-300 border border-white/10 rounded-3xl overflow-hidden shadow-2xl z-50 backdrop-blur-xl"
                   >
-                    {searchResults.map((user: any) => (
+                    {searchResults.map((user: SocialProfile) => (
                       <div key={user.id} className="flex items-center justify-between p-5 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center font-black text-black">
@@ -193,7 +239,7 @@ export function FriendsPage() {
                   Favoritos
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {socialData.favorites.map((user: any) => (
+                  {socialData.favorites.map((user: SocialProfile) => (
                     <motion.div 
                       whileHover={{ scale: 1.02 }}
                       key={user.id} 
@@ -227,7 +273,7 @@ export function FriendsPage() {
                 <h2 className="text-xl font-black italic uppercase tracking-tighter">A seguir ({socialData?.following?.length || 0})</h2>
                 <div className="space-y-3">
                   {socialData?.following && socialData.following.length > 0 ? (
-                    socialData.following.map((user: any) => (
+                    socialData.following.map((user: SocialProfile) => (
                       <div key={user.id} className="bg-surface-200/20 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:bg-surface-200/40 transition-all">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-white/50 group-hover:text-primary transition-colors">
@@ -267,7 +313,7 @@ export function FriendsPage() {
                 <h2 className="text-xl font-black italic uppercase tracking-tighter">Seguidores ({socialData?.followers?.length || 0})</h2>
                 <div className="space-y-3">
                   {socialData?.followers && socialData.followers.length > 0 ? (
-                    socialData.followers.map((user: any) => (
+                    socialData.followers.map((user: SocialProfile) => (
                       <div key={user.id} className="bg-surface-200/20 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:bg-surface-200/40 transition-all">
                         <div className="flex items-center gap-4">
                            <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-white/50 shadow-inner">

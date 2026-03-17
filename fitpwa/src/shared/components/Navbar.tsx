@@ -9,6 +9,7 @@ function SyncStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [pendingCount, setPendingCount] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -19,8 +20,14 @@ function SyncStatus() {
 
     const checkPending = async () => {
       const count = await OfflineSyncService.getSyncQueueSize()
+      
+      // If count was > 0 and now is 0, show success briefly
+      if (pendingCount > 0 && count === 0 && isOnline) {
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+      }
+      
       setPendingCount(count)
-      // If we are online and have pending, we are likely syncing or about to
       setIsSyncing(count > 0 && navigator.onLine)
     }
 
@@ -32,7 +39,7 @@ function SyncStatus() {
       window.removeEventListener('offline', handleOffline)
       clearInterval(interval)
     }
-  }, [])
+  }, [pendingCount, isOnline])
 
   if (!isOnline) {
     return (
@@ -54,12 +61,16 @@ function SyncStatus() {
     )
   }
 
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-      <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-      <span className="text-[10px] font-bold text-primary uppercase tracking-tight">Sincronizado</span>
-    </div>
-  )
+  if (showSuccess) {
+    return (
+      <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
+        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+        <span className="text-[10px] font-bold text-primary uppercase tracking-tight">Sincronizado</span>
+      </div>
+    )
+  }
+
+  return null
 }
 
 export function Navbar() {

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
-import { Trophy, Medal, Users, Globe } from 'lucide-react'
+import { Trophy, Users, Globe } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface LeaderboardUser {
   id: string
@@ -60,50 +61,82 @@ export function LeaderboardPage({ hideHeader = false }: { hideHeader?: boolean }
 
   const renderList = (users: LeaderboardUser[]) => {
     return (
-      <div className="space-y-3">
-        {users.map((user, idx) => {
-          const isMe = user.id === profile?.id
-          const rank = idx + 1
-          
-          return (
-            <div 
-              key={user.id} 
-              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                isMe 
-                  ? 'bg-primary/10 border-primary/40 shadow-lg shadow-primary/5 ring-1 ring-primary/20' 
-                  : 'bg-surface-200 border-surface-100 hover:bg-surface-300'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${
-                  rank === 1 ? 'bg-yellow-500/20 text-yellow-500' :
-                  rank === 2 ? 'bg-slate-300/20 text-slate-300' :
-                  rank === 3 ? 'bg-amber-600/20 text-amber-600' :
-                  'bg-surface-100 text-gray-500'
-                }`}>
-                  {rank <= 3 ? <Medal className="w-6 h-6" /> : rank}
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary font-bold">
-                    {user.username?.[0]?.toUpperCase() || 'A'}
-                  </div>
-                  <div>
-                    <h4 className={`font-bold ${isMe ? 'text-primary' : 'text-white'}`}>
-                      @{user.username} {isMe && '(Tu)'}
-                    </h4>
-                    <p className="text-xs text-gray-400">Nível {user.level || 1}</p>
-                  </div>
-                </div>
-              </div>
+      <div className="space-y-3 relative">
+        <AnimatePresence mode="popLayout">
+          {users.map((user, idx) => {
+            const isMe = user.id === profile?.id
+            const rank = idx + 1
+            
+            return (
+              <motion.div 
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                key={user.id} 
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                  isMe 
+                    ? 'bg-primary/10 border-primary/40 shadow-lg shadow-primary/5 ring-1 ring-primary/20' 
+                    : 'bg-surface-200 border-surface-100 hover:bg-surface-300'
+                }`}
+              >
+                {/* Rank Glow for Top 3 */}
+                {rank <= 3 && (
+                  <div className={`absolute -left-8 -top-8 w-24 h-24 blur-3xl opacity-20 rounded-full ${
+                    rank === 1 ? 'bg-yellow-500' : rank === 2 ? 'bg-slate-300' : 'bg-amber-600'
+                  }`} />
+                )}
 
-              <div className="text-right">
-                <p className="text-lg font-black text-white">{user.xp_total?.toLocaleString() || 0}</p>
-                <p className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">XP Total</p>
-              </div>
-            </div>
-          )
-        })}
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black shadow-inner ${
+                    rank === 1 ? 'bg-yellow-500 text-black' :
+                    rank === 2 ? 'bg-slate-300 text-black' :
+                    rank === 3 ? 'bg-amber-600 text-white' :
+                    'bg-surface-100 text-gray-500'
+                  }`}>
+                    {rank <= 3 ? <Trophy className="w-5 h-5" /> : rank}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary font-bold overflow-hidden border border-white/10">
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          user.username?.[0]?.toUpperCase() || 'A'
+                        )}
+                      </div>
+                      {isMe && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-[#0A0A0B]" />}
+                    </div>
+                    <div>
+                      <h4 className={`font-bold text-sm sm:text-base ${isMe ? 'text-primary' : 'text-white'}`}>
+                        @{user.username} {isMe && <span className="text-[10px] ml-1 opacity-70 italic">(Tu)</span>}
+                      </h4>
+                      <div className="flex items-center gap-2">
+                         <div className="h-1 w-12 bg-surface-100 rounded-full overflow-hidden">
+                           <div className="h-full bg-primary" style={{ width: `${((user.level || 1) % 10) * 10}%` }} />
+                         </div>
+                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lvl {user.level || 1}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right relative z-10">
+                  <motion.p 
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    className="text-lg font-black text-white"
+                  >
+                    {user.xp_total?.toLocaleString() || 0}
+                  </motion.p>
+                  <p className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">XP Total</p>
+                </div>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
       </div>
     )
   }

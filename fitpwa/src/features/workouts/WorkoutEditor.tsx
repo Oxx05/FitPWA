@@ -21,6 +21,7 @@ import { Plus, GripVertical, Trash2, AlertCircle, Dumbbell, Sparkles } from 'luc
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
 import { Modal } from '@/shared/components/Modal'
+import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { useTranslation } from 'react-i18next'
@@ -93,58 +94,53 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">{t('editor.sets')}</label>
-          <input
-            type="number"
+          <DebouncedNumericInput
             min={1}
             max={20}
             value={ex.sets}
-            onChange={e => onUpdate(ex.id, 'sets', parseInt(e.target.value) || 1)}
+            onChange={val => onUpdate(ex.id, 'sets', val || 1)}
             className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
           />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">{t('editor.repsMinMax')}</label>
           <div className="flex items-center gap-1">
-            <input
-              type="number"
+            <DebouncedNumericInput
               min={1}
               max={100}
               value={ex.reps_min}
-              onChange={e => onUpdate(ex.id, 'reps_min', parseInt(e.target.value) || 1)}
+              onChange={val => onUpdate(ex.id, 'reps_min', val || 1)}
               className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
             />
             <span className="text-gray-500 text-xs">-</span>
-            <input
-              type="number"
+            <DebouncedNumericInput
               min={1}
               max={100}
               value={ex.reps_max}
-              onChange={e => onUpdate(ex.id, 'reps_max', parseInt(e.target.value) || 1)}
+              onChange={val => onUpdate(ex.id, 'reps_max', val || 1)}
               className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
             />
           </div>
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">{t('editor.weight')}</label>
-          <input
-            type="number"
+          <DebouncedNumericInput
             min={0}
             step={0.5}
             placeholder="—"
-            value={ex.weight_kg ?? ''}
-            onChange={e => onUpdate(ex.id, 'weight_kg', e.target.value ? parseFloat(e.target.value) : null)}
+            value={ex.weight_kg}
+            onChange={val => onUpdate(ex.id, 'weight_kg', val)}
             className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
           />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">{t('editor.rest')}</label>
           <div className="relative">
-            <input
-              type="number"
+            <DebouncedNumericInput
               min={0}
               step={15}
               value={ex.rest_seconds}
-              onChange={e => onUpdate(ex.id, 'rest_seconds', parseInt(e.target.value) || 0)}
+              onChange={val => onUpdate(ex.id, 'rest_seconds', val || 0)}
               className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
             />
             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">
@@ -263,7 +259,7 @@ export function WorkoutEditor() {
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, t])
 
   const loadTemplate = useCallback(async () => {
     if (!templateId || id) return
@@ -314,7 +310,7 @@ export function WorkoutEditor() {
     } finally {
       setLoading(false)
     }
-  }, [templateId, id])
+  }, [templateId, id, t])
 
   useEffect(() => {
     if (id) loadPlan()

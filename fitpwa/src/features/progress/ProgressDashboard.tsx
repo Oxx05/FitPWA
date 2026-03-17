@@ -10,13 +10,56 @@ import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap, TrendingUp, Trendin
 import { Link } from 'react-router-dom'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { AnimatePresence, motion } from 'framer-motion'
+
+export interface WorkoutSessionDetail {
+  id: string
+  plan_name: string | null
+  started_at: string
+  finished_at: string | null
+  total_volume_kg: number
+  duration_seconds: number
+}
+
+interface GroupedSets {
+  [exerciseName: string]: unknown[]
+}
 
 export function ProgressDashboard() {
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
-  const [compareSession, setCompareSession] = useState<any>(null)
-  const [comparisonTarget, setComparisonTarget] = useState<any>(null)
+  const [compareSession, setCompareSession] = useState<WorkoutSessionDetail | null>(null)
+  const [comparisonTarget, setComparisonTarget] = useState<WorkoutSessionDetail | null>(null)
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null)
+  const [selectedSessionForDetails, setSelectedSessionForDetails] = useState<WorkoutSessionDetail | null>(null)
+
+  const { data: sessionDetails, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['session-details', selectedSessionForDetails?.id],
+    queryFn: async () => {
+      if (!selectedSessionForDetails?.id) return null
+      const { data, error } = await supabase
+        .from('session_sets')
+        .select('*')
+        .eq('session_id', selectedSessionForDetails.id)
+        .order('created_at', { ascending: true })
+      
+      if (error) throw error
+      
+      // Group by exercise
+      const grouped = (data || []).reduce((acc: GroupedSets, set: { exercise_name: string }) => {
+        if (!acc[set.exercise_name]) acc[set.exercise_name] = []
+        acc[set.exercise_name].push(set)
+        return acc
+      }, {})
+      
+      return Object.entries(grouped).map(([name, sets]) => ({
+        name,
+        sets: sets as unknown[]
+      }))
+    },
+    enabled: !!selectedSessionForDetails?.id
+  })
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['progress-stats', profile?.id],
@@ -128,8 +171,8 @@ export function ProgressDashboard() {
         streak,
         chartData: Array.from(chartDataMap.values()),
         history: [...history].reverse(),
-        prs: (prsData || []).map(pr => ({
-          exercise_name: (pr as any).exercises?.name_pt || (pr as any).exercises?.name || 'Exercício',
+        prs: (prsData || []).map((pr: { exercises: unknown, one_rep_max?: number, weight_kg?: number, reps?: number }) => ({
+          exercise_name: (pr.exercises as unknown as { name_pt?: string, name: string })?.name_pt || (pr.exercises as unknown as { name_pt?: string, name: string })?.name || 'Exercício',
           one_rep_max: pr.one_rep_max || 0,
           weight_kg: pr.weight_kg || 0,
           reps: pr.reps || 0
@@ -149,6 +192,7 @@ export function ProgressDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progress-stats'] })
       queryClient.invalidateQueries({ queryKey: ['profile-stats'] })
+      setSessionToDelete(null)
     }
   })
 
@@ -300,10 +344,11 @@ export function ProgressDashboard() {
         {safeStats.history.length > 0 ? (
           <div className="space-y-3">
             {safeStats.history.map((session) => (
-              <div 
-                key={session.id}
-                className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all"
-              >
+                <div 
+                  key={session.id}
+                  onClick={() => setSelectedSessionForDetails(session)}
+                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all cursor-pointer"
+                >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary">
                     <Calendar className="w-5 h-5" />
@@ -324,17 +369,19 @@ export function ProgressDashboard() {
                 
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => setCompareSession(session)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setCompareSession(session)
+                    }}
                     className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="Comparar treino"
                   >
                     <TrendingUp className="w-5 h-5" />
                   </button>
                   <button 
-                    onClick={() => {
-                      if (confirm('Tens a certeza que queres apagar este treino?')) {
-                        deleteSession.mutate(session.id)
-                      }
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSessionToDelete(session.id)
                     }}
                     className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                     title="Apagar treino"
@@ -447,6 +494,76 @@ export function ProgressDashboard() {
           </Modal>
         )}
       </AnimatePresence>
+
+      <Modal
+        isOpen={!!selectedSessionForDetails}
+        onClose={() => setSelectedSessionForDetails(null)}
+        title={selectedSessionForDetails?.plan_name || 'Detalhes do Treino'}
+        size="lg"
+      >
+        {isLoadingDetails ? (
+          <div className="flex justify-center p-12">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : sessionDetails ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center bg-surface-100 p-4 rounded-xl border border-white/5">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-primary" />
+                <span className="text-white font-bold">
+                  {selectedSessionForDetails && format(new Date(selectedSessionForDetails.started_at), "dd MMM yyyy, HH:mm", { locale: pt })}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-gray-400">
+                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {formatDuration(selectedSessionForDetails?.duration_seconds || 0)}</span>
+                <span className="flex items-center gap-1"><Weight className="w-4 h-4" /> {formatVolume(selectedSessionForDetails?.total_volume_kg || 0)}kg</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {sessionDetails.map((group: { name: string, sets: unknown[] }, idx: number) => (
+                <div key={idx} className="bg-surface-100/50 rounded-xl overflow-hidden border border-white/5">
+                  <div className="bg-surface-100 px-4 py-2 border-b border-white/5">
+                    <h4 className="font-bold text-white italic">{group.name}</h4>
+                  </div>
+                  <div className="p-2 space-y-1">
+                    {(group.sets as { set_number: number, weight_kg: number, reps: number, notes?: string }[]).map((set, sIdx) => (
+                      <div key={sIdx} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs bg-primary/20 text-primary w-5 h-5 flex items-center justify-center rounded-full font-bold">
+                            {set.set_number}
+                          </span>
+                          <span className="text-sm text-white font-medium">{set.weight_kg}kg × {set.reps}</span>
+                        </div>
+                        {set.notes && (
+                          <span className="text-xs text-gray-500 italic truncate max-w-[150px]">{set.notes}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button className="w-full" onClick={() => setSelectedSessionForDetails(null)}>Fechar</Button>
+          </div>
+        ) : (
+          <div className="text-center p-12 text-gray-500">
+            Não foram encontrados detalhes para esta sessão.
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!sessionToDelete}
+        onClose={() => setSessionToDelete(null)}
+        onConfirm={() => sessionToDelete && deleteSession.mutate(sessionToDelete)}
+        title="Apagar Treino"
+        message="Tens a certeza que queres apagar este treino? Esta acção não pode ser revertida."
+        confirmText="Apagar"
+        variant="danger"
+        isLoading={deleteSession.isPending}
+      />
     </div>
   )
 }

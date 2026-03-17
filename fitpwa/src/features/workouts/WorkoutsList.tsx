@@ -83,39 +83,63 @@ export function WorkoutsList() {
           <div className="w-8 h-8 border-4 border-primary border-t-transparent flex rounded-full animate-spin"></div>
         </div>
       ) : (plans && plans.length > 0) ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {plans.map((plan, idx) => (
             <motion.div
               key={plan.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -5 }}
               transition={{ delay: idx * 0.05 }}
-              className="bg-surface-200 border border-surface-100 p-5 rounded-xl hover:border-primary/50 transition-colors"
+              className="group bg-surface-200/40 border border-white/5 p-6 rounded-3xl hover:border-primary/50 hover:bg-surface-200 transition-all hover:shadow-2xl hover:shadow-primary/5 relative overflow-hidden"
             >
-              <h3 className="text-lg font-bold text-white capitalize">{plan.name}</h3>
-              <p className="text-sm text-gray-400 line-clamp-2 mt-2">{plan.description || t('common.noDescription')}</p>
+               {/* Background Glow */}
+              <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-primary/5 blur-3xl rounded-full group-hover:bg-primary/10 transition-colors" />
+
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className="p-3 bg-surface-100 rounded-2xl text-primary group-hover:scale-110 transition-transform">
+                  <Dumbbell className="w-6 h-6" />
+                </div>
+                {idx === 0 && (
+                  <span className="bg-primary text-black text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">
+                    Recente
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-xl font-black text-white capitalize italic tracking-tighter mb-2 group-hover:text-primary transition-colors">
+                {plan.name}
+              </h3>
+              <p className="text-sm text-gray-400 line-clamp-2 min-h-[40px] leading-relaxed">
+                {plan.description || t('common.noDescription')}
+              </p>
               
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-xs bg-surface-100 px-3 py-1 rounded-full text-gray-300">
-                  {plan.days_per_week ? t('workouts.perWeek', { count: plan.days_per_week }) : t('common.free')}
-                </span>
+              <div className="flex justify-between items-center mt-6 pt-6 border-t border-white/5 relative z-10">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Frequência</span>
+                  <span className="text-sm text-white font-bold">
+                    {plan.days_per_week ? t('workouts.perWeek', { count: plan.days_per_week }) : t('common.free')}
+                  </span>
+                </div>
                 
                 <Link to={`/workouts/${plan.id}/start`}>
-                  <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10 hover:text-primary">
+                  <Button size="sm" variant="primary" className="rounded-full font-black uppercase tracking-tighter text-xs h-10 px-6">
                     {t('workouts.start')}
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       ) : (
         <EmptyState 
           icon={<Dumbbell className="w-16 h-16" />}
           title={t('workouts.noPlanYet')}
           description={t('workouts.noPlanDescription')}
-        />      )}
+        />
+      )}
     </div>
   )
 }

@@ -75,7 +75,17 @@ export interface OfflinePlanCache {
   id: string // Supabase ID
   name: string
   description?: string
-  exercises: any[]
+  exercises: {
+    id: string
+    exercise_id: string
+    sets: number
+    reps_min: number
+    reps_max: number
+    weight_kg: number | null
+    rest_seconds: number
+    order_index: number
+    exercise_name?: string
+  }[]
   difficulty: string
   updatedAt: string
 }
@@ -273,7 +283,9 @@ export class OfflineSyncService {
           }
 
           // Mark session as synced
-          await db.sessions.update(session.id!, { synced: true })
+          if (session.id) {
+            await db.sessions.update(session.id, { synced: true })
+          }
           sessionsSynced++
         } catch (err) {
           errors.push(`Erro ao sincronizar sessão: ${(err as Error).message}`)

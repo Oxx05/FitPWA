@@ -7,8 +7,9 @@ import { Input } from '@/shared/components/Input'
 import { supabase } from '@/shared/lib/supabase'
 import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { CustomSelect } from '@/shared/components/CustomSelect'
 
 export function ProfilePage() {
   const { profile, user, signOut, isPremium } = useAuthStore()
@@ -33,10 +34,6 @@ export function ProfilePage() {
 
   const currentLang = i18n.language?.startsWith('en') ? 'en' : 'pt'
 
-  const toggleLanguage = () => {
-    const newLang = currentLang === 'pt' ? 'en' : 'pt'
-    i18n.changeLanguage(newLang)
-  }
 
   const requestNotificationPermission = async () => {
     if (typeof Notification === 'undefined') {
@@ -248,14 +245,21 @@ export function ProfilePage() {
               {notificationStatus === 'granted' ? t('profile.notificationsEnabled') : notificationStatus === 'denied' ? t('profile.notificationsBlocked') : t('profile.notificationsEnable')}
             </span>
           </button>
-          {/* Language Switcher */}
-          <button onClick={toggleLanguage} className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200">
-            <div className="flex items-center gap-3 text-gray-300">
+          {/* Language Selection */}
+          <div className="p-4 bg-surface-100 rounded-xl border border-transparent">
+            <div className="flex items-center gap-3 text-gray-300 mb-3">
               <Globe className="w-5 h-5" />
-              <span className="font-medium text-white">{currentLang === 'pt' ? 'Idioma' : 'Language'}</span>
+              <span className="font-medium text-white">{t('profile.language')}</span>
             </div>
-            <span className="text-xs text-gray-400 uppercase font-bold">{currentLang === 'pt' ? '🇵🇹 PT' : '🇬🇧 EN'}</span>
-          </button>
+            <CustomSelect
+              value={currentLang}
+              onChange={(val) => i18n.changeLanguage(val)}
+              options={[
+                { value: 'pt', label: 'Português 🇵🇹' },
+                { value: 'en', label: 'English 🇬🇧' }
+              ]}
+            />
+          </div>
           <ProfileLink icon={<CreditCard />} label={t('profile.payments')} to="/premium" />
         </div>
 
@@ -442,17 +446,28 @@ export function ProfilePage() {
               onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
             />
           </div>
-          {profileMsg && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${profileMsg.includes(t('common.error')) ? 'bg-error/10 text-error' : 'bg-primary/10 text-primary'}`}>
-              <Check className="w-4 h-4" />
-              {profileMsg}
-            </div>
-          )}
+          <AnimatePresence>
+            {profileMsg && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className={`flex items-center gap-2 p-3 rounded-xl text-sm overflow-hidden ${
+                  profileMsg.includes(t('common.error')) 
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                    : 'bg-primary/10 text-primary border border-primary/20'
+                }`}
+              >
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{profileMsg}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <Button
             onClick={handleSaveProfile}
             disabled={savingProfile || !editName.trim()}
-            className="w-full gap-2"
+            className="w-full gap-2 h-12 rounded-xl font-bold uppercase tracking-tight"
           >
             {savingProfile ? t('profile.savingProfile') : (
               <>

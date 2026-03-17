@@ -31,9 +31,18 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
     queryFn: async () => {
       let query = supabase
         .from('workout_plans')
-        .select(
-          'id, name, description, user_id, difficulty, days_per_week, likes, saves, created_at, is_public'
-        )
+        .select(`
+          id, 
+          name, 
+          description, 
+          user_id, 
+          difficulty, 
+          days_per_week, 
+          likes, 
+          saves, 
+          created_at,
+          profiles:user_id (username)
+        `)
         .eq('is_public', true)
 
       if (searchQuery) {
@@ -55,13 +64,13 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
         id: w.id,
         name: w.name,
         description: w.description || '',
-        author_name: 'Utilizador', // Em fase futura podemos fazer join com profiles
+        author_name: (w.profiles as unknown as { username: string })?.username || 'Atleta',
         author_id: w.user_id,
         difficulty: w.difficulty || 'intermediate',
         days_per_week: w.days_per_week || 0,
         likes: w.likes || 0,
         saves: w.saves || 0,
-        comments: 0, // Removido temporariamente até migrar tabela de comentários
+        comments: 0,
         created_at: w.created_at
       })) as PublicWorkout[]
     }
@@ -137,7 +146,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                 : 'bg-surface-200 border-surface-100 text-white hover:border-primary/50'
             }`}
           >
-            {sort === 'trending' ? '🔥 Trending' : sort === 'recent' ? '🆕 Recente' : '💾 Guardados'}
+            {sort === 'trending' ? 'Trending' : sort === 'recent' ? 'Recente' : 'Guardados'}
           </button>
         ))}
       </div>

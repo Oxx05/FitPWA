@@ -69,8 +69,10 @@ export function captureError(error: Error, context?: Record<string, unknown>): v
     console.error('[Monitoring] Error captured:', error.message, context)
   }
 
-  // TODO: Send to Sentry / external service
-  // Sentry.captureException(error, { extra: context })
+  // External Service Integration Point (e.g. Sentry)
+  // if (!isDev) {
+  //   Sentry.captureException(error, { extra: context })
+  // }
 }
 
 /**

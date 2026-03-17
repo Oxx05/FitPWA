@@ -1,15 +1,19 @@
 import { useState, useMemo } from 'react'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, SearchIcon } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ExerciseCard } from './ExerciseCard'
 import { Input } from '@/shared/components/Input'
 import { EmptyState } from '@/shared/components/EmptyState'
-import { SearchIcon } from 'lucide-react'
+import { CustomSelect } from '@/shared/components/CustomSelect'
 
 import { useOfflineExercises } from '@/shared/hooks/useOfflineData'
+import { Modal } from '@/shared/components/Modal'
+import { ExerciseEvolution } from './components/ExerciseEvolution'
 
 export function ExerciseLibrary() {
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState<string>('all')
+  const [selectedExercise, setSelectedExercise] = useState<any | null>(null)
 
   const { data: exercises, isLoading } = useOfflineExercises()
 
@@ -20,9 +24,13 @@ export function ExerciseLibrary() {
   }), [exercises, search, muscleFilter])
 
   // get unique muscles for filter
-  const muscles = useMemo(() => 
-    Array.from(new Set(exercises?.flatMap(e => e.muscle_groups) || []))
-  , [exercises])
+  const muscleOptions = useMemo(() => {
+    const uniqueMuscles = Array.from(new Set(exercises?.flatMap(e => e.muscle_groups) || []))
+    return [
+      { value: 'all', label: 'Todos os Músculos' },
+      ...uniqueMuscles.map(m => ({ value: m, label: m }))
+    ]
+  }, [exercises])
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 pb-24">
@@ -42,18 +50,13 @@ export function ExerciseLibrary() {
           <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
         </div>
         
-        <div className="relative shrink-0">
-          <select 
+        <div className="shrink-0 w-full md:w-64">
+          <CustomSelect
             value={muscleFilter}
-            onChange={(e) => setMuscleFilter(e.target.value)}
-            className="w-full md:w-48 appearance-none bg-surface-100 border border-surface-200 text-white rounded-md h-10 px-3 pl-10 focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">Todos os Músculos</option>
-            {muscles.map(m => (
-              <option key={m} value={m} className="capitalize">{m}</option>
-            ))}
-          </select>
-          <Filter className="absolute left-3 top-2.5 text-gray-400 w-5 h-5 pointer-events-none" />
+            onChange={setMuscleFilter}
+            options={muscleOptions}
+            icon={<Filter className="w-5 h-5" />}
+          />
         </div>
       </div>
 
@@ -63,9 +66,21 @@ export function ExerciseLibrary() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredExercises?.map(exercise => (
-            <ExerciseCard key={exercise.id} exercise={exercise} />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filteredExercises?.map((exercise, idx) => (
+              <motion.div
+                key={exercise.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
+                <ExerciseCard 
+                  exercise={exercise} 
+                  onClick={() => setSelectedExercise(exercise)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
           {filteredExercises?.length === 0 && (
             <div className="col-span-full">
               <EmptyState 
@@ -77,6 +92,20 @@ export function ExerciseLibrary() {
           )}
         </div>
       )}
+      <Modal
+        isOpen={!!selectedExercise}
+        onClose={() => setSelectedExercise(null)}
+        title="Evolução"
+        size="md"
+        closeButton
+      >
+        {selectedExercise && (
+          <ExerciseEvolution 
+            exerciseId={selectedExercise.id} 
+            exerciseName={selectedExercise.name} 
+          />
+        )}
+      </Modal>
     </div>
   )
 }
