@@ -47,7 +47,7 @@ export function MuscleHeatmap() {
           )
         `)
         .eq('user_id', profile.id)
-        .gte('created_at', sevenDaysAgo)
+        .gte('finished_at', sevenDaysAgo)
 
       if (sErr) throw sErr
 

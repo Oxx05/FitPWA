@@ -55,7 +55,7 @@ export interface OfflineSession {
   durationSeconds: number
   totalVolumeKg: number
   notes?: string
-  createdAt: string
+  finishedAt: string
   synced: boolean
 }
 
@@ -251,7 +251,7 @@ export class OfflineSyncService {
               duration_seconds: session.durationSeconds,
               total_volume_kg: session.totalVolumeKg,
               notes: session.notes || null,
-              created_at: session.createdAt
+              finished_at: session.finishedAt
             })
             .select('id')
             .single()

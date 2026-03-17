@@ -15,7 +15,7 @@ interface FeedSet {
 interface FeedSession {
   id: string
   total_volume_kg: number
-  created_at: string
+  finished_at: string
   profiles: {
     username: string
   }[]
@@ -43,7 +43,7 @@ export function SocialFeed() {
         .select(`
           id,
           user_id,
-          created_at,
+          finished_at,
           total_volume_kg,
           profiles:user_id (username, avatar_url),
           session_sets (
@@ -54,7 +54,8 @@ export function SocialFeed() {
           )
         `)
         .in('user_id', followingIds)
-        .order('created_at', { ascending: false })
+        .not('finished_at', 'is', null)
+        .order('finished_at', { ascending: false })
         .limit(10)
 
       if (error) throw error
@@ -116,7 +117,7 @@ export function SocialFeed() {
                 </p>
                 <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                   <Calendar className="w-3 h-3" />
-                  {new Date(session.created_at).toLocaleDateString()}
+                  {new Date(session.finished_at).toLocaleDateString()}
                 </div>
               </div>
             </div>

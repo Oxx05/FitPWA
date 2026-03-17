@@ -17,14 +17,14 @@ export function SmartInsights() {
       const { data: sessions } = await supabase
         .from('workout_sessions')
         .select(`
-          created_at,
+          finished_at,
           session_sets (
             exercise_id,
             exercises (muscle_groups)
           )
         `)
         .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
+        .order('finished_at', { ascending: false })
         .limit(20)
 
       const list = []
@@ -32,7 +32,7 @@ export function SmartInsights() {
       // Insight 1: Consistency
       const lastSession = sessions?.[0]
       if (lastSession) {
-        const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.created_at).getTime()) / (1000 * 3600 * 24))
+        const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.finished_at).getTime()) / (1000 * 3600 * 24))
         if (daysSince === 0) {
             list.push({
                 icon: <CheckCircle2 className="text-green-500" />,

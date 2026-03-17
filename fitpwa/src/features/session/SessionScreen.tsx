@@ -548,7 +548,7 @@ export function SessionScreen() {
                 durationSeconds: duration,
                 totalVolumeKg: totalVolume,
                 notes: sessionNotes || undefined,
-                createdAt: new Date().toISOString(),
+                finishedAt: new Date().toISOString(),
                 synced: false
               },
               completedSets.map(s => ({
@@ -591,7 +591,7 @@ export function SessionScreen() {
               durationSeconds: duration,
               totalVolumeKg: totalVolume,
               notes: sessionNotes || undefined,
-              createdAt: new Date().toISOString(),
+              finishedAt: new Date().toISOString(),
               synced: false
             },
             completedSets.map(s => ({

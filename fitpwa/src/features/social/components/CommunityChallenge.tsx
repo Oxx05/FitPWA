@@ -22,13 +22,13 @@ export function CommunityChallenge() {
 
       const { data, error } = await supabase
         .from('workout_sessions')
-        .select('total_volume, user_id')
+        .select('total_volume_kg, user_id')
         .gte('finished_at', startOfWeek.toISOString())
 
       if (error) throw error
 
-      const totalValue = data?.reduce((acc, s) => acc + (s.total_volume || 0), 0) || 0
-      const userContribution = data?.filter(s => s.user_id === profile?.id).reduce((acc, s) => acc + (s.total_volume || 0), 0) || 0
+      const totalValue = data?.reduce((acc, s) => acc + (s.total_volume_kg || 0), 0) || 0
+      const userContribution = data?.filter(s => s.user_id === profile?.id).reduce((acc, s) => acc + (s.total_volume_kg || 0), 0) || 0
       const target = 1000000 // 1 Million KG goal
       const percentage = Math.min((totalValue / target) * 100, 100)
 
