@@ -452,27 +452,40 @@ export function ProfilePage() {
                 onChange={(e) => setDefaultMaxReps(Number(e.target.value) || 0)}
               />
             </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.defaultSets')}</label>
-            <Input
-              type="number"
-              value={defaultSets}
-              onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
-            />
           </div>
-            <div className="flex items-center gap-3 text-gray-300">
-              <Bell className="w-5 h-5" />
-              <span className="font-medium text-white">Sons e Alertas</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-widest text-[10px]">{t('profile.defaultSets')}</label>
+              <Input
+                type="number"
+                value={defaultSets}
+                onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
+                className="h-12 bg-surface-200 border-white/5 focus:border-primary/50"
+              />
             </div>
-            <button
-              onClick={() => {
-                const { setSoundEnabled, profile } = useAuthStore.getState()
-                setSoundEnabled(profile?.sound_enabled !== false ? false : true)
-              }}
-              className={`w-12 h-6 rounded-full transition-colors relative ${profile?.sound_enabled !== false ? 'bg-primary' : 'bg-surface-200'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${profile?.sound_enabled !== false ? 'left-7' : 'left-1'}`} />
-            </button>
+            <div className="flex flex-col justify-end">
+              <div 
+                onClick={() => {
+                  const { setSoundEnabled, profile } = useAuthStore.getState()
+                  setSoundEnabled(profile?.sound_enabled !== false ? false : true)
+                }}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer h-12 ${
+                  profile?.sound_enabled !== false 
+                    ? 'bg-primary/10 border-primary/30 text-primary' 
+                    : 'bg-surface-200 border-white/5 text-gray-500'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Bell className={`w-4 h-4 ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-black uppercase tracking-tight ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-400'}`}>
+                    {profile?.sound_enabled !== false ? t('profile.soundEnabled') : t('profile.soundDisabled')}
+                  </span>
+                </div>
+                <div className={`w-8 h-4 rounded-full relative transition-colors ${profile?.sound_enabled !== false ? 'bg-primary' : 'bg-surface-300'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${profile?.sound_enabled !== false ? 'left-4.5' : 'left-0.5'}`} />
+                </div>
+              </div>
+            </div>
           </div>
           <AnimatePresence>
             {profileMsg && (

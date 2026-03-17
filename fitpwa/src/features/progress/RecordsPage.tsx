@@ -91,7 +91,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('workout_history')
-        .select('*, exercises:exercise_id(name, name_pt)')
+        .select('*')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(100)

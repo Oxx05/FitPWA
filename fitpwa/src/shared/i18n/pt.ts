@@ -262,8 +262,10 @@ const pt = {
       valueWeight: 'PESO (KG)',
       valueVolume: 'VOLUME TOTAL (KG)',
       inspiring: 'Inspirador',
-      congrats: 'Parabéns',
-    }
+      feedMore: 'Ver mais',
+      inspiringSent: 'Inspiração enviada! 💪',
+      congratsSent: 'Parabéns enviados! 🏆',
+    },
   },
 
   // ─── Evolution ───

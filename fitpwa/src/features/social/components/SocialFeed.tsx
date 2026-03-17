@@ -4,6 +4,7 @@ import { Trophy, TrendingUp, Calendar, Heart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useToast } from '@/shared/contexts/ToastContext'
 import { ConquestCard } from '@/shared/components/ConquestCard'
 
 interface FeedSet {
@@ -25,6 +26,7 @@ interface FeedSession {
 export function SocialFeed() {
   const { t } = useTranslation()
   const { profile } = useAuthStore()
+  const { showToast } = useToast()
 
   const { data: feedItems, isLoading } = useQuery({
     queryKey: ['social-feed', profile?.id],
@@ -132,14 +134,20 @@ export function SocialFeed() {
               />
               
               <div className="flex gap-4 mt-6">
-                 <button className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95 group">
+                  <button 
+                    onClick={() => showToast(t('social.feed.inspiringSent'), 'success')}
+                    className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95 group"
+                  >
                     <Heart className="w-4 h-4 group-hover:fill-primary group-hover:stroke-primary" />
                     <span>{t('social.feed.inspiring')}</span>
-                 </button>
-                 <button className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95">
+                  </button>
+                  <button 
+                    onClick={() => showToast(t('social.feed.congratsSent'), 'success')}
+                    className="flex items-center gap-2 px-6 py-2 bg-surface-200 hover:bg-surface-100 rounded-full border border-white/5 transition-all text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary active:scale-95"
+                  >
                     <TrendingUp className="w-4 h-4" />
                     <span>{t('social.feed.congrats')}</span>
-                 </button>
+                  </button>
               </div>
             </div>
 

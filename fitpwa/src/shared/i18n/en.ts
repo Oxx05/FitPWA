@@ -262,8 +262,10 @@ const en = {
       valueWeight: 'WEIGHT (KG)',
       valueVolume: 'TOTAL VOLUME (KG)',
       inspiring: 'Inspiring',
-      congrats: 'Congrats',
-    }
+      feedMore: 'See more',
+      inspiringSent: 'Inspiration sent! 💪',
+      congratsSent: 'Congrats sent! 🏆',
+    },
   },
 
   // ─── Evolution ───
