@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { FeatureGate } from '../premium/FeatureGate'
@@ -5,12 +6,17 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { startOfWeek, subWeeks, isSameWeek, format } from 'date-fns'
 import { pt } from 'date-fns/locale'
-import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap } from 'lucide-react'
+import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Modal } from '@/shared/components/Modal'
+import { Button } from '@/shared/components/Button'
+import { AnimatePresence, motion } from 'framer-motion'
 
 export function ProgressDashboard() {
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
+  const [compareSession, setCompareSession] = useState<any>(null)
+  const [comparisonTarget, setComparisonTarget] = useState<any>(null)
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['progress-stats', profile?.id],
@@ -318,6 +324,13 @@ export function ProgressDashboard() {
                 
                 <div className="flex items-center gap-2">
                   <button 
+                    onClick={() => setCompareSession(session)}
+                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    title="Comparar treino"
+                  >
+                    <TrendingUp className="w-5 h-5" />
+                  </button>
+                  <button 
                     onClick={() => {
                       if (confirm('Tens a certeza que queres apagar este treino?')) {
                         deleteSession.mutate(session.id)
@@ -340,6 +353,100 @@ export function ProgressDashboard() {
         )}
       </div>
 
+      {/* Comparison Modal */}
+      <AnimatePresence>
+        {compareSession && (
+          <Modal
+            isOpen={!!compareSession}
+            onClose={() => { setCompareSession(null); setComparisonTarget(null); }}
+            title="Comparar Treinos"
+            size="lg"
+          >
+            <div className="space-y-6">
+              <div className="bg-surface-100 p-4 rounded-xl border border-white/5">
+                <p className="text-xs text-gray-500 uppercase font-black mb-2">Treino Selecionado</p>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-white text-lg">{compareSession.plan_name || 'Treino Personalizado'}</h4>
+                  <p className="text-sm text-gray-400">{format(new Date(compareSession.started_at), "dd/MM/yyyy")}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-xs text-gray-500 uppercase font-black">Comparar com sessão anterior:</label>
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
+                  {safeStats.history
+                    .filter(s => s.id !== compareSession.id && s.plan_name === compareSession.plan_name)
+                    .map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => setComparisonTarget(s)}
+                        className={`p-3 rounded-xl border text-left transition-all flex justify-between items-center ${
+                          comparisonTarget?.id === s.id 
+                            ? 'bg-primary/10 border-primary text-primary' 
+                            : 'bg-surface-200 border-white/5 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="font-bold">{format(new Date(s.started_at), "dd MMM yyyy, HH:mm")}</span>
+                        <span className="text-xs">{formatVolume(s.total_volume_kg)} kg</span>
+                      </button>
+                    ))}
+                  {safeStats.history.filter(s => s.id !== compareSession.id && s.plan_name === compareSession.plan_name).length === 0 && (
+                    <p className="text-sm text-gray-500 italic p-4 bg-surface-200 rounded-xl">Não foram encontradas outras sessões deste plano para comparar.</p>
+                  )}
+                </div>
+              </div>
+
+              {comparisonTarget && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="grid grid-cols-2 gap-4 p-6 bg-surface-200 rounded-[2rem] border border-white/5 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-6 opacity-5">
+                    <TrendingUp size={60} />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Diferença de Volume</p>
+                    <div className="flex items-center gap-2">
+                       <p className="text-2xl font-black italic">
+                        {Math.round(compareSession.total_volume_kg - comparisonTarget.total_volume_kg)}kg
+                      </p>
+                      {compareSession.total_volume_kg > comparisonTarget.total_volume_kg ? (
+                        <TrendingUp className="text-primary w-5 h-5" />
+                      ) : (
+                        <TrendingDown className="text-red-400 w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+
+                   <div className="space-y-1">
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Tempo de Treino</p>
+                    <div className="flex items-center gap-2">
+                       <p className="text-2xl font-black italic">
+                        {Math.round((compareSession.duration_seconds - comparisonTarget.duration_seconds) / 60)} min
+                      </p>
+                      {compareSession.duration_seconds < comparisonTarget.duration_seconds ? (
+                        <Zap className="text-primary w-5 h-5" />
+                      ) : (
+                        <Clock className="text-gray-500 w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              <Button 
+                variant="secondary" 
+                className="w-full"
+                onClick={() => { setCompareSession(null); setComparisonTarget(null); }}
+              >
+                Fechar
+              </Button>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

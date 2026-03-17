@@ -169,6 +169,7 @@ export function WorkoutEditor() {
   const [description, setDescription] = useState('')
   const [difficulty, setDifficulty] = useState('intermediate')
   const [exercises, setExercises] = useState<PlanExercise[]>([])
+  const [isPublic, setIsPublic] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showExerciseModal, setShowExerciseModal] = useState(false)
@@ -422,6 +423,7 @@ export function WorkoutEditor() {
         description: description || null,
         type: 'custom' as const,
         days_per_week: 3,
+        is_public: isPublic,
       }
 
       if (id) {
@@ -536,6 +538,19 @@ export function WorkoutEditor() {
             <option value="intermediate">{t('editor.intermediate')}</option>
             <option value="advanced">{t('editor.advanced')}</option>
           </select>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-surface-200 border border-surface-100 rounded-lg">
+          <div>
+            <h4 className="font-bold text-white">Treino Público</h4>
+            <p className="text-sm text-gray-500">Permite que outros utilizadores vejam e guardem este treino.</p>
+          </div>
+          <button
+            onClick={() => setIsPublic(!isPublic)}
+            className={`w-12 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-primary' : 'bg-surface-100'}`}
+          >
+            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isPublic ? 'left-7' : 'left-1'}`} />
+          </button>
         </div>
       </div>
 
