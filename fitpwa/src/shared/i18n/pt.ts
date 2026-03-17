@@ -178,6 +178,9 @@ const pt = {
     browserNoNotifications: 'Este browser não suporta notificações.',
     notificationsActivated: 'Notificações Ativadas!',
     notificationsBody: 'Vais receber avisos do temporizador de descanso do FitPWA.',
+    soundEnabled: 'Som Ativado',
+    soundDisabled: 'Som Desativado',
+    soundAlerts: 'Sons e Alertas',
   },
 
   // ─── Session / Timer ───
@@ -219,6 +222,21 @@ const pt = {
     completeSet: 'Completar Série',
     setCompleted: 'Série Concluída ✓',
     startingVoice: 'Guia de voz activado',
+    cancelWorkout: 'Cancelar Treino',
+    cancelReason: {
+      title: 'Porquê o cancelamento?',
+      tired: 'Cansaço / Falta de energia',
+      noTime: 'Falta de tempo',
+      injury: 'Lesão / Desconforto',
+      other: 'Outro motivo',
+    },
+    cancelSuggestion: {
+      tired: 'O descanso é crucial. Que tal uma sessão de mobilidade leve amanhã?',
+      noTime: 'Treinos curtos também contam! Tenta um treino rápido de 15 min na próxima vez.',
+      injury: 'A tua saúde em primeiro lugar. Consulta um profissional se a dor persistir.',
+      other: 'Às vezes o dia não corre como planeado. O importante é voltar no próximo!',
+    },
+    yesCancel: 'Sim, Cancelar',
   },
 
   // ─── Social ───

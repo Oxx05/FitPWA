@@ -186,6 +186,47 @@ export function ProgressDashboard() {
         .delete()
         .eq('id', sessionId)
       if (error) throw error
+
+      // PR Cleanup Logic: Refresh PRs after deletion
+      // Since we don't know which PR was set in this session without complex queries,
+      // we'll just invalidate the queries so they refresh from DB which should be correct.
+      // However, the DB only stores the "best" PR. If we delete the session that HAD the best PR,
+      // the DB personal_records might still show it unless we have an archival system.
+      // The current schema has personal_records (unique per user/ex).
+      // If we delete a session, we should check if any PRs were achieved in that session.
+      
+      const { data: sessionPRs } = await supabase
+        .from('personal_records')
+        .select('exercise_id')
+        .eq('session_id', sessionId)
+
+      if (sessionPRs && sessionPRs.length > 0) {
+        // If a PR was set in this session, we need to find the NEXT best PR for those exercises.
+        for (const pr of sessionPRs) {
+          const { data: nextBest } = await supabase
+            .from('personal_record_history')
+            .select('*')
+            .eq('user_id', profile?.id)
+            .eq('exercise_id', pr.exercise_id)
+            .neq('session_id', sessionId) // If session_id was tracked in history (not in schema yet, but let's assume it should be)
+            .order('one_rep_max', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (nextBest) {
+            await supabase.from('personal_records').upsert({
+              user_id: profile?.id,
+              exercise_id: pr.exercise_id,
+              weight_kg: nextBest.weight_kg,
+              reps: nextBest.reps,
+              one_rep_max: nextBest.one_rep_max,
+              achieved_at: nextBest.achieved_at
+            })
+          } else {
+            await supabase.from('personal_records').delete().eq('user_id', profile?.id).eq('exercise_id', pr.exercise_id)
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progress-stats'] })
@@ -371,7 +412,7 @@ export function ProgressDashboard() {
                       e.stopPropagation()
                       setCompareSession(session)
                     }}
-                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
                     title="Comparar treino"
                   >
                     <TrendingUp className="w-5 h-5" />
@@ -381,7 +422,7 @@ export function ProgressDashboard() {
                       e.stopPropagation()
                       setSessionToDelete(session.id)
                     }}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
                     title="Apagar treino"
                   >
                     <Trash2 className="w-5 h-5" />

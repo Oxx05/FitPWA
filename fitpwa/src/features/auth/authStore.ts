@@ -19,6 +19,7 @@ export interface Profile {
   default_reps_min?: number
   default_reps_max?: number
   default_sets?: number
+  sound_enabled?: boolean
 }
 
 interface AuthState {
@@ -33,6 +34,7 @@ interface AuthState {
   setLoading: (isLoading: boolean) => void
   addXp: (amount: number) => void
   clearPendingLevelUp: () => void
+  setSoundEnabled: (enabled: boolean) => void
   signOut: () => Promise<void>
 }
 
@@ -53,6 +55,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const isPremium = !!profile?.is_premium &&
       (!profile.premium_expires_at || new Date(profile.premium_expires_at) > new Date())
     set({ profile, isPremium, pendingLevelUp })
+  },
+  setSoundEnabled: (enabled: boolean) => {
+    const profile = get().profile
+    if (!profile) return
+    const updatedProfile = { ...profile, sound_enabled: enabled }
+    set({ profile: updatedProfile })
+    supabase.from('profiles').update({ sound_enabled: enabled }).eq('id', profile.id).then()
   },
   addXp: (amount: number) => {
     const profile = get().profile

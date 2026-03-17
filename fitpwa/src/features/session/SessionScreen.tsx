@@ -66,6 +66,8 @@ export function SessionScreen() {
   const [planName, setPlanName] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'treino' | 'controlo'>('treino')
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState<string | null>(null)
   const [spotifyConnected, setSpotifyConnected] = useState(() => hasValidSpotifyToken())
   const [spotifyPlaying, setSpotifyPlaying] = useState<boolean | null>(null)
   const [spotifyTrack, setSpotifyTrack] = useState<{ name: string; artist: string; albumArt?: string } | null>(null)
@@ -107,14 +109,16 @@ export function SessionScreen() {
         })
       }
       try {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')
-        audio.play().catch(() => {})
+        if (profile?.sound_enabled !== false) {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')
+          audio.play().catch(() => {})
+        }
       } catch { /* audio playback can fail silently on mobile */ }
       return
     }
     const interval = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
     return () => clearInterval(interval)
-  }, [restTimer, t])
+  }, [restTimer, t, profile?.sound_enabled])
 
   // Load plan data
   useEffect(() => {
@@ -745,6 +749,16 @@ export function SessionScreen() {
               </div>
             </div>
             <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={() => setShowCancelModal(true)}
+              className="gap-1 border-white/10"
+              title="Cancelar Treino"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
+              <span className="hidden sm:inline">Cancelar</span>
+            </Button>
+            <Button 
               variant="danger" 
               size="sm" 
               onClick={() => setShowFinishModal(true)}
@@ -1014,24 +1028,41 @@ export function SessionScreen() {
             exit={{ opacity: 0, scale: 0.9, y: 50 }}
             className="fixed bottom-28 left-4 right-4 z-50 pointer-events-none"
           >
-            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex items-center justify-between pointer-events-auto border-2 border-white/20">
-              <div className="flex items-center gap-4">
-                <div className="bg-black/10 p-2 rounded-xl">
-                  <Clock className="w-6 h-6 animate-pulse" />
+            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex flex-col gap-4 pointer-events-auto border-2 border-white/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-black/10 p-2 rounded-xl">
+                    <Clock className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-black tracking-widest opacity-60">{t('session.restInProgress')}</p>
+                    <p className="text-3xl font-black italic tabular-nums leading-none">
+                      {formatTime(restTimer)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase font-black tracking-widest opacity-60">{t('session.restInProgress')}</p>
-                  <p className="text-3xl font-black italic tabular-nums leading-none">
-                    {formatTime(restTimer)}
-                  </p>
+                <button 
+                  onClick={() => setRestTimer(null)}
+                  className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-xl font-black uppercase text-xs transition-colors"
+                >
+                  {t('session.ignore')}
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2 bg-black/5 p-2 rounded-xl">
+                <span className="text-[10px] font-black uppercase tracking-tighter opacity-70 ml-1">Ajustar:</span>
+                <div className="flex gap-1 flex-1">
+                  {[-30, -10, +10, +30].map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setRestTimer(prev => Math.max(0, (prev ?? 0) + val))}
+                      className="flex-1 py-1 bg-black/10 hover:bg-black/20 rounded-lg text-xs font-bold transition-all active:scale-95"
+                    >
+                      {val > 0 ? `+${val}` : val}s
+                    </button>
+                  ))}
                 </div>
               </div>
-              <button 
-                onClick={() => setRestTimer(null)}
-                className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-xl font-black uppercase text-xs transition-colors"
-              >
-                {t('session.ignore')}
-              </button>
             </div>
           </motion.div>
         )}
@@ -1257,6 +1288,85 @@ export function SessionScreen() {
               className="flex-1"
             >
               {t('session.yesFinish')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cancel Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => { setShowCancelModal(false); setCancelReason(null); }}
+        title="Cancelar Treino?"
+        size="sm"
+        closeButton
+      >
+        <div className="space-y-4">
+          <p className="text-gray-400">
+            Tens a certeza que queres cancelar? O progresso desta sessão não será guardado.
+          </p>
+
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-gray-500 uppercase">Motivo (opcional):</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'tired', label: 'Cansaço', suggestion: 'Não forces. Um descanso extra hoje pode render mais amanhã! 🧘' },
+                { id: 'time', label: 'Falta de tempo', suggestion: 'Um treino curto é melhor que nenhum! Tenta fazer pelo menos mais um set. ⚡' },
+                { id: 'injury', label: 'Dor/Lesão', suggestion: 'Para imediatamente! A tua saúde é prioritária. Aplica gelo se necessário. 🩹' },
+                { id: 'other', label: 'Outro', suggestion: 'Ouve o teu corpo. Voltamos amanhã com mais força! 💪' }
+              ].map(reason => (
+                <button
+                  key={reason.id}
+                  onClick={() => setCancelReason(reason.id)}
+                  className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                    cancelReason === reason.id 
+                      ? 'bg-primary/20 border-primary text-primary' 
+                      : 'bg-surface-100 border-white/5 text-gray-400 hover:border-white/10'
+                  }`}
+                >
+                  {reason.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {cancelReason && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-primary/10 border border-primary/20 p-4 rounded-xl"
+              >
+                <div className="flex gap-3">
+                  <Zap className="w-5 h-5 text-primary shrink-0" />
+                  <p className="text-xs text-primary leading-relaxed font-medium">
+                    { [
+                        { id: 'tired', suggestion: 'Não forces. Um descanso extra hoje pode render mais amanhã! 🧘' },
+                        { id: 'time', suggestion: 'Um treino curto é melhor que nenhum! Tenta fazer pelo menos mais um set. ⚡' },
+                        { id: 'injury', suggestion: 'Para imediatamente! A tua saúde é prioritária. Aplica gelo se necessário. 🩹' },
+                        { id: 'other', suggestion: 'Ouve o teu corpo. Voltamos amanhã com mais força! 💪' }
+                      ].find(r => r.id === cancelReason)?.suggestion
+                    }
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => { setShowCancelModal(false); setCancelReason(null); }}
+              className="flex-1"
+            >
+              Continuar
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => navigate('/workouts')}
+              className="flex-1"
+            >
+              Cancelar
             </Button>
           </div>
         </div>

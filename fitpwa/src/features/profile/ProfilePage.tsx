@@ -5,12 +5,13 @@ import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { Input } from '@/shared/components/Input'
 import { supabase } from '@/shared/lib/supabase'
-import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil, ChevronRight } from 'lucide-react'
+import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil, ChevronRight, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { CustomSelect } from '@/shared/components/CustomSelect'
 import { useToast } from '@/shared/contexts/ToastContext'
+import { NotificationCenter } from './NotificationCenter'
 
 export function ProfilePage() {
   const { profile, user, signOut, isPremium } = useAuthStore()
@@ -20,6 +21,7 @@ export function ProfilePage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null)
   const [publishDescription, setPublishDescription] = useState('')
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false)
 
   // Editable profile fields
   const [editName, setEditName] = useState(profile?.full_name || '')
@@ -247,6 +249,17 @@ export function ProfilePage() {
               {notificationStatus === 'granted' ? t('profile.notificationsEnabled') : notificationStatus === 'denied' ? t('profile.notificationsBlocked') : t('profile.notificationsEnable')}
             </span>
           </button>
+          <button 
+            onClick={() => setShowNotificationCenter(true)}
+            className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200"
+          >
+            <div className="flex items-center gap-3 text-gray-300">
+              <Clock className="w-5 h-5" />
+              <span className="font-medium text-white">Histórico de Notificações</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-500" />
+          </button>
+          
           {/* Language Selection */}
           <div className="p-4 bg-surface-100 rounded-xl border border-transparent">
             <div className="flex items-center gap-3 text-gray-300 mb-3">
@@ -439,7 +452,6 @@ export function ProfilePage() {
                 onChange={(e) => setDefaultMaxReps(Number(e.target.value) || 0)}
               />
             </div>
-          </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.defaultSets')}</label>
             <Input
@@ -447,6 +459,20 @@ export function ProfilePage() {
               value={defaultSets}
               onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
             />
+          </div>
+            <div className="flex items-center gap-3 text-gray-300">
+              <Bell className="w-5 h-5" />
+              <span className="font-medium text-white">Sons e Alertas</span>
+            </div>
+            <button
+              onClick={() => {
+                const { setSoundEnabled, profile } = useAuthStore.getState()
+                setSoundEnabled(profile?.sound_enabled !== false ? false : true)
+              }}
+              className={`w-12 h-6 rounded-full transition-colors relative ${profile?.sound_enabled !== false ? 'bg-primary' : 'bg-surface-200'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${profile?.sound_enabled !== false ? 'left-7' : 'left-1'}`} />
+            </button>
           </div>
           <AnimatePresence>
             {profileMsg && (
@@ -480,6 +506,11 @@ export function ProfilePage() {
           </Button>
         </div>
       </Modal>
+
+      <NotificationCenter 
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+      />
     </div>
   )
 }

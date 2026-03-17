@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trophy, Star, ChevronRight } from 'lucide-react'
 import type { Achievement } from './useAchievementsStore'
+import { SocialShare } from '../progress/SocialShare'
 
 interface LevelUpModalProps {
   level: number
@@ -37,13 +38,19 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
               <p className="text-primary font-bold">Inígnia de Veterano</p>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-full h-12 bg-primary text-black font-bold rounded-xl hover:bg-primary-hover active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              Continuar
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="flex-1 h-12 bg-primary text-black font-bold rounded-xl hover:bg-primary-hover active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                Continuar
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <SocialShare 
+                title="Novo Nível Alcançado!"
+                text={`Cheguei ao nível ${level} no FitPWA! 🚀💪`}
+              />
+            </div>
           </div>
         </motion.div>
       </div>
@@ -72,6 +79,12 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
         </div>
         <h4 className="text-white font-bold leading-tight">{achievement.title}</h4>
         <p className="text-gray-400 text-xs mt-1">{achievement.description}</p>
+      </div>
+      <div onClick={(e) => e.stopPropagation()}>
+        <SocialShare 
+          title="Nova Conquista Desbloqueada!"
+          text={`Desbloqueei a conquista "${achievement.title}" no FitPWA! 🏆\n${achievement.description}`}
+        />
       </div>
     </motion.div>
   )

@@ -178,6 +178,9 @@ const en = {
     browserNoNotifications: 'This browser does not support notifications.',
     notificationsActivated: 'Notifications Enabled!',
     notificationsBody: 'You will receive rest timer alerts from FitPWA.',
+    soundEnabled: 'Sound Enabled',
+    soundDisabled: 'Sound Disabled',
+    soundAlerts: 'Sound and Alerts',
   },
 
   // ─── Session / Timer ───
@@ -219,6 +222,21 @@ const en = {
     completeSet: 'Complete Set',
     setCompleted: 'Set Completed ✓',
     startingVoice: 'Voice guide activated',
+    cancelWorkout: 'Cancel Workout',
+    cancelReason: {
+      title: 'Why are you cancelling?',
+      tired: 'Tiredness / Lack of energy',
+      noTime: 'Lack of time',
+      injury: 'Injury / Discomfort',
+      other: 'Other reason',
+    },
+    cancelSuggestion: {
+      tired: 'Rest is crucial. How about a light mobility session tomorrow?',
+      noTime: 'Short workouts count too! Try a 15 min quick workout next time.',
+      injury: 'Your health comes first. Consult a professional if pain persists.',
+      other: "Sometimes the day doesn't go as planned. The important thing is to come back next time!",
+    },
+    yesCancel: 'Yes, Cancel',
   },
 
   // ─── Social ───
