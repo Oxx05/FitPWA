@@ -39,7 +39,7 @@ export function MuscleHeatmap() {
         .from('workout_sessions')
         .select(`
           id,
-          workout_sets (
+          session_sets (
             reps,
             weight_kg,
             exercise_id,
@@ -47,13 +47,13 @@ export function MuscleHeatmap() {
           )
         `)
         .eq('user_id', profile.id)
-        .gte('finished_at', sevenDaysAgo)
+        .gte('created_at', sevenDaysAgo)
 
       if (sErr) throw sErr
 
       const volume: MuscleVolume = {}
       sessions?.forEach(session => {
-        const sets = session.workout_sets as unknown as Array<{ exercises: Array<{ muscle_groups: string[] }> | null }>
+        const sets = session.session_sets as unknown as Array<{ exercises: Array<{ muscle_groups: string[] }> | null }>
         sets?.forEach(set => {
           const muscles = set.exercises?.[0]?.muscle_groups || []
           muscles.forEach((m: string) => {

@@ -20,7 +20,7 @@ interface RawSet {
   weight_kg: number
   reps: number
   workout_sessions: {
-    finished_at: string
+    created_at: string
   }[]
 }
 
@@ -34,21 +34,21 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
       if (!profile?.id) return []
 
       const { data: sets, error } = await supabase
-        .from('workout_sets')
+        .from('session_sets')
         .select(`
           weight_kg,
           reps,
-          workout_sessions (finished_at)
+          workout_sessions (created_at)
         `)
         .eq('exercise_id', exerciseId)
-        .order('workout_sessions(finished_at)', { ascending: true })
+        .order('workout_sessions(created_at)', { ascending: true })
 
       if (error) throw error
 
       const dailyStats: Record<string, { max1RM: number; totalVolume: number }> = {}
 
       sets?.forEach((set: RawSet) => {
-        const finishedAt = set.workout_sessions?.[0]?.finished_at
+        const finishedAt = set.workout_sessions?.[0]?.created_at
         if (!finishedAt) return
         const date = new Date(finishedAt).toLocaleDateString()
         const oneRepMax = (set.weight_kg || 0) * (1 + (set.reps || 0) / 30)

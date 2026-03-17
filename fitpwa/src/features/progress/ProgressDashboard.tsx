@@ -16,8 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 export interface WorkoutSessionDetail {
   id: string
   plan_name: string | null
-  started_at: string
-  finished_at: string | null
+  created_at: string | null
   total_volume_kg: number
   duration_seconds: number
 }
@@ -42,7 +41,7 @@ export function ProgressDashboard() {
         .from('session_sets')
         .select('*')
         .eq('session_id', selectedSessionForDetails.id)
-        .order('created_at', { ascending: true })
+        .order('set_number', { ascending: true })
       
       if (error) throw error
       
@@ -74,15 +73,14 @@ export function ProgressDashboard() {
         .select(`
           id,
           plan_name,
-          started_at,
-          finished_at,
+          created_at,
           total_volume_kg,
           duration_seconds
         `)
         .eq('user_id', profile.id)
-        .not('finished_at', 'is', null)
-        .gte('started_at', eightWeeksAgo.toISOString())
-        .order('started_at', { ascending: true })
+        .not('created_at', 'is', null)
+        .gte('created_at', eightWeeksAgo.toISOString())
+        .order('created_at', { ascending: true })
 
       // Fetch Personal Records
       const { data: prsData } = await supabase
@@ -103,13 +101,13 @@ export function ProgressDashboard() {
       if (!history) return null
 
       const now = new Date()
-      const currentWeekWorkouts = history.filter(h => isSameWeek(new Date(h.started_at), now))
+      const currentWeekWorkouts = history.filter(h => isSameWeek(new Date(h.created_at!), now))
       
       // Calculate total volume for current week
       const currentWeekVolume = currentWeekWorkouts.reduce((sum, h) => sum + (Number(h.total_volume_kg) || 0), 0)
       
       // Calculate total volume for previous week
-      const previousWeekWorkouts = history.filter(h => isSameWeek(new Date(h.started_at), subWeeks(now, 1)))
+      const previousWeekWorkouts = history.filter(h => isSameWeek(new Date(h.created_at!), subWeeks(now, 1)))
       const prevWeekVolume = previousWeekWorkouts.reduce((sum, h) => sum + (Number(h.total_volume_kg) || 0), 0)
 
       let volumeChange = 0
@@ -130,7 +128,7 @@ export function ProgressDashboard() {
       }
 
       history.forEach(h => {
-        const weekKey = format(startOfWeek(new Date(h.started_at)), "dd MMM", { locale: pt })
+        const weekKey = format(startOfWeek(new Date(h.created_at!)), "dd MMM", { locale: pt })
         if (chartDataMap.has(weekKey)) {
           const entry = chartDataMap.get(weekKey)
           entry.volume += (Number(h.total_volume_kg) || 0)
@@ -140,7 +138,7 @@ export function ProgressDashboard() {
       // Try to determine consecutive days workout streak
       let streak = 0
       const dates = history
-        .map(h => format(new Date(h.started_at), 'yyyy-MM-dd'))
+        .map(h => format(new Date(h.created_at!), 'yyyy-MM-dd'))
         .filter((v, i, a) => a.indexOf(v) === i) // Unique dates
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // Descending
 
@@ -202,7 +200,7 @@ export function ProgressDashboard() {
     volumeChange: 0,
     streak: 0,
     chartData: [] as Array<{ week: string; volume: number }>,
-    history: [] as Array<{ id: string; plan_name: string | null; started_at: string; finished_at: string | null; total_volume_kg: number; duration_seconds: number }>,
+    history: [] as Array<{ id: string; plan_name: string | null; created_at: string | null; total_volume_kg: number; duration_seconds: number }>,
     prs: [] as Array<{ exercise_name: string; one_rep_max: number; weight_kg: number; reps: number }>
   }
 
@@ -362,7 +360,7 @@ export function ProgressDashboard() {
                       <span className="flex items-center gap-1">
                         <Weight className="w-3 h-3" /> {formatVolume(session.total_volume_kg)}kg
                       </span>
-                      <span>{format(new Date(session.started_at), "dd MMM, HH:mm", { locale: pt })}</span>
+                      <span>{format(new Date(session.created_at!), "dd MMM, HH:mm", { locale: pt })}</span>
                     </div>
                   </div>
                 </div>
@@ -414,7 +412,7 @@ export function ProgressDashboard() {
                 <p className="text-xs text-gray-500 uppercase font-black mb-2">Treino Selecionado</p>
                 <div className="flex justify-between items-center">
                   <h4 className="font-bold text-white text-lg">{compareSession.plan_name || 'Treino Personalizado'}</h4>
-                  <p className="text-sm text-gray-400">{format(new Date(compareSession.started_at), "dd/MM/yyyy")}</p>
+                  <p className="text-sm text-gray-400">{format(new Date(compareSession.created_at!), "dd/MM/yyyy")}</p>
                 </div>
               </div>
 
@@ -433,7 +431,7 @@ export function ProgressDashboard() {
                             : 'bg-surface-200 border-white/5 text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        <span className="font-bold">{format(new Date(s.started_at), "dd MMM yyyy, HH:mm")}</span>
+                        <span className="font-bold">{format(new Date(s.created_at!), "dd MMM yyyy, HH:mm")}</span>
                         <span className="text-xs">{formatVolume(s.total_volume_kg)} kg</span>
                       </button>
                     ))}
@@ -511,7 +509,7 @@ export function ProgressDashboard() {
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-primary" />
                 <span className="text-white font-bold">
-                  {selectedSessionForDetails && format(new Date(selectedSessionForDetails.started_at), "dd MMM yyyy, HH:mm", { locale: pt })}
+                  {selectedSessionForDetails && format(new Date(selectedSessionForDetails.created_at!), "dd MMM yyyy, HH:mm", { locale: pt })}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-400">

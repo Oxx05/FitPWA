@@ -14,8 +14,8 @@ interface FeedSet {
 
 interface FeedSession {
   id: string
-  total_volume: number
-  finished_at: string
+  total_volume_kg: number
+  created_at: string
   profiles: {
     username: string
   }[]
@@ -43,8 +43,8 @@ export function SocialFeed() {
         .select(`
           id,
           user_id,
-          finished_at,
-          total_volume,
+          created_at,
+          total_volume_kg,
           profiles:user_id (username, avatar_url),
           session_sets (
             exercise_id,
@@ -54,7 +54,7 @@ export function SocialFeed() {
           )
         `)
         .in('user_id', followingIds)
-        .order('finished_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10)
 
       if (error) throw error
@@ -96,7 +96,7 @@ export function SocialFeed() {
         const hasBest = !!bestSet
         const title = hasBest ? t('social.feed.highlight') : t('social.feed.sessionFinished')
         const subtitle = bestSet?.exercise_name || t('social.feed.sessionCompleted')
-        const value = bestSet?.weight_kg ? `${bestSet.weight_kg}` : `${Math.round(session.total_volume)}`
+        const value = bestSet?.weight_kg ? `${bestSet.weight_kg}` : `${Math.round(session.total_volume_kg)}`
         const label = bestSet?.weight_kg ? t('social.feed.valueWeight') : t('social.feed.valueVolume')
 
         return (
@@ -116,7 +116,7 @@ export function SocialFeed() {
                 </p>
                 <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                   <Calendar className="w-3 h-3" />
-                  {new Date(session.finished_at).toLocaleDateString()}
+                  {new Date(session.created_at).toLocaleDateString()}
                 </div>
               </div>
             </div>

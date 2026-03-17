@@ -16,9 +16,15 @@ export function SmartInsights() {
 
       const { data: sessions } = await supabase
         .from('workout_sessions')
-        .select('finished_at, workout_sets(exercises(muscle_groups))')
+        .select(`
+          created_at,
+          session_sets (
+            exercise_id,
+            exercises (muscle_groups)
+          )
+        `)
         .eq('user_id', profile.id)
-        .order('finished_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(20)
 
       const list = []
@@ -26,7 +32,7 @@ export function SmartInsights() {
       // Insight 1: Consistency
       const lastSession = sessions?.[0]
       if (lastSession) {
-        const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.finished_at).getTime()) / (1000 * 3600 * 24))
+        const daysSince = Math.floor((new Date().getTime() - new Date(lastSession.created_at).getTime()) / (1000 * 3600 * 24))
         if (daysSince === 0) {
             list.push({
                 icon: <CheckCircle2 className="text-green-500" />,
@@ -45,9 +51,9 @@ export function SmartInsights() {
       // Insight 2: Muscle Balance
       const recentMuscles = new Set()
       sessions?.slice(0, 5).forEach(s => {
-          const sets = s.workout_sets as unknown as Array<{ exercises: Array<{ muscle_groups: string[] }> | null }>
+          const sets = s.session_sets as unknown as Array<{ exercises: { muscle_groups: string[] } | null }>
           sets?.forEach(set => {
-              set.exercises?.[0]?.muscle_groups?.forEach((m: string) => recentMuscles.add(m))
+              set.exercises?.muscle_groups?.forEach((m: string) => recentMuscles.add(m))
           })
       })
 
