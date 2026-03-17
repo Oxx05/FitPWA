@@ -16,6 +16,14 @@ interface ExerciseEvolutionProps {
   exerciseName: string
 }
 
+interface RawSet {
+  weight_kg: number
+  reps: number
+  workout_sessions: {
+    finished_at: string
+  }[]
+}
+
 export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutionProps) {
   const { t } = useTranslation()
   const { profile } = useAuthStore()
@@ -39,8 +47,10 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
 
       const dailyStats: Record<string, { max1RM: number; totalVolume: number }> = {}
 
-      sets?.forEach((set: any) => {
-        const date = new Date(set.workout_sessions.finished_at).toLocaleDateString()
+      sets?.forEach((set: RawSet) => {
+        const finishedAt = set.workout_sessions?.[0]?.finished_at
+        if (!finishedAt) return
+        const date = new Date(finishedAt).toLocaleDateString()
         const oneRepMax = (set.weight_kg || 0) * (1 + (set.reps || 0) / 30)
         const volume = (set.weight_kg || 0) * (set.reps || 0)
 

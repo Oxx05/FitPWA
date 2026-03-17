@@ -1015,7 +1015,7 @@ export function SessionScreen() {
                   <Clock className="w-6 h-6 animate-pulse" />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-black tracking-widest opacity-60">Descanso em curso</p>
+                  <p className="text-[10px] uppercase font-black tracking-widest opacity-60">{t('session.restInProgress')}</p>
                   <p className="text-3xl font-black italic tabular-nums leading-none">
                     {formatTime(restTimer)}
                   </p>
@@ -1025,7 +1025,7 @@ export function SessionScreen() {
                 onClick={() => setRestTimer(null)}
                 className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-xl font-black uppercase text-xs transition-colors"
               >
-                Ignorar
+                {t('session.ignore')}
               </button>
             </div>
           </motion.div>
@@ -1098,17 +1098,17 @@ export function SessionScreen() {
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-black font-black text-sm">FP</div>
-                <span className="text-xs font-black text-white uppercase tracking-widest italic">MODO FOCO</span>
+                <span className="text-xs font-black text-white uppercase tracking-widest italic">{t('session.focusMode')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => {
                     const next = !voiceEnabled
                     setVoiceEnabled(next)
-                    if (next) speak('Guia de voz activado')
+                    if (next) speak(t('session.startingVoice'))
                   }}
                   className={`p-3 rounded-2xl transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
-                  title="Guia de Voz"
+                  title={t('profile.notifications')}
                 >
                   <Zap className={`w-6 h-6 ${voiceEnabled ? 'animate-pulse' : ''}`} />
                 </button>
@@ -1123,17 +1123,17 @@ export function SessionScreen() {
 
             <div className="flex-grow flex flex-col justify-center gap-8 max-w-lg mx-auto w-full">
               <div className="text-center space-y-2">
-                <p className="text-primary font-black uppercase tracking-widest text-xs">A treinar agora</p>
+                <p className="text-primary font-black uppercase tracking-widest text-xs">{t('session.trainingNow')}</p>
                 <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">
                   {currentExercise.name}
                 </h2>
                 <div className="inline-flex bg-surface-200 px-6 py-2 rounded-full border border-white/10 gap-6">
                    <div className="flex flex-col">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">Objetivo</span>
-                      <span className="text-sm text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} reps</span>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t('common.goal')}</span>
+                      <span className="text-sm text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} {t('session.reps')}</span>
                    </div>
                    <div className="flex flex-col">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">Resto</span>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t('editor.rest')}</span>
                       <span className="text-sm text-white font-black">{currentExercise.restSeconds}s</span>
                    </div>
                 </div>
@@ -1146,15 +1146,15 @@ export function SessionScreen() {
                     return (
                       <>
                         <div className="flex justify-between items-center px-4">
-                          <span className="text-gray-500 font-black text-sm uppercase">Série {activeSet.setNumber}</span>
+                          <span className="text-gray-500 font-black text-sm uppercase">{t('session.set')} {activeSet.setNumber}</span>
                           {restTimer !== null && (
-                            <span className="text-primary font-black animate-pulse">DESCANSO: {formatTime(restTimer)}</span>
+                            <span className="text-primary font-black animate-pulse">{t('session.restTimer').toUpperCase()}: {formatTime(restTimer)}</span>
                           )}
                         </div>
 
                         <div className="flex items-center gap-4">
                            <div className="flex-1 space-y-2">
-                             <p className="text-xs font-bold text-gray-500 uppercase text-center">Peso (kg)</p>
+                             <p className="text-xs font-bold text-gray-500 uppercase text-center">{t('editor.weight')}</p>
                              <DebouncedNumericInput
                                 value={activeSet.weight}
                                 onChange={val => handleSetChange(activeSet.id, 'weight', val)}
@@ -1163,7 +1163,7 @@ export function SessionScreen() {
                            </div>
                            <div className="text-4xl font-black text-gray-700 mt-6">×</div>
                            <div className="flex-1 space-y-2">
-                             <p className="text-xs font-bold text-gray-500 uppercase text-center">Reps</p>
+                             <p className="text-xs font-bold text-gray-500 uppercase text-center">{t('session.reps')}</p>
                              <DebouncedNumericInput
                                 value={activeSet.reps}
                                 onChange={val => handleSetChange(activeSet.id, 'reps', val)}
@@ -1178,7 +1178,7 @@ export function SessionScreen() {
                           className="h-20 rounded-3xl text-2xl font-black uppercase italic tracking-tighter"
                           onClick={() => handleCompleteSet(activeSet.id)}
                         >
-                          {activeSet.completed ? "Série Concluída ✓" : "Completar Série"}
+                          {activeSet.completed ? t('session.setCompleted') : t('session.completeSet')}
                         </Button>
                       </>
                     )
@@ -1193,7 +1193,7 @@ export function SessionScreen() {
                 disabled={currentExerciseIndex === 0}
                 onClick={() => setCurrentExerciseIndex(i => i - 1)}
               >
-                Anterior
+                {t('common.back')}
               </Button>
               <Button 
                 variant="ghost" 
@@ -1201,7 +1201,7 @@ export function SessionScreen() {
                 disabled={currentExerciseIndex === exercises.length - 1}
                 onClick={() => setCurrentExerciseIndex(i => i + 1)}
               >
-                Próximo Exercício
+                {t('session.nextExercise')}
               </Button>
             </div>
           </motion.div>

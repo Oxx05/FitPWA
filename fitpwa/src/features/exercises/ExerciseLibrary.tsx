@@ -10,10 +10,16 @@ import { useOfflineExercises } from '@/shared/hooks/useOfflineData'
 import { Modal } from '@/shared/components/Modal'
 import { ExerciseEvolution } from './components/ExerciseEvolution'
 
+interface Exercise {
+  id: string
+  name: string
+  muscle_groups: string[]
+}
+
 export function ExerciseLibrary() {
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState<string>('all')
-  const [selectedExercise, setSelectedExercise] = useState<any | null>(null)
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
 
   const { data: exercises, isLoading } = useOfflineExercises()
 

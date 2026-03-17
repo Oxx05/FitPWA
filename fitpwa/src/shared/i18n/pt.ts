@@ -22,6 +22,7 @@ const pt = {
     likes: 'likes',
     saved: 'guardados',
     published: 'Publicados',
+    goal: 'Objetivo',
   },
 
   // ─── Navigation ───
@@ -206,8 +207,17 @@ const pt = {
     totalSets: 'Séries totais',
     continueTraining: 'Continuar',
     yesFinish: 'Sim, Terminar',
-    restFinished: 'Descanso Terminado!',
     restFinishedBody: 'Prepara-te para a próxima série!',
+    restInProgress: 'Descanso em curso',
+    ignore: 'Ignorar',
+    focusMode: 'Modo Foco',
+    nextSet: 'Próxima Série',
+    remainingTime: 'Tempo Restante',
+    setsDone: 'Séries Concluídas',
+    trainingNow: 'A treinar agora',
+    completeSet: 'Completar Série',
+    setCompleted: 'Série Concluída ✓',
+    startingVoice: 'Guia de voz activado',
   },
 
   // ─── Social ───

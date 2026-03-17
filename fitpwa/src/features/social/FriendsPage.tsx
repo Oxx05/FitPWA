@@ -155,7 +155,7 @@ export function FriendsPage() {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'mural' | 'social' | 'leaderboard' | 'community')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all uppercase tracking-tighter whitespace-nowrap ${
                 activeTab === tab.id ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-gray-400 hover:text-white'
               }`}

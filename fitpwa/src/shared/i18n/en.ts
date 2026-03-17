@@ -22,6 +22,7 @@ const en = {
     likes: 'likes',
     saved: 'saved',
     published: 'Published',
+    goal: 'Goal',
   },
 
   // ─── Navigation ───
@@ -206,8 +207,17 @@ const en = {
     totalSets: 'Total Sets',
     continueTraining: 'Continue',
     yesFinish: 'Yes, Finish',
-    restFinished: 'Rest Finished!',
     restFinishedBody: 'Get ready for the next set!',
+    restInProgress: 'Rest in progress',
+    ignore: 'Ignore',
+    focusMode: 'Focus Mode',
+    nextSet: 'Next Set',
+    remainingTime: 'Remaining Time',
+    setsDone: 'Sets Completed',
+    trainingNow: 'Training now',
+    completeSet: 'Complete Set',
+    setCompleted: 'Set Completed ✓',
+    startingVoice: 'Voice guide activated',
   },
 
   // ─── Social ───

@@ -6,6 +6,22 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { ConquestCard } from '@/shared/components/ConquestCard'
 
+interface FeedSet {
+  weight_kg: number
+  reps: number
+  exercise_name: string
+}
+
+interface FeedSession {
+  id: string
+  total_volume: number
+  finished_at: string
+  profiles: {
+    username: string
+  }[]
+  session_sets: FeedSet[]
+}
+
 export function SocialFeed() {
   const { t } = useTranslation()
   const { profile } = useAuthStore()
@@ -69,9 +85,9 @@ export function SocialFeed() {
 
   return (
     <div className="space-y-12">
-      {feedItems.map((session: any) => {
+      {feedItems.map((session: FeedSession) => {
         const sets = session.session_sets || []
-        const bestSet = [...sets].sort((a: any, b: any) => {
+        const bestSet = [...sets].sort((a: FeedSet, b: FeedSet) => {
           const ormA = (a.weight_kg || 0) * (1 + (a.reps || 0) / 30)
           const ormB = (b.weight_kg || 0) * (1 + (b.reps || 0) / 30)
           return ormB - ormA
@@ -92,11 +108,11 @@ export function SocialFeed() {
           >
             <div className="flex items-center gap-3 mb-4 px-2">
               <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center font-black text-primary border border-white/5 uppercase italic">
-                {session.profiles?.username?.[0] || 'U'}
+                {session.profiles?.[0]?.username?.[0] || 'U'}
               </div>
               <div>
                 <p className="text-sm font-black text-white italic uppercase tracking-tighter">
-                  @{session.profiles?.username}
+                  @{session.profiles?.[0]?.username}
                 </p>
                 <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                   <Calendar className="w-3 h-3" />
