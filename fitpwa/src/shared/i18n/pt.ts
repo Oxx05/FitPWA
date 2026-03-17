@@ -147,6 +147,7 @@ const pt = {
     account: 'Conta',
     accountSettings: 'Definições da Conta',
     notifications: 'Notificações',
+    language: 'Idioma',
     notificationsEnabled: 'Ativadas',
     notificationsBlocked: 'Bloqueadas',
     notificationsEnable: 'Ligar',

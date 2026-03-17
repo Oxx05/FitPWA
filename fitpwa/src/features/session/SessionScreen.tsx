@@ -83,11 +83,6 @@ export function SessionScreen() {
     }
   }, [restTimer, voiceEnabled, speak])
 
-  useEffect(() => {
-    if (!voiceEnabled) return
-    speak(`Próximo exercício: ${currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`)
-  }, [currentExerciseIndex, voiceEnabled, speak])
-
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ type, message })
     setTimeout(() => setToast(null), 3000)
@@ -252,6 +247,13 @@ export function SessionScreen() {
   }, [navigate])
 
   const currentExercise = exercises[currentExerciseIndex]
+
+  // Effect to announce new exercise (moved after currentExercise declaration)
+  useEffect(() => {
+    if (!voiceEnabled || !currentExercise) return
+    speak(`Próximo exercício: ${currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`)
+  }, [currentExerciseIndex, voiceEnabled, speak, currentExercise])
+
   const completedVolume = exercises.reduce((acc, ex) =>
     acc + ex.sets.reduce((setAcc, set) =>
       set.completed ? setAcc + ((set.weight || 0) * (set.reps || 0)) : setAcc, 0), 0)

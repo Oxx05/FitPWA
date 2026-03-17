@@ -5,7 +5,7 @@ import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { Input } from '@/shared/components/Input'
 import { supabase } from '@/shared/lib/supabase'
-import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil } from 'lucide-react'
+import { User, Mail, Shield, LogOut, Settings, Bell, CreditCard, Globe, Lock, Check, Pencil, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -234,7 +234,7 @@ export function ProfilePage() {
               <Settings className="w-5 h-5" />
               <span className="font-medium text-white">{t('profile.accountSettings')}</span>
             </div>
-            <span className="text-gray-500">→</span>
+            <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
           <button onClick={requestNotificationPermission} className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200">
             <div className="flex items-center gap-3 text-gray-300">
@@ -501,7 +501,7 @@ function ProfileLink({ icon, label, to = '#' }: { icon: React.ReactNode, label: 
         {icon}
         <span className="font-medium text-white">{label}</span>
       </div>
-      <span className="text-gray-500">→</span>
+      <ChevronRight className="w-5 h-5 text-gray-500" />
     </Link>
   )
 }

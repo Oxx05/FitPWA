@@ -147,6 +147,7 @@ const en = {
     account: 'Account',
     accountSettings: 'Account Settings',
     notifications: 'Notifications',
+    language: 'Language',
     notificationsEnabled: 'Enabled',
     notificationsBlocked: 'Blocked',
     notificationsEnable: 'Enable',
