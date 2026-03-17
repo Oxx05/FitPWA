@@ -1117,12 +1117,26 @@ export function SessionScreen() {
           </Button>
 
           <Button
-            disabled={currentExerciseIndex === exercises.length - 1}
-            onClick={() => setCurrentExerciseIndex(i => i + 1)}
+            onClick={() => {
+              if (currentExerciseIndex === exercises.length - 1) {
+                setShowFinishModal(true)
+              } else {
+                setCurrentExerciseIndex(i => i + 1)
+              }
+            }}
             className="flex-1 gap-2 active:scale-95 transition-transform"
           >
-            {t('common.next')}
-            <ChevronRight className="w-5 h-5" />
+            {currentExerciseIndex === exercises.length - 1 ? (
+              <>
+                {t('session.finishWorkout')}
+                <Square className="w-5 h-5" />
+              </>
+            ) : (
+              <>
+                {t('common.next')}
+                <ChevronRight className="w-5 h-5" />
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -1238,11 +1252,16 @@ export function SessionScreen() {
               </Button>
               <Button 
                 variant="ghost" 
-                className="flex-1 h-16 rounded-2xl text-white font-black uppercase border border-white/10"
-                disabled={currentExerciseIndex === exercises.length - 1}
-                onClick={() => setCurrentExerciseIndex(i => i + 1)}
+                className="flex-1 h-16 rounded-2xl text-white font-black uppercase border border-white/10 active:scale-95 transition-all bg-primary/10 border-primary/20"
+                onClick={() => {
+                  if (currentExerciseIndex === exercises.length - 1) {
+                    setShowFinishModal(true)
+                  } else {
+                    setCurrentExerciseIndex(i => i + 1)
+                  }
+                }}
               >
-                {t('session.nextExercise')}
+                {currentExerciseIndex === exercises.length - 1 ? t('session.finishWorkout') : t('session.nextExercise')}
               </Button>
             </div>
           </motion.div>
