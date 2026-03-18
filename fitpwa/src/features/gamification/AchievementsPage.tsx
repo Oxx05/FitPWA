@@ -26,8 +26,9 @@ export function AchievementsPage() {
     { id: 'workouts', icon: <History className="w-4 h-4" />, label: t('gamification.categories.workouts') },
     { id: 'volume', icon: <Target className="w-4 h-4" />, label: t('gamification.categories.volume') },
     { id: 'level', icon: <Star className="w-4 h-4" />, label: t('gamification.categories.level') },
-    { id: 'secret', icon: <HelpCircle className="w-4 h-4" />, label: 'Segredos' },
-  ]
+    { id: 'social', icon: <Users className="w-4 h-4" />, label: t('gamification.categories.social') },
+    { id: 'secret', icon: <HelpCircle className="w-4 h-4" />, label: t('gamification.categories.secrets') }
+  ];
 
   // Group achievements by groupId to show levels/tiers
   const groupedAchievements = useMemo(() => {
@@ -69,8 +70,7 @@ export function AchievementsPage() {
               <Lock className="w-16 h-16 text-gray-500" />
             </div>
             <p className="text-4xl font-black text-white mb-1">
-              {Object.keys(groupedAchievements).length - 
-               Object.values(groupedAchievements).filter(list => list.some(a => unlockedIds.includes(a.id))).length}
+              {achievements.length - unlockedIds.length}
             </p>
             <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{t('gamification.toEarn')}</p>
           </div>
@@ -80,10 +80,10 @@ export function AchievementsPage() {
         <div className="space-y-16">
           {categories.map((category) => {
             const catGroups = Object.entries(groupedAchievements).filter(([_, list]) => 
-              (category.id === 'secret' ? list.some(a => a.secret) : list.some(a => a.requirement === category.id && !a.secret))
+              (category.id === 'secret' ? list[0].secret : list[0].groupId === category.id && !list[0].secret)
             )
             
-            if (catGroups.length === 0) return null
+            // if (catGroups.length === 0) return null
 
             return (
               <section key={category.id} className="space-y-8">
@@ -96,88 +96,96 @@ export function AchievementsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {catGroups.map(([groupId, list], gIdx) => {
-                    // Sort by level to find current progress
-                    const sorted = [...list].sort((a, b) => a.level - b.level)
-                    const lastUnlocked = [...sorted].reverse().find(a => unlockedIds.includes(a.id))
-                    
-                    // Show highest unlocked, or the next one to earn, or the first one if all locked
-                    const nextToEarn = sorted.find(a => !unlockedIds.includes(a.id))
-                    const displayed = lastUnlocked || nextToEarn || sorted[0]
-                    
-                    const isFullyLocked = !lastUnlocked
-                    const isSecret = displayed.secret && isFullyLocked
+                  {catGroups.length === 0 ? (
+                    <div className="col-span-full py-8 text-center bg-surface-200/20 rounded-3xl border border-dashed border-white/5">
+                      <p className="text-sm text-gray-500 font-bold uppercase tracking-widest leading-loose">
+                        {t('gamification.categoryEmpty')}
+                      </p>
+                    </div>
+                  ) : (
+                    catGroups.map(([groupId, list], gIdx) => {
+                      // ... existing mapping logic ...
+                      // Sort by level to find current progress
+                      const sorted = [...list].sort((a, b) => a.level - b.level)
+                      const lastUnlocked = [...sorted].reverse().find(a => unlockedIds.includes(a.id))
+                      
+                      const nextToEarn = sorted.find(a => !unlockedIds.includes(a.id))
+                      const displayed = lastUnlocked || nextToEarn || sorted[0]
+                      
+                      const isFullyLocked = !lastUnlocked
+                      const isSecret = displayed.secret && isFullyLocked
 
-                    return (
-                      <motion.div
-                        key={groupId}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: gIdx * 0.05 }}
-                        className={`relative p-6 rounded-[32px] border transition-all duration-500 flex flex-col items-center text-center gap-4 overflow-hidden ${
-                          !isFullyLocked 
-                            ? (displayed.level === 4 ? 'bg-blue-500/10 border-blue-400/30' : 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl') 
-                            : 'bg-surface-200/40 border-white/5 opacity-50'
-                        }`}
-                      >
-                        {/* Rarity Badge */}
-                        {!isSecret && displayed.rarity !== undefined && (
-                          <div className="absolute top-4 left-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                            <Users className="w-2.5 h-2.5 text-gray-500" />
-                            <span className="text-[9px] font-bold text-gray-400 uppercase">{displayed.rarity}%</span>
-                          </div>
-                        )}
-
-                        {/* Background Rank Indicator */}
-                        {!isFullyLocked && (
-                          <div className={`absolute -top-1 -right-1 w-12 h-12 flex items-center justify-center rotate-12 opacity-20 text-white font-black text-xl`}>
-                            {displayed.level === 4 ? 'PLAT' : displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
-                          </div>
-                        )}
-
-                        <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative z-10 ${
-                          !isFullyLocked 
-                            ? (displayed.level === 4 ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-slow' : 'bg-primary/10 animate-float') 
-                            : 'bg-surface-100'
-                        }`}>
-                          {isSecret ? <HelpCircle className="w-10 h-10 text-gray-600" /> : displayed.icon}
-                          {isFullyLocked && !isSecret && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                              <Lock className="w-6 h-6 text-white/50" />
+                      return (
+                        <motion.div
+                          key={groupId}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: gIdx * 0.05 }}
+                          className={`relative p-6 rounded-[32px] border transition-all duration-500 flex flex-col items-center text-center gap-4 overflow-hidden ${
+                            !isFullyLocked 
+                              ? (displayed.level === 4 ? 'bg-blue-500/10 border-blue-400/30' : 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl') 
+                              : 'bg-surface-200/40 border-white/5 opacity-50'
+                          }`}
+                        >
+                          {/* Rarity Badge */}
+                          {!isSecret && displayed.rarity !== undefined && (
+                            <div className="absolute top-4 left-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                              <Users className="w-2.5 h-2.5 text-gray-500" />
+                              <span className="text-[9px] font-bold text-gray-400 uppercase">{displayed.rarity}%</span>
                             </div>
                           )}
-                        </div>
-                        
-                        <div className="relative z-10 w-full">
-                          <h3 className={`text-base font-black tracking-tight mb-1 ${!isFullyLocked ? 'text-white' : 'text-gray-500'}`}>
-                            {isSecret ? '???' : (isPt ? displayed.title_pt : displayed.title)}
-                          </h3>
-                          <p className="text-xs text-gray-500 leading-snug px-2">
-                            {isSecret ? 'Continua a treinar para descobrir...' : (isPt ? displayed.description_pt : displayed.description)}
-                          </p>
-                        </div>
 
-                        {/* Level Progress dots */}
-                        {list.length > 1 && !isSecret && (
-                          <div className="flex gap-1.5 mt-2">
-                            {list.map(a => (
-                              <div 
-                                key={a.id} 
-                                className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                                  unlockedIds.includes(a.id) ? 'bg-primary scale-110 shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-surface-300'
-                                }`} 
-                              />
-                            ))}
+                          {/* Background Rank Indicator */}
+                          {!isFullyLocked && (
+                            <div className={`absolute -top-1 -right-1 w-12 h-12 flex items-center justify-center rotate-12 opacity-20 text-white font-black text-xl`}>
+                              {displayed.level === 4 ? 'PLAT' : displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
+                            </div>
+                          )}
+
+                          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative z-10 ${
+                            !isFullyLocked 
+                              ? (displayed.level === 4 ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-slow' : 'bg-primary/10 animate-float') 
+                              : 'bg-surface-100'
+                          }`}>
+                            {isSecret ? <HelpCircle className="w-10 h-10 text-gray-600" /> : displayed.icon}
+                            {isFullyLocked && !isSecret && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                                <Lock className="w-6 h-6 text-white/50" />
+                              </div>
+                            )}
                           </div>
-                        )}
+                          
+                          <div className="relative z-10 w-full">
+                            <h3 className={`text-base font-black tracking-tight mb-1 ${!isFullyLocked ? 'text-white' : 'text-gray-500'}`}>
+                              {isSecret ? '???' : (isPt ? displayed.title_pt : displayed.title)}
+                            </h3>
+                            <p className="text-xs text-gray-500 leading-snug px-2">
+                              {isSecret ? t('gamification.keepTraining') : (isPt ? displayed.description_pt : displayed.description)}
+                            </p>
+                          </div>
 
-                        {/* Secret Glow */}
-                        {isSecret && (
-                          <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
-                        )}
-                      </motion.div>
-                    )
-                  })}
+                          {/* Level Progress dots */}
+                          {list.length > 1 && !isSecret && (
+                            <div className="flex gap-1.5 mt-2">
+                              {list.map(a => (
+                                <div 
+                                  key={a.id} 
+                                  className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                                    unlockedIds.includes(a.id) ? 'bg-primary scale-110 shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-surface-300'
+                                  }`} 
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Secret Glow */}
+                          {isSecret && (
+                            <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
+                          )}
+                        </motion.div>
+                      )
+                    })
+                  )}
                 </div>
               </section>
             )

@@ -27,9 +27,7 @@ export function DebouncedNumericInput({
   useEffect(() => {
     const handler = setTimeout(() => {
       if (localValue === '') {
-        // Don't trigger onChange immediately on empty string to allow typing
-        // but if it stays empty, we might want to send null eventually
-        // For now, let's only trigger if it's a valid number
+        if (value !== null) onChange(null)
         return
       }
       const numericValue = parseFloat(localValue)
@@ -50,12 +48,15 @@ export function DebouncedNumericInput({
   }
 
   const handleBlur = () => {
-    const numericValue = localValue === '' ? null : parseFloat(localValue)
-    if (!isNaN(Number(localValue)) && numericValue !== value) {
-      onChange(numericValue)
-    } else if (isNaN(Number(localValue))) {
-      // Revert if invalid
-      setLocalValue(value === null ? '' : value.toString())
+    if (localValue === '') {
+      onChange(null)
+    } else {
+      const numericValue = parseFloat(localValue)
+      if (!isNaN(numericValue) && numericValue !== value) {
+        onChange(numericValue)
+      } else if (isNaN(numericValue)) {
+        setLocalValue(value === null ? '' : value.toString())
+      }
     }
   }
 

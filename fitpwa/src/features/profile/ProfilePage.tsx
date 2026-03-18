@@ -466,90 +466,114 @@ export function ProfilePage() {
         title={t('profile.accountSettings')}
         closeButton
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.name')}</label>
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder={t('profile.namePlaceholder')}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t('auth.email')}</label>
-            <div className="bg-surface-100 border border-surface-200 rounded-lg px-4 py-2.5 text-gray-400 cursor-not-allowed">
-              {user?.email}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{t('profile.emailCannotChange')}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t('profile.defaultRestTime')}</label>
-            <Input
-              type="number"
-              value={defaultRest}
-              onChange={(e) => setDefaultRest(Number(e.target.value) || 0)}
-              placeholder="ex: 90"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Reps (Min)</label>
-              <Input
-                type="number"
-                value={defaultMinReps}
-                onChange={(e) => setDefaultMinReps(Number(e.target.value) || 0)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Reps (Max)</label>
-              <Input
-                type="number"
-                value={defaultMaxReps}
-                onChange={(e) => setDefaultMaxReps(Number(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2 uppercase tracking-widest text-[10px]">{t('profile.defaultSets')}</label>
-              <Input
-                type="number"
-                value={defaultSets}
-                onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
-                className="h-12 bg-surface-200 border-white/5 focus:border-primary/50"
-              />
-            </div>
-            <div className="flex flex-col justify-end">
-              <div 
-                onClick={() => {
-                  const { setSoundEnabled, profile } = useAuthStore.getState()
-                  setSoundEnabled(profile?.sound_enabled !== false ? false : true)
-                }}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer h-12 ${
-                  profile?.sound_enabled !== false 
-                    ? 'bg-primary/10 border-primary/30 text-primary' 
-                    : 'bg-surface-200 border-white/5 text-gray-500'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Bell className={`w-4 h-4 ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-500'}`} />
-                  <span className={`text-xs font-black uppercase tracking-tight ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-400'}`}>
-                    {profile?.sound_enabled !== false ? t('profile.soundEnabled') : t('profile.soundDisabled')}
-                  </span>
+        <div className="space-y-8 py-2">
+          {/* Section: Personal Info */}
+          <section className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70 px-1">{t('profile.account')}</h4>
+            <div className="bg-surface-100/50 p-4 rounded-3xl border border-white/5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.name')}</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder={t('profile.namePlaceholder')}
+                  className="bg-surface-200 border-white/5 focus:border-primary/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('auth.email')}</label>
+                <div className="bg-surface-200 border border-white/5 rounded-2xl px-4 py-3 text-gray-400 cursor-not-allowed text-sm">
+                  {user?.email}
                 </div>
-                <div className={`w-8 h-4 rounded-full relative transition-colors ${profile?.sound_enabled !== false ? 'bg-primary' : 'bg-surface-300'}`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${profile?.sound_enabled !== false ? 'left-4.5' : 'left-0.5'}`} />
+                <p className="text-[10px] text-gray-600 mt-2 font-bold uppercase">{t('profile.emailCannotChange')}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Training Defaults */}
+          <section className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70 px-1">{t('profile.training')}</h4>
+            <div className="bg-surface-100/50 p-4 rounded-3xl border border-white/5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.defaultRestTime')}</label>
+                  <Input
+                    type="number"
+                    value={defaultRest}
+                    onChange={(e) => setDefaultRest(Number(e.target.value) || 0)}
+                    placeholder="ex: 90"
+                    className="bg-surface-200 border-white/5 focus:border-primary/50"
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.defaultSets')}</label>
+                  <Input
+                    type="number"
+                    value={defaultSets}
+                    onChange={(e) => setDefaultSets(Number(e.target.value) || 0)}
+                    className="bg-surface-200 border-white/5 focus:border-primary/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Reps (Min)</label>
+                  <Input
+                    type="number"
+                    value={defaultMinReps}
+                    onChange={(e) => setDefaultMinReps(Number(e.target.value) || 0)}
+                    className="bg-surface-200 border-white/5 focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Reps (Max)</label>
+                  <Input
+                    type="number"
+                    value={defaultMaxReps}
+                    onChange={(e) => setDefaultMaxReps(Number(e.target.value) || 0)}
+                    className="bg-surface-200 border-white/5 focus:border-primary/50"
+                  />
                 </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          {/* Section: Preferences */}
+          <section className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70 px-1">{t('profile.soundAlerts')}</h4>
+            <div 
+              onClick={() => {
+                const { setSoundEnabled, profile } = useAuthStore.getState()
+                setSoundEnabled(profile?.sound_enabled !== false ? false : true)
+              }}
+              className={`flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer ${
+                profile?.sound_enabled !== false 
+                  ? 'bg-primary/5 border-primary/20 text-primary' 
+                  : 'bg-surface-100/50 border-white/5 text-gray-500'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Bell className={`w-5 h-5 ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-500'}`} />
+                <span className={`text-sm font-black uppercase tracking-tight ${profile?.sound_enabled !== false ? 'text-primary' : 'text-gray-400'}`}>
+                  {profile?.sound_enabled !== false ? t('profile.soundEnabled') : t('profile.soundDisabled')}
+                </span>
+              </div>
+              <div className={`w-10 h-5 rounded-full relative transition-colors ${profile?.sound_enabled !== false ? 'bg-primary' : 'bg-surface-300'}`}>
+                <motion.div 
+                  animate={{ left: profile?.sound_enabled !== false ? '22px' : '2px' }}
+                  className="absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm" 
+                />
+              </div>
+            </div>
+          </section>
+
           <AnimatePresence>
             {profileMsg && (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className={`flex items-center gap-2 p-3 rounded-xl text-sm overflow-hidden ${
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={`flex items-center gap-2 p-4 rounded-2xl text-sm font-bold shadow-lg ${
                   profileMsg && profileMsg.includes(t('common.error')) 
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
                     : 'bg-primary/10 text-primary border border-primary/20'
@@ -564,7 +588,7 @@ export function ProfilePage() {
           <Button
             onClick={handleSaveProfile}
             disabled={savingProfile || !editName.trim()}
-            className="w-full gap-2 h-12 rounded-xl font-bold uppercase tracking-tight"
+            className="w-full gap-2 h-14 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             {savingProfile ? t('profile.savingProfile') : (
               <>

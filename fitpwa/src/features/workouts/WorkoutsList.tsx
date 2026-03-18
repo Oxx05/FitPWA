@@ -103,7 +103,7 @@ export function WorkoutsList() {
                 </div>
                 {idx === 0 && (
                   <span className="bg-primary text-black text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">
-                    Recente
+                    {t('workouts.recent')}
                   </span>
                 )}
               </div>
@@ -117,7 +117,7 @@ export function WorkoutsList() {
               
               <div className="flex justify-between items-center mt-6 pt-6 border-t border-white/5 relative z-10">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Frequência</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('workouts.frequency')}</span>
                   <span className="text-sm text-white font-bold">
                     {plan.days_per_week ? t('workouts.perWeek', { count: plan.days_per_week }) : t('common.free')}
                   </span>

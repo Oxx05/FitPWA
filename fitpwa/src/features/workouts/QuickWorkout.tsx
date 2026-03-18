@@ -45,7 +45,7 @@ interface Exercise {
 
 export function QuickWorkout() {
   const { profile, user } = useAuthStore()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
@@ -155,7 +155,7 @@ export function QuickWorkout() {
         exercises: selectedExercises,
         started_at: new Date().toISOString(),
         duration_minutes: 0,
-        title: 'Treino Rápido'
+        title: t('workouts.quickWorkout')
       }
       
       localStorage.setItem('quickWorkout', JSON.stringify(workoutData))
@@ -169,14 +169,14 @@ export function QuickWorkout() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24">
       <div>
-        <h1 className="text-3xl font-bold italic uppercase tracking-tighter">Treino Rápido</h1>
-        <p className="text-gray-400">Crie um treino individual sem seguir um plano</p>
+        <h1 className="text-3xl font-bold italic uppercase tracking-tighter">{t('workouts.quickWorkout')}</h1>
+        <p className="text-gray-400">{t('workouts.quickWorkoutDesc')}</p>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Exercícios Selecionados</h2>
-          <span className="text-sm text-gray-400">{selectedExercises.length} exercícios</span>
+          <h2 className="text-xl font-bold">{t('workouts.exercisesSelected')}</h2>
+          <span className="text-sm text-gray-400">{selectedExercises.length} {t('workouts.exercises')}</span>
         </div>
 
         {selectedExercises.length > 0 ? (
@@ -243,7 +243,7 @@ export function QuickWorkout() {
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Dumbbell className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Nenhum exercício selecionado ainda</p>
+            <p>{t('workouts.noExercisesSelected')}</p>
           </div>
         )}
       </div>
@@ -253,7 +253,7 @@ export function QuickWorkout() {
         className="w-full h-14 bg-surface-200 border border-dashed border-surface-100 hover:border-primary/50 text-white rounded-xl"
       >
         <Plus className="w-5 h-5 mr-2 text-primary" />
-        Adicionar Exercício
+        {t('workouts.addExercise')}
       </Button>
 
       {selectedExercises.length > 0 && (
@@ -262,19 +262,19 @@ export function QuickWorkout() {
           disabled={startWorkoutMutation.isPending}
           className="w-full h-14 bg-primary text-black font-black uppercase tracking-tighter italic rounded-xl shadow-lg shadow-primary/20"
         >
-          {startWorkoutMutation.isPending ? 'A iniciar...' : 'Começar Treino'}
+          {startWorkoutMutation.isPending ? t('workouts.starting') : t('workouts.startWorkout')}
         </Button>
       )}
 
       <Modal
         isOpen={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
-        title="Selecionar Exercício"
+        title={t('workouts.selectExercise')}
         size="lg"
       >
         <div className="space-y-4">
           <Input
-            placeholder="Pesquisar ou criar exercício..."
+            placeholder={t('workouts.searchOrCreate')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -290,9 +290,9 @@ export function QuickWorkout() {
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-primary">
-                  {creatingCustom ? 'A criar...' : `Criar "${searchTerm.trim()}"`}
+                  {creatingCustom ? t('workouts.creating') : t('common.create') + ` "${searchTerm.trim()}"`}
                 </h4>
-                <p className="text-[10px] text-primary/60 uppercase font-black">Adicionar como exercício personalizado</p>
+                <p className="text-[10px] text-primary/60 uppercase font-black">{t('workouts.addCustomExercise')}</p>
               </div>
             </button>
           )}
@@ -304,7 +304,7 @@ export function QuickWorkout() {
                 selectedMuscle === null ? 'bg-primary text-black' : 'bg-surface-100 text-gray-500 hover:text-white'
               }`}
             >
-              Todos
+              {t('workouts.all')}
             </button>
             {muscleGroups.map(muscle => (
               <button
@@ -342,7 +342,7 @@ export function QuickWorkout() {
               ))
             ) : (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'Nenhum exercício encontrado.' : 'Começa a escrever para pesquisar...'}
+                {searchTerm ? t('workouts.noExercisesFound') : t('workouts.startTyping')}
               </div>
             )}
           </div>

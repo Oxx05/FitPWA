@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { Download, Trophy, Crown } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { toPng } from 'html-to-image'
+import { useTranslation } from 'react-i18next'
 
 interface ConquestCardProps {
   title: string
@@ -9,9 +10,11 @@ interface ConquestCardProps {
   value: string
   label: string
   achievementIcon?: React.ReactNode
+  showShare?: boolean
 }
 
-export function ConquestCard({ title, subtitle, value, label, achievementIcon }: ConquestCardProps) {
+export function ConquestCard({ title, subtitle, value, label, achievementIcon, showShare = true }: ConquestCardProps) {
+  const { t } = useTranslation()
   const cardRef = useRef<HTMLDivElement>(null)
 
   const handleShare = async () => {
@@ -61,11 +64,13 @@ export function ConquestCard({ title, subtitle, value, label, achievementIcon }:
         </div>
       </div>
 
-      <div className="flex w-full gap-3 mt-4">
-        <Button onClick={handleShare} className="flex-1 font-black uppercase tracking-tighter flex items-center justify-center gap-2">
-          <Download className="w-4 h-4" /> Guardar Imagem
-        </Button>
-      </div>
+      {showShare && (
+        <div className="flex w-full gap-3 mt-4">
+          <Button onClick={handleShare} className="flex-1 font-black uppercase tracking-tighter flex items-center justify-center gap-2">
+            <Download className="w-4 h-4" /> {t('social.feed.saveImage')}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

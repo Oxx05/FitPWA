@@ -65,6 +65,18 @@ export const useAchievementsStore = create<AchievementsState>()(
         { id: 'volume_10000', groupId: 'volume', level: 3, title: 'Earth Shaker', title_pt: 'Sismo Humano', description: '10,000kg in a single session!', description_pt: '10.000kg numa única sessão!', icon: '🌎', requirement: 'session_volume', threshold: 10000 },
         { id: 'volume_1000000', groupId: 'volume', level: 4, title: 'Titan of Earth', title_pt: 'Titã da Terra', description: 'Lifted 1,000,000kg total volume!', description_pt: 'Levantaste 1.000.000kg de volume total!', icon: '☄️', requirement: 'total_volume', threshold: 1000000 },
 
+        // LEVEL
+        { id: 'level_5', groupId: 'level', level: 1, title: 'Ascending', title_pt: 'A Ascender', description: 'Reached Level 5!', description_pt: 'Chegaste ao Nível 5!', icon: '🌱', requirement: 'level', threshold: 5 },
+        { id: 'level_20', groupId: 'level', level: 2, title: 'Elite Athlete', title_pt: 'Atleta de Elite', description: 'Reached Level 20!', description_pt: 'Chegaste ao Nível 20!', icon: '🌟', requirement: 'level', threshold: 20 },
+        { id: 'level_50', groupId: 'level', level: 3, title: 'Master of Gym', title_pt: 'Mestre do Ginásio', description: 'Reached Level 50!', description_pt: 'Chegaste ao Nível 50!', icon: '🌋', requirement: 'level', threshold: 50 },
+        { id: 'level_100', groupId: 'level', level: 4, title: 'Living God', title_pt: 'Deus Vivo', description: 'Reached Level 100!', description_pt: 'Chegaste ao Nível 100!', icon: '💠', requirement: 'level', threshold: 100 },
+
+        // SOCIAL
+        { id: 'social_10', groupId: 'social', level: 1, title: 'Community Spirit', title_pt: 'Espírito de Equipa', description: 'Inspired 10 athletes!', description_pt: 'Inspiraste 10 atletas!', icon: '❤️', requirement: 'social_likes', threshold: 10 },
+        { id: 'social_50', groupId: 'social', level: 2, title: 'Inspiration Hub', title_pt: 'Centro de Inspiração', description: 'Inspired 50 athletes!', description_pt: 'Inspiraste 50 atletas!', icon: '✨', requirement: 'social_likes', threshold: 50 },
+        { id: 'social_200', groupId: 'social', level: 3, title: 'Influencer', title_pt: 'Influencer', description: 'Inspired 200 athletes!', description_pt: 'Inspiraste 200 atletas!', icon: '📣', requirement: 'social_likes', threshold: 200 },
+        { id: 'social_1000', groupId: 'social', level: 4, title: 'Icon', title_pt: 'Ícone', description: 'Inspired 1000 athletes!', description_pt: 'Inspiraste 1000 atletas!', icon: '🌍', requirement: 'social_likes', threshold: 1000 },
+
         // SECRETS
         { id: 'midnight_trainer', groupId: 'secret_time', level: 1, title: 'Night Owl', title_pt: 'Coruja da Noite', description: 'Workout between 11PM and 4AM.', description_pt: 'Treinaste entre as 23h e as 4h.', icon: '🦉', requirement: 'midnight_workout', threshold: 1, secret: true },
         { id: 'viking_spirit', groupId: 'secret_viking', level: 1, title: 'Viking Spirit', title_pt: 'Espírito Viking', description: 'Extreme intensity session.', description_pt: 'Treino de altíssima intensidade.', icon: '🪓', requirement: 'extreme_intensity', threshold: 1, secret: true },

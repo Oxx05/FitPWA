@@ -89,7 +89,7 @@ export function SessionScreen() {
     if (!voiceEnabled) return
 
     if (restTimer === 0) {
-      speak('Descanso terminado. Próxima série agora!')
+      speak(t('session.restFinished') + '. ' + t('session.restFinishedBody'))
     }
   }, [restTimer, voiceEnabled, speak])
 
@@ -102,8 +102,8 @@ export function SessionScreen() {
       sets: Array.from({ length: 3 }, (_, i) => ({
         id: `ext-${Date.now()}-${i}`,
         setNumber: i + 1,
-        reps: null,
-        weight: null,
+        reps: 0,
+        weight: 0,
         completed: false
       })),
       muscleGroups: exercise.muscle_groups || [],
@@ -113,7 +113,7 @@ export function SessionScreen() {
     }
     setExercises([...exercises, newEx])
     setShowAddExerciseModal(false)
-    showToast(`${newEx.name} adicionado ao treino`, 'success')
+    showToast(`${newEx.name} ${t('session.setAdded').toLowerCase()}`, 'success')
   }
 
   const fetchAvailableExercises = async () => {
@@ -192,7 +192,7 @@ export function SessionScreen() {
           if (!quickData) throw new Error('No workout data found')
           
           const workout = JSON.parse(quickData)
-          setPlanName(workout.title || 'Treino Rápido')
+          setPlanName(workout.title || t('session.quickWorkout'))
           
           const exerciseIds = workout.exercises.map((ex: any) => ex.exerciseId)
           const { data: exerciseDetails, error: exError } = await supabase
@@ -210,12 +210,12 @@ export function SessionScreen() {
               id: `${ex.exerciseId}-${idx}`,
               order: idx,
               exerciseId: ex.exerciseId,
-              name: (detail?.name_pt) || (detail?.name) || 'Exercício',
+              name: (detail?.name_pt) || (detail?.name) || t('common.exercise'),
               sets: Array.from({ length: ex.sets || 3 }, (_, i) => ({
                 id: `${ex.exerciseId}-${idx}-${i}`,
                 setNumber: i + 1,
-                reps: null,
-                weight: ex.weight || null,
+                reps: 0,
+                weight: ex.weight || 0,
                 completed: false,
                 notes: ''
               })),
@@ -266,12 +266,12 @@ export function SessionScreen() {
             id: pe.id as string,
             order: idx,
             exerciseId: ex?.id as string ?? '',
-            name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
+            name: (ex?.name_pt as string) || (ex?.name as string) || t('common.exercise'),
             sets: Array.from({ length: (pe.sets as number) || profile?.default_sets || 3 }, (_, i) => ({
               id: `${pe.id}-${i}`,
               setNumber: i + 1,
-              reps: null,
-              weight: (pe.weight_kg as number) || null,
+              reps: 0,
+              weight: (pe.weight_kg as number) || 0,
               completed: false,
               notes: ''
             })),
@@ -392,9 +392,9 @@ export function SessionScreen() {
     exchangeSpotifyCode(code, redirectUri).then((token) => {
       if (token) {
         setSpotifyConnected(true)
-        showToast('Spotify conectado com sucesso.', 'success')
+        showToast(t('session.spotifyConnected'), 'success')
       } else {
-        showToast('Falha ao conectar o Spotify.', 'error')
+        showToast(t('session.spotifyError'), 'error')
       }
       clearStoredSpotifyState()
       const returnPath = sessionStorage.getItem('fitpwa.spotify.returnPath')
@@ -402,7 +402,7 @@ export function SessionScreen() {
       const nextPath = returnPath || window.location.pathname
       navigate(nextPath, { replace: true })
     }).catch(() => {
-      showToast('Falha ao conectar o Spotify.', 'error')
+      showToast(t('session.spotifyError'), 'error')
       clearStoredSpotifyState()
     })
   }, [navigate])
@@ -491,8 +491,8 @@ export function SessionScreen() {
               {
                 id: `${ex.id}-${ex.sets.length}`,
                 setNumber: ex.sets.length + 1,
-                reps: null,
-                weight: null,
+                reps: 0,
+                weight: 0,
                 completed: false
               }
             ]
@@ -664,7 +664,7 @@ export function SessionScreen() {
                   if (oneRepMax <= currentOrm) return null
                   
                   newPrs.push({
-                    exerciseName: exerciseNameMap.get(b.exerciseId) || 'Exercício',
+                    exerciseName: exerciseNameMap.get(b.exerciseId) || t('common.exercise'),
                     weight: b.weight ?? 0,
                     reps: b.reps ?? 0,
                     oneRepMax,
@@ -722,7 +722,7 @@ export function SessionScreen() {
                 }, 250)
               }
             }
-            showToast('Treino guardado na cloud.', 'success')
+            showToast(t('session.workoutSavedCloud'), 'success')
           } else {
             // New Robust Offline Saving
             await OfflineSyncService.saveSessionOffline(
@@ -763,7 +763,7 @@ export function SessionScreen() {
               })
             }
 
-            showToast('Sem internet. Treino guardado localmente.', 'info')
+            showToast(t('session.workoutSavedOffline'), 'info')
           }
         } catch (saveError) {
           console.error('Error saving workout:', saveError)
@@ -791,7 +791,7 @@ export function SessionScreen() {
               synced: false
             }))
           )
-          showToast('Falha ao guardar online. Guardado localmente.', 'info')
+          showToast(t('session.workoutSavedOfflineFallback'), 'info')
         }
         
         // Update daily XP in profile
@@ -813,7 +813,7 @@ export function SessionScreen() {
       navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
     } catch (error) {
       console.error('Error finishing workout:', error)
-      showToast('Erro ao finalizar treino.', 'error')
+      showToast(t('session.workoutSaveError'), 'error')
     }
   }
 
@@ -821,7 +821,7 @@ export function SessionScreen() {
     const redirectUri = window.location.origin + '/session'
     const authUrl = await getSpotifyAuthUrl(redirectUri)
     if (!authUrl) {
-      showToast('Configura VITE_SPOTIFY_CLIENT_ID para ligar o Spotify.', 'error')
+      showToast(t('session.spotifyConfigError'), 'error')
       return
     }
     sessionStorage.setItem('fitpwa.spotify.returnPath', window.location.pathname)
@@ -831,7 +831,7 @@ export function SessionScreen() {
   const handleSpotifyDisconnect = () => {
     clearSpotifyToken()
     setSpotifyConnected(false)
-    showToast('Spotify desconectado.', 'info')
+    showToast(t('session.spotifyDisconnected'), 'info')
   }
 
   const handleSpotifyPlayPause = async () => {
@@ -844,7 +844,7 @@ export function SessionScreen() {
         setSpotifyPlaying(true)
       }
     } catch {
-      showToast('Não foi possível controlar o Spotify.', 'error')
+      showToast(t('session.spotifyControlError'), 'error')
     }
   }
 
@@ -857,7 +857,7 @@ export function SessionScreen() {
         setSpotifyPlaying(now.isPlaying)
       }
     } catch {
-      showToast('Não foi possível avançar a música.', 'error')
+      showToast(t('session.spotifyNextError'), 'error')
     }
   }
 
@@ -870,7 +870,7 @@ export function SessionScreen() {
         setSpotifyPlaying(now.isPlaying)
       }
     } catch {
-      showToast('Não foi possível voltar a música.', 'error')
+      showToast(t('session.spotifyPrevError'), 'error')
     }
   }
 
@@ -885,11 +885,11 @@ export function SessionScreen() {
   if (!currentExercise) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold text-white mb-2">Sem exercícios</h1>
-        <p className="text-gray-400 mb-4">Este plano não tem exercícios configurados.</p>
+        <h1 className="text-2xl font-bold text-white mb-2">{t('session.noExercises')}</h1>
+        <p className="text-gray-400 mb-4">{t('session.noExercisesDesc')}</p>
         <Button onClick={() => navigate('/workouts')} className="gap-2">
           <ChevronLeft className="w-4 h-4" />
-          Voltar
+          {t('common.back')}
         </Button>
       </div>
     )
@@ -901,21 +901,21 @@ export function SessionScreen() {
       <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="font-bold text-white text-lg">Sessão Activa</h1>
+            <h1 className="font-bold text-white text-lg">{t('session.activeSession')}</h1>
             <p className="text-sm text-gray-400">{currentExerciseIndex + 1} / {exercises.length}</p>
           </div>
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsFocusMode(!isFocusMode)}
               className={`p-2 rounded-xl transition-all border border-white/5 active:scale-90 ${isFocusMode ? 'bg-primary text-black' : 'bg-surface-100 text-primary hover:bg-primary/20'}`}
-              title={isFocusMode ? "Sair Modo Foco" : "Modo Foco Imersivo"}
+              title={isFocusMode ? t('session.exitFocus') : t('session.focusModeDesc')}
             >
               <Target className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setRestTimer(prev => prev === null ? 90 : prev + 30)}
               className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
-              title="Descanso Manual (+30s)"
+              title={t('session.manualRest')}
             >
               <Clock className="w-5 h-5" />
             </button>
@@ -927,12 +927,12 @@ export function SessionScreen() {
                   title="Pular descanso"
                 >
                    <p className="text-primary font-mono font-bold leading-none">{formatTime(restTimer)}</p>
-                   <p className="text-[8px] text-primary/70 uppercase">Pular</p>
+                   <p className="text-[8px] text-primary/70 uppercase">{t('session.skip')}</p>
                 </div>
               )}
               <div>
                 <p className="text-white font-mono font-bold leading-none">{formatTime(duration)}</p>
-                <p className="text-[8px] text-gray-400 uppercase">Duração</p>
+                <p className="text-[8px] text-gray-400 uppercase">{t('session.duration')}</p>
               </div>
             </div>
             <Button 
@@ -943,7 +943,7 @@ export function SessionScreen() {
               title="Cancelar Treino"
             >
               <Trash2 className="w-4 h-4 text-red-500" />
-              <span className="hidden sm:inline">Cancelar</span>
+              <span className="hidden sm:inline">{t('common.cancel')}</span>
             </Button>
             <Button 
               variant="danger" 
@@ -952,7 +952,7 @@ export function SessionScreen() {
               className="gap-1"
             >
               <Square className="w-4 h-4" />
-              Terminar
+              {t('common.finish')}
             </Button>
           </div>
         </div>
@@ -967,7 +967,7 @@ export function SessionScreen() {
               activeTab === 'treino' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
-            Treino
+            {t('session.workout')}
           </button>
           <button
             onClick={() => setActiveTab('controlo')}
@@ -975,7 +975,7 @@ export function SessionScreen() {
               activeTab === 'controlo' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
-            Controlo
+            {t('session.control')}
           </button>
         </div>
 
@@ -1039,7 +1039,7 @@ export function SessionScreen() {
                         return (
                           <div className="mt-3 flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg border border-primary/20">
                             <TrendingUp className="w-3 h-3 text-primary animate-bounce-slow" />
-                            <span className="text-[10px] font-black text-white uppercase italic tracking-tight">Evolução: Recomenda-se +2.5kg</span>
+                            <span className="text-[10px] font-black text-white uppercase italic tracking-tight">{t('session.evolution')}: {t('session.evolutionSuggested')}</span>
                           </div>
                         )
                       }
@@ -1053,7 +1053,7 @@ export function SessionScreen() {
                 <span className="text-center">Set</span>
                 <span className="text-center">Kg</span>
                 <span className="text-center">Reps</span>
-                <span className="text-center">Feito</span>
+                <span className="text-center">{t('common.done')}</span>
               </div>
 
               {/* Sets List */}
@@ -1111,7 +1111,7 @@ export function SessionScreen() {
                         type="text"
                         value={set.notes || ''}
                         onChange={e => handleSetChange(set.id, 'notes', e.target.value)}
-                        placeholder="Adicionar nota (ex: mais devagar)..."
+                        placeholder={t('session.addNotePlaceholder')}
                         className="flex-1 bg-transparent border-b border-surface-200 focus:border-primary text-xs sm:text-sm text-gray-400 placeholder-gray-600 pb-1 focus:outline-none transition-colors"
                       />
                       {idx > 0 && (
@@ -1119,7 +1119,7 @@ export function SessionScreen() {
                           onClick={() => handleCopyPreviousSet(set.id)}
                           className="text-[10px] uppercase tracking-wider font-bold text-gray-500 hover:text-white bg-surface-200 rounded-md px-2 py-1 transition-colors"
                         >
-                          Copiar Ant.
+                          {t('session.copyPrevious')}
                         </button>
                       )}
                       <button
@@ -1138,7 +1138,7 @@ export function SessionScreen() {
                 className="w-full h-10 border border-dashed border-primary/30 rounded-lg text-primary hover:bg-primary/5 transition-colors font-medium text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
               >
                 <Plus className="w-4 h-4" />
-                Adicionar Série
+                {t('session.addSet')}
               </button>
             </div>
 
@@ -1147,43 +1147,43 @@ export function SessionScreen() {
               className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-gray-400 hover:text-primary hover:border-primary/20 transition-all font-black uppercase text-xs tracking-widest bg-surface-200/50"
             >
               <Plus className="w-4 h-4 mx-auto mb-1" />
-              Adicionar Exercício
+              {t('session.addExercise')}
             </button>
 
           </>
         ) : (
           <div className="space-y-6">
             <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
-              <h3 className="text-gray-400 text-sm font-medium mb-2">Notas do Treino</h3>
+              <h3 className="text-gray-400 text-sm font-medium mb-2">{t('session.workoutNotes')}</h3>
               <textarea
                 value={sessionNotes}
                 onChange={e => setSessionNotes(e.target.value)}
-                placeholder="Anota aqui tudo o que for importante sobre o treino em geral..."
+                placeholder={t('session.workoutNotesPlaceholder')}
                 className="w-full bg-surface-100 border border-surface-200 rounded-lg p-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-primary resize-none h-24 shadow-inner mt-2"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Tempo Total</p>
+                <p className="text-gray-400 text-sm">{t('session.duration')}</p>
                 <p className="text-2xl font-bold text-white">{formatTime(duration)}</p>
               </div>
               <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Descanso</p>
+                <p className="text-gray-400 text-sm">{t('session.rest')}</p>
                 <p className="text-2xl font-bold text-white">{restTimer !== null ? `${restTimer}s` : '—'}</p>
               </div>
               <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Volume (completado)</p>
+                <p className="text-gray-400 text-sm">{t('session.volume')} ({t('session.completed').toLowerCase()})</p>
                 <p className="text-2xl font-bold text-white">{completedVolume.toFixed(0)} kg</p>
               </div>
               <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
-                <p className="text-gray-400 text-sm">Sets Completados</p>
+                <p className="text-gray-400 text-sm">{t('session.setsCompletedTitle')}</p>
                 <p className="text-2xl font-bold text-white">{completedSetsCount}</p>
               </div>
             </div>
 
             <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl">
-              <h3 className="text-lg font-bold text-white mb-4">Exercícios (ordem do treino)</h3>
+              <h3 className="text-lg font-bold text-white mb-4">{t('session.exercisesOrder')}</h3>
               <div className="space-y-3">
                 {exercises.map((ex, idx) => {
                   const completed = ex.sets.filter(s => s.completed).length
@@ -1240,26 +1240,26 @@ export function SessionScreen() {
                 {spotifyConnected ? (
                   <>
                     <Button variant="secondary" onClick={handleSpotifyPrev}>
-                      Anterior
+                      {t('common.previous')}
                     </Button>
                     <Button onClick={handleSpotifyPlayPause}>
                       {spotifyPlaying ? 'Pausar' : 'Play'}
                     </Button>
                     <Button variant="secondary" onClick={handleSpotifyNext}>
-                      Seguinte
+                      {t('common.next')}
                     </Button>
                     <Button variant="secondary" onClick={handleSpotifyDisconnect}>
-                      Desconectar
+                      {t('session.disconnect')}
                     </Button>
                     {isDesktop && (
                       <Button onClick={() => window.open('https://open.spotify.com', '_blank')}>
-                        Abrir Spotify
+                        {t('session.openSpotify')}
                       </Button>
                     )}
                   </>
                 ) : (
                   <Button onClick={handleSpotifyConnect}>
-                    Ligar Spotify
+                    {t('session.connectSpotify')}
                   </Button>
                 )}
               </div>
@@ -1432,7 +1432,7 @@ export function SessionScreen() {
                       <span className="text-xs text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} {t('session.reps')}</span>
                    </div>
                    <div className="flex flex-col">
-                      <span className="text-[8px] text-gray-500 font-bold uppercase">{t('editor.rest')}</span>
+                      <span className="text-[8px] text-gray-500 font-bold uppercase">{t('session.rest')}</span>
                       <span className="text-xs text-white font-black">{currentExercise.restSeconds}s</span>
                    </div>
                 </div>
@@ -1506,7 +1506,7 @@ export function SessionScreen() {
 
                         <div className="flex items-center gap-4">
                            <div className="flex-1 space-y-1 text-center">
-                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('editor.weight')}</p>
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.weightTitle').toUpperCase()}</p>
                              <DebouncedNumericInput
                                 value={activeSet.weight}
                                 onChange={val => handleSetChange(activeSet.id, 'weight', val)}
@@ -1515,7 +1515,7 @@ export function SessionScreen() {
                            </div>
                            <div className="text-3xl font-black text-gray-700 mt-6">×</div>
                            <div className="flex-1 space-y-1 text-center">
-                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.reps')}</p>
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.repsTitle').toUpperCase()}</p>
                              <DebouncedNumericInput
                                 value={activeSet.reps}
                                 onChange={val => handleSetChange(activeSet.id, 'reps', val)}
