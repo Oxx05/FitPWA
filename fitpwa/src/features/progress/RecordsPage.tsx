@@ -6,6 +6,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { EXERCISES } from '@/shared/data/exercises'
 import { WeightProgressChart } from './WeightProgressChart'
+import { Link } from 'react-router-dom'
 import { SocialShare } from './SocialShare'
 import { Button } from '@/shared/components/Button'
 import { pushNotifications } from '@/shared/lib/pushNotifications'
@@ -37,6 +38,23 @@ interface WorkoutHistory {
   sets_completed: number
   duration_seconds: number
   created_at: string
+}
+
+interface DBSet {
+  exercise_id: string
+  exercise_name: string
+  set_number: number
+  reps: number
+  weight_kg: number
+  notes?: string
+}
+
+interface DBSession {
+  id: string
+  created_at: string
+  duration_seconds: number
+  total_volume_kg: number
+  session_sets: DBSet[]
 }
 
 export function RecordsPage() {
@@ -115,6 +133,39 @@ export function RecordsPage() {
           created_at: h.created_at || new Date().toISOString()
         }
       }) as WorkoutHistory[]
+    }
+  })
+
+  // Novo histórico de sessões completas
+  const { data: recentSessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['recent-sessions', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+      const { data, error } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id,
+          created_at,
+          duration_seconds,
+          total_volume_kg,
+          session_sets (
+            exercise_id,
+            exercise_name,
+            set_number,
+            reps,
+            weight_kg,
+            notes
+          )
+        `)
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        console.error('Error fetching sessions:', error)
+        return []
+      }
+      return data as DBSession[]
     }
   })
 
@@ -330,7 +381,77 @@ export function RecordsPage() {
         )}
       </div>
 
-      {/* History Section */}
+      {/* Sessões Completas */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Sessões Recentes</h2>
+        {sessionsLoading ? (
+          <div className="flex justify-center p-12">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        ) : recentSessions && recentSessions.length > 0 ? (
+          <div className="space-y-3">
+            {recentSessions.map((session, idx) => {
+              // Agrupar sets por exercício
+              const groupedExercises: Record<string, any> = {}
+              session.session_sets.forEach((s) => {
+                if (!groupedExercises[s.exercise_id]) {
+                  groupedExercises[s.exercise_id] = {
+                    exerciseId: s.exercise_id,
+                    name: s.exercise_name,
+                    sets: [],
+                    repsMin: 8,
+                    repsMax: 12,
+                    restSeconds: 90
+                  }
+                }
+                groupedExercises[s.exercise_id].sets.push(s)
+              })
+              const exercisesList = Object.values(groupedExercises)
+
+              return (
+                <motion.div
+                  key={session.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div>
+                    <p className="font-medium text-white flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      {new Date(session.created_at).toLocaleDateString('pt-PT')}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      {exercisesList.length} exercícios • {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s • {session.total_volume_kg}kg volume
+                    </p>
+                  </div>
+                  <Link
+                    to="/workouts/new"
+                    state={{
+                      initialData: {
+                        name: `Treino de ${new Date(session.created_at).toLocaleDateString('pt-PT')}`,
+                        description: 'Recuperado do histórico',
+                        exercises: exercisesList
+                      }
+                    }}
+                  >
+                    <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10 border border-primary/20">
+                      Guardar como Plano
+                    </Button>
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
+            <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
+            <p>Nenhuma sessão completa encontrada</p>
+          </div>
+        )}
+      </div>
+
+      {/* History Section (Exercícios Analíticos) */}
       <div>
         <h2 className="text-2xl font-bold mb-4">Histórico de Treinos</h2>
         {historyLoading ? (

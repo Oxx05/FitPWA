@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Mic, MicOff, Search, StickyNote, TrendingUp, RotateCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -13,6 +13,7 @@ import { OfflineSyncService } from '@/shared/lib/offlineSync'
 import { useAuthStore } from '@/features/auth/authStore'
 import { XP_PER_EXERCISE, XP_PER_SET, XP_PER_WORKOUT, XP_STREAK_MULTIPLIER } from '@/shared/utils/gamification'
 import { motion, AnimatePresence } from 'framer-motion'
+import { WheelPicker } from '@/shared/components/WheelPicker'
 import {
   clearSpotifyToken,
   exchangeSpotifyCode,
@@ -42,26 +43,32 @@ interface ExerciseInSession {
   order: number
   exerciseId: string
   name: string
+  name_pt?: string
   sets: SetRecord[]
   muscleGroups: string[]
   repsMin: number
   repsMax: number
   restSeconds: number
+  planExerciseId?: string
+  notes?: string
 }
 
 export function SessionScreen() {
   const navigate = useNavigate()
   const { id: planId } = useParams<{ id?: string }>()
   const { user, profile, addXp } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const [exercises, setExercises] = useState<ExerciseInSession[]>([])
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isRunning, setIsRunning] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [restTimer, setRestTimer] = useState<number | null>(null)
+  const [targetRestTimer, setTargetRestTimer] = useState<number>(90)
+  const [isRestTimerRunning, setIsRestTimerRunning] = useState(false)
   const [sessionNotes, setSessionNotes] = useState('')
   const [planName, setPlanName] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'treino' | 'controlo'>('treino')
@@ -82,6 +89,11 @@ export function SessionScreen() {
     sets: { weight_kg: number; reps: number }[];
     notes: string | null;
   } | null>(null)
+  
+  const [isTimerMinimized, setIsTimerMinimized] = useState(false)
+  const [recentRestTimes, setRecentRestTimes] = useState<number[]>([60, 90, 120])
+  const [showSuspiciousModal, setShowSuspiciousModal] = useState(false)
+  
   const { speak } = useVoiceGuide()
 
   // Effect to announce rest end or new exercise
@@ -98,7 +110,8 @@ export function SessionScreen() {
       id: `ext-${Date.now()}`,
       order: exercises.length,
       exerciseId: exercise.id,
-      name: exercise.name_pt || exercise.name,
+      name: exercise.name,
+      name_pt: exercise.name_pt,
       sets: Array.from({ length: 3 }, (_, i) => ({
         id: `ext-${Date.now()}-${i}`,
         setNumber: i + 1,
@@ -139,11 +152,45 @@ export function SessionScreen() {
     return () => clearInterval(interval)
   }, [isRunning])
 
+  // Document Title Effect
+  useEffect(() => {
+    let title = 'FitPWA'
+    if (restTimer !== null) {
+      const status = isRestTimerRunning ? t('session.resting') : t('session.restPaused')
+      title = `${status.toUpperCase()} ${formatTime(restTimer)} | FitPWA`
+    } else if (isRunning && duration > 0) {
+      title = `${formatTime(duration)} | FitPWA`
+    } else if (!isRunning) {
+      title = `(${t('session.pause')}) | FitPWA`
+    }
+    document.title = title
+  }, [isRunning, duration, restTimer, isRestTimerRunning, t])
+
+  // Persistent Active Session Effect
+  useEffect(() => {
+    if (exercises.length === 0) return
+    const currentState = {
+      exercises,
+      currentExerciseIndex,
+      duration,
+      restTimer,
+      targetRestTimer,
+      isRestTimerRunning,
+      sessionNotes,
+      planId,
+      planName,
+      isRunning
+    }
+    localStorage.setItem('fitpwa_active_session', JSON.stringify(currentState))
+  }, [exercises, currentExerciseIndex, duration, restTimer, targetRestTimer, isRestTimerRunning, sessionNotes, planId, planName, isRunning])
+
   // Rest timer effet
   useEffect(() => {
-    if (restTimer === null) return
+    if (restTimer === null || !isRestTimerRunning) return
+    
     if (restTimer <= 0) {
       setRestTimer(null)
+      setIsRestTimerRunning(false)
       
       // Haptic Feedback
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -170,22 +217,70 @@ export function SessionScreen() {
       speak(restTimer.toString())
     }
 
-    const interval = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
+    const interval = setInterval(() => {
+      setRestTimer(prev => (prev && prev > 0) ? prev - 1 : 0)
+    }, 1000)
     
-    // Update document title for background visibility
-    const originalTitle = document.title
-    document.title = `DESCANSAR ${restTimer}s | FitPWA`
-    
-    return () => {
-      clearInterval(interval)
-      document.title = originalTitle
+    return () => clearInterval(interval)
+  }, [restTimer === null, isRestTimerRunning, t, profile?.sound_enabled, voiceEnabled, speak])
+
+  // Load recent timers
+  useEffect(() => {
+    const saved = localStorage.getItem('fitpwa_recent_timers')
+    if (saved) {
+      try {
+        setRecentRestTimes(JSON.parse(saved))
+      } catch (e) {
+        console.error('Error loading recent timers:', e)
+      }
     }
-  }, [restTimer, t, profile?.sound_enabled, voiceEnabled, speak])
+  }, [])
+
+  const saveRecentTimer = (time: number) => {
+    localStorage.setItem('fitpwa_last_rest_time', time.toString())
+    setTargetRestTimer(time)
+    setRecentRestTimes(prev => {
+      const filtered = prev.filter(t => t !== time)
+      const next = [time, ...filtered].slice(0, 3)
+      localStorage.setItem('fitpwa_recent_timers', JSON.stringify(next))
+      return next
+    })
+  }
+
+
 
   // Load plan data
   useEffect(() => {
     const loadPlanData = async () => {
       try {
+        const rawActiveSession = localStorage.getItem('fitpwa_active_session')
+        if (rawActiveSession) {
+          try {
+            const activeSession = JSON.parse(rawActiveSession)
+            // If it's the SAME plan (or both are quick), resume
+            if (activeSession.planId === planId || (!planId && activeSession.planId === 'quick')) {
+              setExercises(activeSession.exercises)
+              setCurrentExerciseIndex(activeSession.currentExerciseIndex || 0)
+              setDuration(activeSession.duration || 0)
+              setRestTimer(activeSession.restTimer || null)
+              setTargetRestTimer(activeSession.targetRestTimer || activeSession.restTimer || 90)
+              setIsRestTimerRunning(activeSession.isRestTimerRunning || false)
+              setSessionNotes(activeSession.sessionNotes || '')
+              setPlanName(activeSession.planName || null)
+              if (activeSession.isRunning !== undefined) {
+                setIsRunning(activeSession.isRunning)
+              }
+              setIsLoading(false)
+              return
+            } else {
+              // DIFFERENT session is active!
+              setError(t('session.anotherActiveSession'))
+              setIsLoading(false)
+              return
+            }
+          } catch (e) { console.error('Error recovering active session:', e) }
+        }
+
         if (!planId) {
           // Handle Quick Workout
           const quickData = localStorage.getItem('quickWorkout')
@@ -210,19 +305,20 @@ export function SessionScreen() {
               id: `${ex.exerciseId}-${idx}`,
               order: idx,
               exerciseId: ex.exerciseId,
-              name: (detail?.name_pt) || (detail?.name) || t('common.exercise'),
+              name: detail?.name || t('common.exercise'),
+              name_pt: detail?.name_pt,
               sets: Array.from({ length: ex.sets || 3 }, (_, i) => ({
                 id: `${ex.exerciseId}-${idx}-${i}`,
                 setNumber: i + 1,
                 reps: 0,
                 weight: ex.weight || 0,
-                completed: false,
-                notes: ''
+                completed: false
               })),
               muscleGroups: detail?.muscle_groups || [],
               repsMin: 8,
               repsMax: 12,
-              restSeconds: 90
+              restSeconds: 90,
+              notes: ''
             }
           })
           
@@ -251,7 +347,7 @@ export function SessionScreen() {
         const { data: planExercises, error: peError } = await supabase
           .from('plan_exercises')
           .select(`
-            id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg,
+            id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg, notes,
             exercises ( id, name, name_pt, muscle_groups )
           `)
           .eq('plan_id', planId)
@@ -266,7 +362,8 @@ export function SessionScreen() {
             id: pe.id as string,
             order: idx,
             exerciseId: ex?.id as string ?? '',
-            name: (ex?.name_pt as string) || (ex?.name as string) || t('common.exercise'),
+            name: (ex?.name as string) || t('common.exercise'),
+            name_pt: ex?.name_pt as string,
             sets: Array.from({ length: (pe.sets as number) || profile?.default_sets || 3 }, (_, i) => ({
               id: `${pe.id}-${i}`,
               setNumber: i + 1,
@@ -278,7 +375,9 @@ export function SessionScreen() {
             muscleGroups: (ex?.muscle_groups as string[]) || [],
             repsMin: (pe.reps_min as number) || profile?.default_reps_min || 8,
             repsMax: (pe.reps_max as number) || profile?.default_reps_max || 12,
-            restSeconds: (pe.rest_seconds as number) || profile?.default_rest_seconds || 90
+            restSeconds: (pe.rest_seconds as number) || profile?.default_rest_seconds || 90,
+            planExerciseId: pe.id as string,
+            notes: (pe.notes as string) || ''
           }
         })
 
@@ -429,7 +528,26 @@ export function SessionScreen() {
       : `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleSetChange = (setId: string, field: 'weight' | 'reps' | 'notes', value: number | string | null) => {
+  const handleExerciseNotesChange = async (val: string) => {
+    setExercises(prev => prev.map((ex, idx) =>
+      idx === currentExerciseIndex ? { ...ex, notes: val } : ex
+    ))
+
+    // Persist to DB if it's a plan exercise
+    const ex = exercises[currentExerciseIndex]
+    if (ex?.planExerciseId) {
+      try {
+        await supabase
+          .from('plan_exercises')
+          .update({ notes: val })
+          .eq('id', ex.planExerciseId)
+      } catch (e) {
+        console.error('Error saving exercise notes:', e)
+      }
+    }
+  }
+
+  const handleSetChange = (setId: string, field: 'weight' | 'reps', value: number | string | null) => {
     setExercises(prev => prev.map(ex => ({
       ...ex,
       sets: ex.sets.map(set =>
@@ -458,7 +576,11 @@ export function SessionScreen() {
     // Start rest timer after completing a set
     const exercise = exercises[currentExerciseIndex]
     if (exercise && shouldStartRest) {
-      setRestTimer(exercise.restSeconds)
+      const lastRest = localStorage.getItem('fitpwa_last_rest_time')
+      const restTime = lastRest ? parseInt(lastRest) : exercise.restSeconds
+      setTargetRestTimer(restTime)
+      setRestTimer(restTime)
+      setIsRestTimerRunning(true)
       showToast(t('session.setCompletedSuccess'), 'success')
     }
   }
@@ -514,7 +636,7 @@ export function SessionScreen() {
     showToast(t('session.setRemoved'), 'info')
   }
 
-  const finishWorkout = async () => {
+  const finishWorkout = async (force?: boolean) => {
     try {
       setIsRunning(false)
 
@@ -553,7 +675,22 @@ export function SessionScreen() {
       // Cap at 500 XP
       xpGained = Math.min(xpGained, 500)
 
-      // Daily cap check (1500 XP)
+      // EXTRA ANTI-CHEAT: Check for suspicious values
+      const isSuspiciousValue = exercises.some(ex => 
+        ex.sets.some(s => s.completed && ((s.reps || 0) > 60 || (s.weight || 0) > 500))
+      ) || (stats.setsCount > 10 && stats.duration < 300)
+
+      if (isSuspiciousValue && !showSuspiciousModal && !force) {
+        setShowSuspiciousModal(true)
+        setIsRunning(true) 
+        return
+      }
+
+      if (isSuspiciousValue) {
+        xpGained = Math.min(xpGained, 10)
+      }
+
+      // Daily cap check
       const dailyXpLimit = 1500
       const remainingDailyXp = Math.max(0, dailyXpLimit - (profile?.daily_xp_earned || 0))
       xpGained = Math.min(xpGained, remainingDailyXp)
@@ -810,6 +947,7 @@ export function SessionScreen() {
         return
       }
 
+      localStorage.removeItem('fitpwa_active_session')
       navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
     } catch (error) {
       console.error('Error finishing workout:', error)
@@ -873,6 +1011,21 @@ export function SessionScreen() {
       showToast(t('session.spotifyPrevError'), 'error')
     }
   }
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-error/10 text-error rounded-3xl flex items-center justify-center mb-6 border border-error/20">
+          <AlertCircle className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2">{t('common.error')}</h1>
+        <p className="text-gray-400 mb-8 max-w-sm">{error}</p>
+        <Button onClick={() => navigate('/workouts')} variant="primary" className="px-12 h-14 rounded-xl font-black uppercase italic shadow-lg shadow-primary/20">
+          <ChevronLeft className="w-5 h-5 mr-2" />
+          {t('common.back')}
+        </Button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -913,7 +1066,14 @@ export function SessionScreen() {
               <Target className="w-5 h-5" />
             </button>
             <button 
-              onClick={() => setRestTimer(prev => prev === null ? 90 : prev + 30)}
+              onClick={() => {
+                if (restTimer === null) {
+                  setRestTimer(targetRestTimer)
+                  setIsRestTimerRunning(true)
+                } else {
+                  setRestTimer(prev => (prev ?? 0) + 30)
+                }
+              }}
               className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
               title={t('session.manualRest')}
             >
@@ -940,7 +1100,7 @@ export function SessionScreen() {
               size="sm" 
               onClick={() => setShowCancelModal(true)}
               className="gap-1 border-white/10"
-              title="Cancelar Treino"
+              title={t('session.cancelWorkout')}
             >
               <Trash2 className="w-4 h-4 text-red-500" />
               <span className="hidden sm:inline">{t('common.cancel')}</span>
@@ -986,13 +1146,15 @@ export function SessionScreen() {
             <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{currentExercise.name}</h2>
+                  <h2 className="text-2xl font-bold text-white">
+                    {i18n.language.startsWith('pt') && currentExercise.name_pt ? currentExercise.name_pt : currentExercise.name}
+                  </h2>
                   <p className="text-sm text-gray-400 capitalize mt-1">
-                    {currentExercise.muscleGroups.join(', ')}
+                    {currentExercise.muscleGroups.map(mg => t(`common.muscles.${mg.toLowerCase()}`)).join(', ')}
                   </p>
                 </div>
-                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full">
-                  {currentExercise.repsMin}–{currentExercise.repsMax} reps
+                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  {currentExercise.repsMin}–{currentExercise.repsMax} {t('session.reps')}
                 </span>
               </div>
 
@@ -1007,7 +1169,7 @@ export function SessionScreen() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <RotateCcw className="w-4 h-4 text-primary" />
-                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">Última Vez</span>
+                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">{t('session.lastTime')}</span>
                       </div>
                       <span className="text-[10px] text-gray-500 font-bold">{new Date(previousExerciseData.date).toLocaleDateString()}</span>
                     </div>
@@ -1015,7 +1177,7 @@ export function SessionScreen() {
                     <div className="flex flex-wrap gap-2 mb-3">
                       {previousExerciseData.sets.map((s, i) => (
                         <div key={i} className="bg-background px-3 py-1.5 rounded-xl border border-white/5 flex flex-col items-center min-w-[60px]">
-                           <span className="text-[8px] text-gray-500 font-bold uppercase">S{i+1}</span>
+                           <span className="text-[8px] text-gray-500 font-bold uppercase">{t('session.set').charAt(0).toUpperCase()}{i+1}</span>
                            <span className="text-xs text-white font-black">{s.weight_kg}kg × {s.reps}</span>
                         </div>
                       ))}
@@ -1050,7 +1212,7 @@ export function SessionScreen() {
               </AnimatePresence>
 
               <div className="grid grid-cols-[32px_1fr_1fr_64px] gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider px-2 mb-2 items-center">
-                <span className="text-center">Set</span>
+                <span className="text-center">{t('session.set')}</span>
                 <span className="text-center">Kg</span>
                 <span className="text-center">Reps</span>
                 <span className="text-center">{t('common.done')}</span>
@@ -1105,15 +1267,8 @@ export function SessionScreen() {
                       </button>
                     </div>
 
-                    {/* Secondary Row (Notes & Actions) */}
-                    <div className="flex items-center gap-2 pl-8 sm:pl-11 mt-1">
-                      <input
-                        type="text"
-                        value={set.notes || ''}
-                        onChange={e => handleSetChange(set.id, 'notes', e.target.value)}
-                        placeholder={t('session.addNotePlaceholder')}
-                        className="flex-1 bg-transparent border-b border-surface-200 focus:border-primary text-xs sm:text-sm text-gray-400 placeholder-gray-600 pb-1 focus:outline-none transition-colors"
-                      />
+                    {/* Secondary Row (Actions) */}
+                    <div className="flex items-center justify-end gap-2 pr-2 mt-2 border-t border-surface-100/50 pt-2">
                       {idx > 0 && (
                         <button
                           onClick={() => handleCopyPreviousSet(set.id)}
@@ -1131,6 +1286,16 @@ export function SessionScreen() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Exercise Notes */}
+              <div className="mb-4">
+                <textarea
+                  value={currentExercise.notes || ''}
+                  onChange={(e) => handleExerciseNotesChange(e.target.value)}
+                  placeholder={t('session.addNotePlaceholder')}
+                  className="w-full bg-surface-100/50 border border-surface-100 rounded-xl p-3 text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary focus:bg-surface-100 transition-all resize-none min-h-[60px]"
+                />
               </div>
 
               <button
@@ -1268,54 +1433,7 @@ export function SessionScreen() {
         )}
       </main>
 
-      <AnimatePresence>
-        {restTimer !== null && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 50 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 50 }}
-            className="fixed bottom-28 left-4 right-4 z-[70] pointer-events-none"
-          >
-            <div className="max-w-md mx-auto bg-primary text-black p-4 rounded-2xl shadow-2xl flex flex-col gap-4 pointer-events-auto border-2 border-white/20 active:scale-[1.01] transition-transform"
->
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="bg-black/10 p-2 rounded-xl">
-                    <Clock className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase font-black tracking-widest opacity-60">{t('session.restInProgress')}</p>
-                    <p className="text-3xl font-black italic tabular-nums leading-none">
-                      {formatTime(restTimer)}
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setRestTimer(null)}
-                  className="bg-black/20 hover:bg-black/30 px-4 py-2 rounded-xl font-black uppercase text-xs transition-colors"
-                >
-                  {t('session.ignore')}
-                </button>
-              </div>
-              
-              <div className="flex items-center gap-2 bg-black/5 p-2 rounded-xl">
-                <span className="text-[10px] font-black uppercase tracking-tighter opacity-70 ml-1">Ajustar:</span>
-                <div className="flex gap-1 flex-1">
-                  {[-30, -10, +10, +30].map(val => (
-                    <button
-                      key={val}
-                      onClick={() => setRestTimer(prev => Math.max(0, (prev ?? 0) + val))}
-                      className="flex-1 py-1 bg-black/10 hover:bg-black/20 rounded-lg text-xs font-bold transition-all active:scale-90"
-                    >
-                      {val > 0 ? `+${val}` : val}s
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {toast && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium border ${
@@ -1343,14 +1461,14 @@ export function SessionScreen() {
           </Button>
 
           <Button
-            variant={isRunning ? 'secondary' : 'ghost'}
-            onClick={() => setIsRunning(!isRunning)}
+            variant={isRunning ? 'secondary' : 'primary'}
+            onClick={() => setIsRunning(prev => !prev)}
             className="flex-1 gap-2 active:scale-95 transition-transform shadow-lg"
           >
             {isRunning ? (
               <>
-                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                {t('session.inProgress')}
+                <Pause className="w-4 h-4" />
+                {t('session.pause')}
               </>
             ) : (
               <>
@@ -1404,12 +1522,23 @@ export function SessionScreen() {
                   onClick={() => {
                     const next = !voiceEnabled
                     setVoiceEnabled(next)
-                    if (next) speak(t('session.startingVoice'))
+                    if (next) {
+                      speak(t('session.startingVoice'))
+                    } else if ('speechSynthesis' in window) {
+                      window.speechSynthesis.cancel()
+                    }
                   }}
                   className={`p-3 rounded-2xl transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
                   title={t('profile.notifications')}
                 >
-                  {voiceEnabled ? <Mic className="w-6 h-6 animate-pulse" /> : <MicOff className="w-6 h-6" />}
+                  {voiceEnabled ? <Volume2 className="w-6 h-6 animate-pulse" /> : <VolumeX className="w-6 h-6" />}
+                </button>
+                <button 
+                  onClick={() => setIsRunning(prev => !prev)}
+                  className={`p-3 rounded-2xl transition-all border border-white/5 active:scale-90 ${isRunning ? 'bg-surface-200 text-primary' : 'bg-primary text-black'}`}
+                  title={isRunning ? t('session.pause') : t('session.resume')}
+                >
+                  {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                 </button>
                 <button 
                   onClick={() => setIsFocusMode(false)}
@@ -1449,7 +1578,7 @@ export function SessionScreen() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <RotateCcw className="w-4 h-4 text-primary" />
-                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">Última Vez</span>
+                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">{t('session.lastTime')}</span>
                       </div>
                       <span className="text-[10px] text-gray-500 font-bold">{new Date(previousExerciseData.date).toLocaleDateString()}</span>
                     </div>
@@ -1457,7 +1586,7 @@ export function SessionScreen() {
                     <div className="flex flex-wrap gap-2 mb-3">
                       {previousExerciseData.sets.map((s, i) => (
                         <div key={i} className="bg-surface-200/50 px-3 py-1.5 rounded-xl border border-white/5 flex flex-col items-center min-w-[60px]">
-                           <span className="text-[8px] text-gray-500 font-bold uppercase">S{i+1}</span>
+                           <span className="text-[8px] text-gray-500 font-bold uppercase">{t('session.set').charAt(0).toUpperCase()}{i+1}</span>
                            <span className="text-xs text-white font-black">{s.weight_kg}kg × {s.reps}</span>
                         </div>
                       ))}
@@ -1537,6 +1666,20 @@ export function SessionScreen() {
                  })()}
               </div>
 
+              {/* Exercise Notes Focus Mode */}
+              <div className="bg-surface-200/50 backdrop-blur-md border border-white/5 rounded-3xl p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <StickyNote className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">{t('session.workoutNotes')}</span>
+                </div>
+                <textarea
+                  value={currentExercise.notes || ''}
+                  onChange={(e) => handleExerciseNotesChange(e.target.value)}
+                  placeholder={t('session.addNotePlaceholder')}
+                  className="w-full bg-surface-100/50 border border-surface-100 rounded-xl p-3 text-sm text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary focus:bg-surface-100 transition-all resize-none min-h-[60px]"
+                />
+              </div>
+
               {/* Spotify Controls in Focus Mode */}
               {spotifyConnected && (
                 <div className="bg-surface-200/50 border border-white/5 rounded-3xl p-4 flex flex-col gap-3">
@@ -1599,66 +1742,217 @@ export function SessionScreen() {
       {/* Premium Rest Overlay - Non-Blocking Bottom Sheet */}
       <AnimatePresence>
         {restTimer !== null && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-[70] bg-surface-200/95 backdrop-blur-2xl border-t border-primary/20 rounded-t-[32px] p-6 pb-12 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col items-center"
-          >
-            {/* Handle for the bottom sheet */}
-            <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6" />
-
-            <div className="w-full max-w-sm flex flex-col items-center">
-              <div className="flex items-center gap-8 mb-4">
-                <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin-slow flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-primary" />
+          isTimerMinimized ? (
+             <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 50 }}
+                className="fixed bottom-24 right-4 z-[70] cursor-pointer"
+                onClick={() => setIsTimerMinimized(false)}
+             >
+                <div className="bg-primary text-black px-4 py-2 rounded-full font-black tabular-nums shadow-xl border-2 border-white/20 flex items-center gap-2 active:scale-90 transition-transform">
+                   <Clock className="w-4 h-4 animate-pulse" />
+                   {formatTime(restTimer)}
                 </div>
-                <div className="text-left">
-                  <p className="text-primary font-black uppercase tracking-widest text-[10px] mb-1">{t('session.restInProgress')}</p>
-                  <h2 className="text-6xl font-black italic tabular-nums text-white tracking-tighter">
-                    {formatTime(restTimer)}
-                  </h2>
-                </div>
-              </div>
+             </motion.div>
+          ) : (
+             <motion.div
+               initial={{ y: '100%' }}
+               animate={{ y: 0 }}
+               exit={{ y: '100%' }}
+               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+               className="fixed bottom-0 left-0 right-0 z-[70] bg-surface-200/95 backdrop-blur-2xl border-t border-primary/20 rounded-t-[32px] p-6 pb-12 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col items-center"
+             >
+               <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6 cursor-pointer" onClick={() => setIsTimerMinimized(true)} />
 
-              <div className="flex gap-2 w-full mb-8">
-                {[-15, +15].map(val => (
-                  <button
-                    key={val}
-                    onClick={() => setRestTimer(prev => Math.max(0, (prev ?? 0) + val))}
-                    className="flex-1 bg-surface-100 h-12 rounded-xl border border-white/5 font-black text-sm active:scale-95 transition-all hover:bg-white/5"
-                  >
-                    {val > 0 ? `+${val}` : val}s
-                  </button>
-                ))}
-              </div>
+               <div className="w-full max-w-sm flex flex-col items-center relative">
+                 <button onClick={() => setIsTimerMinimized(true)} className="absolute -top-4 right-0 p-2 text-gray-500 hover:text-white transition-colors bg-surface-100 rounded-full">
+                    <Minimize2 className="w-5 h-5" />
+                 </button>
 
-              <div className="flex gap-3 w-full">
-                <Button
-                  variant="primary"
-                  className="flex-[2] h-14 rounded-2xl text-lg font-black uppercase italic tracking-tighter shadow-lg shadow-primary/20"
-                  onClick={() => setRestTimer(null)}
-                >
-                  {t('session.ignore')} (Pular)
-                </Button>
-                <button
-                  onClick={() => setRestTimer(null)} // Or minimize logic if we had more space
-                  className="flex-1 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
-                  title="Minimizar"
-                >
-                   <Minimize2 className="w-6 h-6 text-gray-400" />
-                </button>
-              </div>
-              
-              <div className="mt-6 flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase truncate max-w-full">
-                <span>Próximo:</span>
-                <span className="text-white truncate">{currentExercise.name}</span>
-              </div>
-            </div>
-          </motion.div>
+                  <div className="flex flex-col items-center gap-6 mb-8 mt-4">
+                    <div className="relative">
+                      <div className={`w-32 h-32 rounded-full border-4 ${isRestTimerRunning ? 'border-primary/20 border-t-primary animate-spin-slow' : 'border-surface-100'} flex items-center justify-center`}>
+                        <Clock className={`w-10 h-10 ${isRestTimerRunning ? 'text-primary animate-pulse' : 'text-gray-500'}`} />
+                      </div>
+                      {!isRestTimerRunning && restTimer !== null && restTimer > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded-lg uppercase italic shadow-lg">
+                          {t('session.restPaused')}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-center">
+                      <p className="text-primary font-black uppercase tracking-widest text-[10px] mb-1">
+                        {restTimer !== null && restTimer > 0 ? t('session.restInProgress') : t('session.setRestTime')}
+                      </p>
+                      <h2 className="text-7xl font-black italic tabular-nums text-white tracking-tighter leading-none">
+                        {formatTime(restTimer ?? targetRestTimer)}
+                      </h2>
+                    </div>
+                  </div>
+
+                  {(!isRestTimerRunning || restTimer === null) && (
+                    <div className="flex justify-center items-center gap-8 py-6 mb-6 bg-surface-100/30 rounded-3xl w-full border border-white/5">
+                      <WheelPicker 
+                        label={t('session.minutes')}
+                        options={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                        value={Math.floor((restTimer ?? targetRestTimer) / 60)}
+                        onChange={(mins) => {
+                          const secs = (restTimer ?? targetRestTimer) % 60
+                          const next = mins * 60 + secs
+                          setRestTimer(next)
+                          setTargetRestTimer(next)
+                        }}
+                      />
+                      <div className="text-4xl font-black text-primary pb-4">:</div>
+                      <WheelPicker 
+                        label={t('session.seconds')}
+                        options={Array.from({ length: 60 }, (_, i) => i)}
+                        value={(restTimer ?? targetRestTimer) % 60}
+                        onChange={(secs) => {
+                          const mins = Math.floor((restTimer ?? targetRestTimer) / 60)
+                          const next = mins * 60 + secs
+                          setRestTimer(next)
+                          setTargetRestTimer(next)
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4 w-full mb-8">
+                    <div className="flex gap-3">
+                      <Button
+                        variant={isRestTimerRunning ? "secondary" : "primary"}
+                        className="flex-[2] h-16 rounded-2xl text-xl font-black uppercase italic tracking-tighter shadow-lg"
+                        onClick={() => {
+                          if (restTimer === null) {
+                            setRestTimer(targetRestTimer)
+                            saveRecentTimer(targetRestTimer)
+                          }
+                          setIsRestTimerRunning(!isRestTimerRunning)
+                        }}
+                      >
+                        {isRestTimerRunning ? (
+                          <><Pause className="w-6 h-6 mr-2" />{t('session.pause')}</>
+                        ) : (
+                          <><Play className="w-6 h-6 mr-2 fill-current" />{restTimer === null ? t('common.start') : t('session.resume')}</>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        className="flex-1 h-16 rounded-2xl text-gray-400 hover:text-white"
+                        onClick={() => {
+                          setRestTimer(targetRestTimer)
+                          setIsRestTimerRunning(false)
+                        }}
+                        title={t('common.reset')}
+                      >
+                        <RotateCcw className="w-6 h-6" />
+                      </Button>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      className="w-full h-12 rounded-xl text-gray-500 font-bold uppercase text-xs hover:text-red-400 transition-colors"
+                      onClick={() => {
+                        setRestTimer(null)
+                        setIsRestTimerRunning(false)
+                      }}
+                    >
+                      {t('session.skip')}
+                    </Button>
+                  </div>
+
+                  <div className="w-full space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{t('session.recentTimes')}</span>
+                      {currentExercise?.planExerciseId && (
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const timeToSave = restTimer ?? targetRestTimer
+                              await supabase.from('plan_exercises').update({ rest_seconds: timeToSave }).eq('id', currentExercise.planExerciseId)
+                              setExercises(prev => prev.map((ex, i) => i === currentExerciseIndex ? { ...ex, restSeconds: timeToSave } : ex))
+                              showToast(t('session.saveTimeSuccess'), 'success')
+                            } catch (e) {
+                              showToast(t('session.saveTimeError'), 'error')
+                            }
+                          }}
+                          className="text-[10px] font-black text-primary uppercase flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-full hover:bg-primary/20 transition-colors"
+                        >
+                          <Save className="w-3 h-3" />
+                          {t('session.saveDefault')}
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 w-full overflow-x-auto no-scrollbar pb-2">
+                      {recentRestTimes.map((time, idx) => (
+                        <button
+                          key={`${time}-${idx}`}
+                          onClick={() => {
+                            setRestTimer(time)
+                            setTargetRestTimer(time)
+                            setIsRestTimerRunning(true)
+                            saveRecentTimer(time)
+                          }}
+                          className="flex-1 min-w-[80px] bg-surface-100 h-12 rounded-xl border border-white/5 font-black text-sm active:scale-95 transition-all outline-none text-white hover:border-primary/50 flex flex-col items-center justify-center group"
+                        >
+                          <span className="text-primary group-hover:scale-110 transition-transform">{formatTime(time)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                 
+                 <div className="mt-6 flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase truncate max-w-full">
+                   <span>{t('session.nextTitle')}:</span>
+                   <span className="text-white truncate">{currentExercise.name}</span>
+                 </div>
+               </div>
+             </motion.div>
+          )
         )}
       </AnimatePresence>
+
+      {/* Suspicious Workout Modal */}
+      <Modal
+        isOpen={showSuspiciousModal}
+        onClose={() => setShowSuspiciousModal(false)}
+        title={t('session.validateWorkout')}
+        size="sm"
+      >
+        <div className="space-y-4 text-center">
+          <div className="w-16 h-16 bg-yellow-500/20 border border-yellow-500/40 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="w-8 h-8 text-yellow-500" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-white uppercase italic tracking-tighter">{t('session.unusualValuesDetected')}</h3>
+            <p className="text-sm text-gray-400">
+              {t('session.unusualValuesDescription')}
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button 
+              variant="secondary" 
+              className="flex-1 h-12"
+              onClick={() => setShowSuspiciousModal(false)}
+            >
+              {t('session.reviewValues')}
+            </Button>
+            <Button 
+              className="flex-1 h-12 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase italic"
+              onClick={async () => {
+                setShowSuspiciousModal(false)
+                await finishWorkout(true)
+              }}
+            >
+              {t('session.saveAnyway')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Finish Modal */}
       <Modal
@@ -1700,7 +1994,7 @@ export function SessionScreen() {
             </Button>
             <Button
               variant="danger"
-              onClick={finishWorkout}
+              onClick={() => finishWorkout()}
               className="flex-1"
             >
               {t('session.yesFinish')}
@@ -1713,23 +2007,23 @@ export function SessionScreen() {
       <Modal
         isOpen={showCancelModal}
         onClose={() => { setShowCancelModal(false); setCancelReason(null); }}
-        title="Cancelar Treino?"
+        title={t('session.cancelWorkoutConfirmTitle')}
         size="sm"
         closeButton
       >
         <div className="space-y-4">
           <p className="text-gray-400">
-            Tens a certeza que queres cancelar? O progresso desta sessão não será guardado.
+            {t('session.cancelConfirm')}
           </p>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold text-gray-500 uppercase">Motivo (opcional):</p>
+            <p className="text-xs font-bold text-gray-500 uppercase">{t('session.cancelReasonTitle')}</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'tired', label: 'Cansaço', suggestion: 'Não forces. Um descanso extra hoje pode render mais amanhã! 🧘' },
-                { id: 'time', label: 'Falta de tempo', suggestion: 'Um treino curto é melhor que nenhum! Tenta fazer pelo menos mais um set. ⚡' },
-                { id: 'injury', label: 'Dor/Lesão', suggestion: 'Para imediatamente! A tua saúde é prioritária. Aplica gelo se necessário. 🩹' },
-                { id: 'other', label: 'Outro', suggestion: 'Ouve o teu corpo. Voltamos amanhã com mais força! 💪' }
+                { id: 'tired' },
+                { id: 'noTime' },
+                { id: 'injury' },
+                { id: 'other' }
               ].map(reason => (
                 <button
                   key={reason.id}
@@ -1740,7 +2034,7 @@ export function SessionScreen() {
                       : 'bg-surface-100 border-white/5 text-gray-400 hover:border-white/10'
                   }`}
                 >
-                  {reason.label}
+                  {t(`session.cancelReason.${reason.id}`)}
                 </button>
               ))}
             </div>
@@ -1756,13 +2050,7 @@ export function SessionScreen() {
                 <div className="flex gap-3">
                   <Zap className="w-5 h-5 text-primary shrink-0" />
                   <p className="text-xs text-primary leading-relaxed font-medium">
-                    { [
-                        { id: 'tired', suggestion: 'Não forces. Um descanso extra hoje pode render mais amanhã! 🧘' },
-                        { id: 'time', suggestion: 'Um treino curto é melhor que nenhum! Tenta fazer pelo menos mais um set. ⚡' },
-                        { id: 'injury', suggestion: 'Para imediatamente! A tua saúde é prioritária. Aplica gelo se necessário. 🩹' },
-                        { id: 'other', suggestion: 'Ouve o teu corpo. Voltamos amanhã com mais força! 💪' }
-                      ].find(r => r.id === cancelReason)?.suggestion
-                    }
+                    {t(`session.cancelSuggestion.${cancelReason}`)}
                   </p>
                 </div>
               </motion.div>
@@ -1775,14 +2063,14 @@ export function SessionScreen() {
               onClick={() => { setShowCancelModal(false); setCancelReason(null); }}
               className="flex-1"
             >
-              Continuar
+              {t('session.continueTraining')}
             </Button>
             <Button
               variant="danger"
               onClick={() => navigate('/workouts')}
               className="flex-1"
             >
-              Cancelar
+              {t('common.cancel')}
             </Button>
           </div>
         </div>
@@ -1792,7 +2080,7 @@ export function SessionScreen() {
       <Modal
         isOpen={showAddExerciseModal}
         onClose={() => setShowAddExerciseModal(false)}
-        title="Adicionar Exercício"
+        title={t('session.addExercise')}
         size="md"
         closeButton
       >
@@ -1801,7 +2089,7 @@ export function SessionScreen() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
-              placeholder="Pesquisar exercício..."
+              placeholder={t('session.searchExercisePlaceholder')}
               value={exerciseSearchTerm}
               onChange={e => setExerciseSearchTerm(e.target.value)}
               className="w-full bg-surface-100 border border-surface-200 rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
@@ -1823,7 +2111,7 @@ export function SessionScreen() {
                 >
                   <div className="text-left">
                     <p className="font-bold text-white group-hover:text-primary transition-colors">{ex.name_pt || ex.name}</p>
-                    <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || 'Geral'}</p>
+                    <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || t('session.general')}</p>
                   </div>
                   <Plus className="w-5 h-5 text-gray-600 group-hover:text-primary" />
                 </button>

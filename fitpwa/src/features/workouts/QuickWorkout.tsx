@@ -55,7 +55,22 @@ export function QuickWorkout() {
 
   const { data: availableExercises = [] } = useOfflineExercises()
 
-  const muscleGroups = ['Peito', 'Costas', 'Ombro', 'Bíceps', 'Tríceps', 'Antebraço', 'Pernas', 'Femorais', 'Glúteos', 'Abdominais', 'Core']
+  const muscleGroups = useMemo(() => [
+    { id: 'chest', label: t('common.muscles.chest') },
+    { id: 'back', label: t('common.muscles.back') },
+    { id: 'shoulders', label: t('common.muscles.shoulders') },
+    { id: 'biceps', label: t('common.muscles.biceps') },
+    { id: 'triceps', label: t('common.muscles.triceps') },
+    { id: 'forearms', label: t('common.muscles.forearms') },
+    { id: 'legs', label: t('common.muscles.legs') },
+    { id: 'hamstrings', label: t('common.muscles.hamstrings') },
+    { id: 'glutes', label: t('common.muscles.glutes') },
+    { id: 'abs', label: t('common.muscles.abs') },
+    { id: 'core', label: t('common.muscles.core') }
+  ], [t])
+
+  const [showActiveSessionModal, setShowActiveSessionModal] = useState(false)
+  const [activeSession, setActiveSession] = useState<any>(null)
 
   const fuse = useMemo(() => new Fuse(availableExercises as Exercise[], {
     keys: ['name', 'name_pt'],
@@ -93,7 +108,7 @@ export function QuickWorkout() {
     }
 
     if (selectedMuscle) {
-      results = results.filter(ex => ex.muscle_groups?.includes(selectedMuscle))
+      results = results.filter(ex => ex.muscle_groups?.some(mg => mg.toLowerCase().includes(selectedMuscle.toLowerCase())))
     }
 
     return results
@@ -150,6 +165,14 @@ export function QuickWorkout() {
 
   const startWorkoutMutation = useMutation({
     mutationFn: async () => {
+      const raw = localStorage.getItem('fitpwa_active_session')
+      if (raw) {
+        const session = JSON.parse(raw)
+        setActiveSession(session)
+        setShowActiveSessionModal(true)
+        throw new Error('Active session exists')
+      }
+
       const workoutData = {
         user_id: profile?.id,
         exercises: selectedExercises,
@@ -165,6 +188,12 @@ export function QuickWorkout() {
       navigate('/session/quick')
     }
   })
+
+  const confirmDiscardAndStart = () => {
+    localStorage.removeItem('fitpwa_active_session')
+    setShowActiveSessionModal(false)
+    startWorkoutMutation.mutate()
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24">
@@ -199,7 +228,7 @@ export function QuickWorkout() {
 
                   <div className="flex gap-2">
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Sets</span>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">{t('editor.sets')}</span>
                       <input
                         type="number"
                         value={ex.sets}
@@ -308,13 +337,13 @@ export function QuickWorkout() {
             </button>
             {muscleGroups.map(muscle => (
               <button
-                key={muscle}
-                onClick={() => setSelectedMuscle(muscle)}
+                key={muscle.id}
+                onClick={() => setSelectedMuscle(muscle.label)}
                 className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                  selectedMuscle === muscle ? 'bg-primary text-black' : 'bg-surface-100 text-gray-500 hover:text-white'
+                  selectedMuscle === muscle.label ? 'bg-primary text-black' : 'bg-surface-100 text-gray-500 hover:text-white'
                 }`}
               >
-                {muscle}
+                {muscle.label}
               </button>
             ))}
           </div>
@@ -345,6 +374,34 @@ export function QuickWorkout() {
                 {searchTerm ? t('workouts.noExercisesFound') : t('workouts.startTyping')}
               </div>
             )}
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={showActiveSessionModal}
+        onClose={() => setShowActiveSessionModal(false)}
+        title={t('session.newSessionConfirmTitle')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-400">
+            {t('session.newSessionConfirmDesc', { planName: activeSession?.planName || t('workouts.quickWorkout') })}
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="primary"
+              onClick={() => navigate(activeSession?.planId === 'quick' ? '/session/quick' : `/workouts/${activeSession?.planId}/start`)}
+              className="w-full"
+            >
+              {t('session.keepTraining')}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={confirmDiscardAndStart}
+              className="w-full border-red-500/30 text-red-500 hover:bg-red-500/10"
+            >
+              {t('session.discardAndStart')}
+            </Button>
           </div>
         </div>
       </Modal>

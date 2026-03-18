@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -172,6 +172,8 @@ export function WorkoutEditor() {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [creatingCustom, setCreatingCustom] = useState(false)
+  const [isActivePlan, setIsActivePlan] = useState(false)
+  const location = useLocation()
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -214,6 +216,18 @@ export function WorkoutEditor() {
     if (!id) return
     try {
       setLoading(true)
+
+      const rawSession = localStorage.getItem('fitpwa_active_session')
+      if (rawSession) {
+        try {
+          const sessionData = JSON.parse(rawSession)
+          if (sessionData.planId === id) {
+            setIsActivePlan(true)
+            setError(t('editor.cannotEditActivePlan'))
+          }
+        } catch(e) {}
+      }
+
       const { data: plan, error: planErr } = await supabase
         .from('workout_plans')
         .select('*')
@@ -313,10 +327,33 @@ export function WorkoutEditor() {
   }, [templateId, id, t])
 
   useEffect(() => {
-    if (id) loadPlan()
-    if (!id) loadTemplate()
+    if (id) {
+      loadPlan()
+    } else if (templateId) {
+      loadTemplate()
+    } else {
+      const state = location.state as any
+      if (state?.initialData) {
+        setTitle(state.initialData.name || '')
+        setDescription(state.initialData.description || '')
+        if (state.initialData.exercises) {
+          const mapped: PlanExercise[] = state.initialData.exercises.map((ex: any, idx: number) => ({
+            id: `new-${idx}-${Date.now()}`,
+            exercise_id: ex.exerciseId || ex.exercise_id,
+            name: ex.name,
+            sets: ex.sets?.length || ex.sets || 3,
+            reps_min: ex.repsMin || ex.reps_min || 8,
+            reps_max: ex.repsMax || ex.reps_max || 12,
+            rest_seconds: ex.restSeconds || ex.rest_seconds || 90,
+            weight_kg: ex.weight || ex.weight_kg || null,
+            is_superset: false
+          }))
+          setExercises(mapped)
+        }
+      }
+    }
     loadExercises()
-  }, [id, loadPlan, loadTemplate, loadExercises])
+  }, [id, templateId, loadPlan, loadTemplate, loadExercises, location.state])
 
   const handleAddExercise = (exercise: Exercise) => {
     const newExercise: PlanExercise = {
@@ -538,8 +575,8 @@ export function WorkoutEditor() {
 
         <div className="flex items-center justify-between p-4 bg-surface-200 border border-surface-100 rounded-lg">
           <div>
-            <h4 className="font-bold text-white">Treino Público</h4>
-            <p className="text-sm text-gray-500">Permite que outros utilizadores vejam e guardem este treino.</p>
+            <h4 className="font-bold text-white">{t('editor.publicWorkout')}</h4>
+            <p className="text-sm text-gray-500">{t('editor.publicWorkoutDesc')}</p>
           </div>
           <button
             onClick={() => setIsPublic(!isPublic)}
@@ -604,7 +641,7 @@ export function WorkoutEditor() {
         <Button 
           className="flex-1"
           onClick={handleSave}
-          disabled={loading}
+          disabled={loading || isActivePlan}
         >
           {loading ? t('editor.saving') : t('editor.savePlan')}
         </Button>

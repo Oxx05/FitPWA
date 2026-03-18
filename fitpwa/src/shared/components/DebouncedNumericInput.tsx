@@ -4,13 +4,17 @@ interface DebouncedNumericInputProps extends Omit<React.InputHTMLAttributes<HTML
   value: number | null
   onChange: (value: number | null) => void
   debounceTime?: number
+  defaultOnEmpty?: number | null // NEW PROP
 }
 
 export function DebouncedNumericInput({
   value,
   onChange,
   debounceTime = 500,
+  defaultOnEmpty = 0,
   className,
+  onFocus,
+  onBlur,
   ...props
 }: DebouncedNumericInputProps) {
   const [localValue, setLocalValue] = useState<string>(value === null ? '' : value.toString())
@@ -27,7 +31,7 @@ export function DebouncedNumericInput({
   useEffect(() => {
     const handler = setTimeout(() => {
       if (localValue === '') {
-        if (value !== null) onChange(null)
+        if (value !== defaultOnEmpty) onChange(defaultOnEmpty)
         return
       }
       const numericValue = parseFloat(localValue)
@@ -37,7 +41,7 @@ export function DebouncedNumericInput({
     }, debounceTime)
 
     return () => clearTimeout(handler)
-  }, [localValue, debounceTime, onChange, value])
+  }, [localValue, debounceTime, onChange, value, defaultOnEmpty])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
@@ -47,9 +51,19 @@ export function DebouncedNumericInput({
     }
   }
 
-  const handleBlur = () => {
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (localValue === '0' || localValue === '0.0') {
+      setLocalValue('')
+    }
+    if (onFocus) onFocus(e)
+  }
+
+  const handleBlurWrapper = (e: React.FocusEvent<HTMLInputElement>) => {
     if (localValue === '') {
-      onChange(null)
+      onChange(defaultOnEmpty)
+      if (defaultOnEmpty !== null) {
+        setLocalValue(defaultOnEmpty.toString())
+      }
     } else {
       const numericValue = parseFloat(localValue)
       if (!isNaN(numericValue) && numericValue !== value) {
@@ -58,6 +72,7 @@ export function DebouncedNumericInput({
         setLocalValue(value === null ? '' : value.toString())
       }
     }
+    if (onBlur) onBlur(e)
   }
 
   return (
@@ -67,7 +82,8 @@ export function DebouncedNumericInput({
       inputMode="decimal"
       value={localValue}
       onChange={handleChange}
-      onBlur={handleBlur}
+      onFocus={handleFocus}
+      onBlur={handleBlurWrapper}
       className={className}
     />
   )

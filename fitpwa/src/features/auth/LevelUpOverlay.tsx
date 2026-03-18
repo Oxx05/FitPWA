@@ -25,7 +25,7 @@ export function LevelUpOverlay() {
   const rewards = [
     { icon: <Zap className="w-5 h-5 text-yellow-400" />, text: "Aumento de stamina +5%" },
     { icon: <Star className="w-5 h-5 text-primary" />, text: "Nova Badge de Nível" },
-    { icon: <Gift className="w-5 h-5 text-blue-400" />, text: "Desbloqueio de novos exercícios" }
+    { icon: <Gift className="w-5 h-5 text-blue-400" />, text: "Acesso a Dicas de Performance" }
   ]
 
   return (
