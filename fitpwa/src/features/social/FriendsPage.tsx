@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
-import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User, Share2, Loader2 } from 'lucide-react'
+import { UserPlus, UserMinus, Star, Search, Trophy, Globe, Users, User, Share2, Loader2, Dumbbell } from 'lucide-react'
 import { LeaderboardPage } from './LeaderboardPage'
 import { CommunityPage } from '../community/CommunityPage'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -153,7 +153,7 @@ export function FriendsPage() {
             { id: 'mural', label: 'Feed Mural', icon: Globe },
             { id: 'social', label: 'Amigos', icon: Users },
             { id: 'leaderboard', label: 'Ranking', icon: Trophy },
-            { id: 'community', label: 'Comunidade', icon: Globe }
+            { id: 'community', label: 'Comunidade', icon: Dumbbell }
           ].map(tab => (
             <button
               key={tab.id}

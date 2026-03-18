@@ -29,6 +29,7 @@ const RecordsPage = React.lazy(() => import('@/features/progress/RecordsPage').t
 const PremiumPage = React.lazy(() => import('@/features/premium/PremiumPage').then(m => ({ default: m.PremiumPage })))
 const FriendsPage = React.lazy(() => import('@/features/social/FriendsPage').then(m => ({ default: m.FriendsPage })))
 const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const AchievementsPage = React.lazy(() => import('@/features/gamification/AchievementsPage').then(m => ({ default: m.AchievementsPage })))
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background text-white">
@@ -104,6 +105,9 @@ function App() {
                 } />
                 <Route path="/profile" element={
                   <ProtectedRoute><ProfilePage /></ProtectedRoute>
+                } />
+                <Route path="/achievements" element={
+                  <ProtectedRoute><AchievementsPage /></ProtectedRoute>
                 } />
               </Routes>
               </Suspense>

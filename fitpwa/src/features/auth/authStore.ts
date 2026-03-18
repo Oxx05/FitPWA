@@ -35,6 +35,7 @@ interface AuthState {
   addXp: (amount: number) => void
   clearPendingLevelUp: () => void
   setSoundEnabled: (enabled: boolean) => void
+  fetchProfile: (userId: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -78,6 +79,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }).eq('id', profile.id).then()
   },
   setLoading: (isLoading) => set({ isLoading }),
+  fetchProfile: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    if (!error && data) {
+      get().setProfile(data)
+    }
+  },
   clearPendingLevelUp: () => set({ pendingLevelUp: null }),
   signOut: async () => {
     await supabase.auth.signOut()

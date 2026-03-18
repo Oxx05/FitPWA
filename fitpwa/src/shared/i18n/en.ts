@@ -181,6 +181,11 @@ const en = {
     soundEnabled: 'Sound Enabled',
     soundDisabled: 'Sound Disabled',
     soundAlerts: 'Sound and Alerts',
+    chooseAvatar: 'Choose Profile Picture',
+    avatarUpdated: 'Profile picture updated!',
+    featuredMedals: 'Featured Medals',
+    noMedalsEquipped: 'No medals equipped',
+    achievementsLink: 'Achievements & Medals',
   },
 
   // ─── Session / Timer ───
@@ -349,6 +354,16 @@ const en = {
     levelUp: 'Level Up!',
     newLevel: 'Level {{level}}',
     achievementUnlocked: 'Achievement Unlocked!',
+    listTitle: 'Achievements & Medals',
+    unlocked: 'Unlocked',
+    toEarn: 'To Earn',
+    categories: {
+      streak: 'Streaks',
+      workouts: 'Workouts',
+      level: 'Level',
+      volume: 'Volume',
+      social: 'Social'
+    }
   },
 }
 

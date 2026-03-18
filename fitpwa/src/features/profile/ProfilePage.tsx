@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next'
 import { CustomSelect } from '@/shared/components/CustomSelect'
 import { useToast } from '@/shared/contexts/ToastContext'
 import { NotificationCenter } from './NotificationCenter'
+import { useAchievementsStore, type Achievement } from '@/features/gamification/useAchievementsStore'
+import { Trophy } from 'lucide-react'
 
 export function ProfilePage() {
   const { profile, user, signOut, isPremium } = useAuthStore()
@@ -22,6 +24,8 @@ export function ProfilePage() {
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null)
   const [publishDescription, setPublishDescription] = useState('')
   const [showNotificationCenter, setShowNotificationCenter] = useState(false)
+  const { achievements, unlockedIds } = useAchievementsStore()
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
 
   // Editable profile fields
   const [editName, setEditName] = useState(profile?.full_name || '')
@@ -178,8 +182,17 @@ export function ProfilePage() {
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-center gap-6 bg-surface-200 p-8 rounded-3xl border border-surface-100 shadow-xl">
-        <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary text-primary">
-          <User className="w-12 h-12" />
+        <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)}>
+          <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary text-primary overflow-hidden relative">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-12 h-12" />
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Pencil className="w-6 h-6 text-white" />
+            </div>
+          </div>
         </div>
         <div className="text-center md:text-left flex-grow">
           <h1 className="text-3xl font-black text-white">{profile?.full_name || t('common.athlete')}</h1>
@@ -191,6 +204,48 @@ export function ProfilePage() {
               <Shield className="w-3.5 h-3.5" /> {t('profile.proMember')}
             </div>
           )}
+          
+          {/* Featured Medals (Highest Tier for each group) */}
+          <div className="flex gap-2 mt-4 justify-center md:justify-start">
+            {(() => {
+              const featured = unlockedIds
+                .map(id => achievements.find(a => a.id === id)!)
+                .filter(Boolean)
+                // Group by groupId and take highest level
+                .reduce((acc, curr) => {
+                  const existing = acc.find(a => a.groupId === curr.groupId)
+                  if (!existing || curr.level > existing.level) {
+                    const filtered = acc.filter(a => a.groupId !== curr.groupId)
+                    filtered.push(curr)
+                    return filtered
+                  }
+                  return acc
+                }, [] as Achievement[])
+                .sort((a, b) => b.level - a.level)
+                .slice(0, 3)
+
+              return featured.map(achievement => (
+                <div 
+                  key={achievement.id} 
+                  className={`w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-xl border shadow-inner relative group/medal ${
+                    achievement.level === 3 ? 'border-yellow-500/50' : achievement.level === 2 ? 'border-gray-400/50' : 'border-surface-300'
+                  }`} 
+                  title={i18n.language === 'pt' ? achievement.title_pt : achievement.title}
+                >
+                  {achievement.icon}
+                  {/* Rank Badge */}
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white ${
+                    achievement.level === 3 ? 'bg-yellow-500' : achievement.level === 2 ? 'bg-gray-400' : 'bg-amber-700'
+                  }`}>
+                    {achievement.level}
+                  </div>
+                </div>
+              ))
+            })()}
+            {unlockedIds.length === 0 && (
+              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-2">{t('profile.noMedalsEquipped')}</p>
+            )}
+          </div>
         </div>
         <Button variant="ghost" className="text-gray-500 hover:text-white" onClick={signOut}>
           <LogOut className="w-5 h-5 mr-2" /> {t('auth.logout')}
@@ -255,7 +310,7 @@ export function ProfilePage() {
           >
             <div className="flex items-center gap-3 text-gray-300">
               <Clock className="w-5 h-5" />
-              <span className="font-medium text-white">Histórico de Notificações</span>
+              <span className="font-medium text-white">{t('profile.notificationsTitle') || 'Histórico de Notificações'}</span>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
@@ -276,6 +331,7 @@ export function ProfilePage() {
             />
           </div>
           <ProfileLink icon={<CreditCard />} label={t('profile.payments')} to="/premium" />
+          <ProfileLink icon={<Trophy className="text-yellow-500" />} label={t('profile.achievementsLink')} to="/achievements" />
         </div>
 
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 space-y-4">
@@ -494,7 +550,7 @@ export function ProfilePage() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className={`flex items-center gap-2 p-3 rounded-xl text-sm overflow-hidden ${
-                  profileMsg.includes(t('common.error')) 
+                  profileMsg && profileMsg.includes(t('common.error')) 
                     ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
                     : 'bg-primary/10 text-primary border border-primary/20'
                 }`}
@@ -524,6 +580,77 @@ export function ProfilePage() {
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
       />
+
+      {/* Avatar Selection Modal */}
+      <Modal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        title={t('profile.chooseAvatar')}
+        closeButton
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1599058917232-d750c18590e6?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1518310382917-450c893b3ce2?w=200&h=200&fit=crop',
+              'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=200&h=200&fit=crop',
+            ].map((url, i) => (
+              <button
+                key={i}
+                onClick={async () => {
+                  if (!user) return
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ avatar_url: url })
+                    .eq('id', user.id)
+                  
+                  if (!error) {
+                    useAuthStore.getState().fetchProfile(user.id)
+                    setShowAvatarModal(false)
+                    showToast(t('profile.avatarUpdated'), 'success')
+                  }
+                }}
+                className={`w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
+                  profile?.avatar_url === url ? 'border-primary scale-90' : 'border-transparent hover:border-white/20'
+                }`}
+              >
+                <img src={url} alt="Avatar option" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-400 uppercase tracking-widest text-[10px]">{t('profile.orImageLink') || 'Ou link da imagem'}</label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="https://..." 
+                className="flex-grow"
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    const url = (e.target as HTMLInputElement).value
+                    if (!url || !user) return
+                    const { error } = await supabase
+                      .from('profiles')
+                      .update({ avatar_url: url })
+                      .eq('id', user.id)
+                    
+                    if (!error) {
+                      useAuthStore.getState().fetchProfile(user.id)
+                      setShowAvatarModal(false)
+                      showToast(t('profile.avatarUpdated'), 'success')
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

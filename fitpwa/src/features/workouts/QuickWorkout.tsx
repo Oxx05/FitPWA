@@ -1,12 +1,31 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { ChevronRight, Plus, Search, Zap } from 'lucide-react'
+import { ChevronRight, Plus, Sparkles, Dumbbell } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
-import { EXERCISES } from '@/shared/data/exercises'
+import { Input } from '@/shared/components/Input'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useNavigate } from 'react-router-dom'
+import { useOfflineExercises } from '@/shared/hooks/useOfflineData'
+import { useTranslation } from 'react-i18next'
+import { supabase } from '@/shared/lib/supabase'
+import Fuse from 'fuse.js'
+
+const TRANSLATION_MAP: Record<string, string> = {
+  'supino': 'bench press',
+  'agachamento': 'squat',
+  'levantamento terra': 'deadlift',
+  'rosca direta': 'bicep curl',
+  'flexao': 'push up',
+  'abdominal': 'crunch',
+  'remada': 'row',
+  'puxada': 'lat pulldown',
+  'extensao': 'extension',
+  'flexao de pernas': 'leg curl',
+  'press militar': 'military press',
+  'elevaçao lateral': 'lateral raise'
+}
 
 interface QuickExercise {
   exerciseId: string
@@ -15,28 +34,108 @@ interface QuickExercise {
   weight?: number
 }
 
+interface Exercise {
+  id: string
+  name: string
+  name_pt?: string
+  muscle_groups?: string[]
+  equipment?: string[]
+  difficulty?: number
+}
+
 export function QuickWorkout() {
-  const { profile } = useAuthStore()
+  const { profile, user } = useAuthStore()
+  const { i18n } = useTranslation()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
   const [selectedExercises, setSelectedExercises] = useState<QuickExercise[]>([])
   const [showExerciseModal, setShowExerciseModal] = useState(false)
+  const [creatingCustom, setCreatingCustom] = useState(false)
+
+  const { data: availableExercises = [] } = useOfflineExercises()
 
   const muscleGroups = ['Peito', 'Costas', 'Ombro', 'Bíceps', 'Tríceps', 'Antebraço', 'Pernas', 'Femorais', 'Glúteos', 'Abdominais', 'Core']
 
-  const filteredExercises = EXERCISES.filter(ex => {
-    const matchesSearch = ex.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesMuscle = selectedMuscle ? ex.muscleGroups.includes(selectedMuscle) : true
-    return matchesSearch && matchesMuscle
-  })
+  const fuse = useMemo(() => new Fuse(availableExercises as Exercise[], {
+    keys: ['name', 'name_pt'],
+    threshold: 0.4,
+    ignoreLocation: true,
+  }), [availableExercises])
 
-  const addExercise = (exerciseId: string) => {
+  const filteredExercises = useMemo(() => {
+    let results = (availableExercises as Exercise[])
+    
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim()
+      const searchTerms = [term]
+      
+      // Add translated term to search if found in map
+      for (const [pt, en] of Object.entries(TRANSLATION_MAP)) {
+        if (term.includes(pt) || pt.includes(term)) {
+          searchTerms.push(en)
+        }
+      }
+      
+      // Perform multi-term search
+      const fuseResults = new Set<string>()
+      let searchResults: Exercise[] = []
+      
+      searchTerms.forEach(t => {
+        fuse.search(t).forEach(r => {
+          if (!fuseResults.has(r.item.id)) {
+            fuseResults.add(r.item.id)
+            searchResults.push(r.item)
+          }
+        })
+      })
+      results = searchResults
+    }
+
+    if (selectedMuscle) {
+      results = results.filter(ex => ex.muscle_groups?.includes(selectedMuscle))
+    }
+
+    return results
+  }, [searchTerm, selectedMuscle, availableExercises, fuse])
+
+  const addExercise = (exercise: Exercise) => {
     setSelectedExercises([
       ...selectedExercises,
-      { exerciseId, sets: 3, reps: 10, weight: 0 }
+      { exerciseId: exercise.id, sets: 3, reps: 10, weight: 0 }
     ])
     setShowExerciseModal(false)
+    setSearchTerm('')
+  }
+
+  const handleCreateCustomExercise = async () => {
+    if (!searchTerm.trim() || !user) return
+
+    try {
+      setCreatingCustom(true)
+      const { data, error: insertErr } = await supabase
+        .from('exercises')
+        .insert({
+          name: searchTerm.trim(),
+          name_pt: searchTerm.trim(),
+          muscle_groups: selectedMuscle ? [selectedMuscle] : [],
+          equipment: [],
+          difficulty: 3,
+          is_custom: true,
+          created_by: user.id,
+        })
+        .select()
+        .single()
+
+      if (insertErr) throw insertErr
+      if (data) {
+        addExercise(data)
+      }
+    } catch (err) {
+      console.error('Erro ao criar exercício:', err)
+    } finally {
+      setCreatingCustom(false)
+    }
   }
 
   const updateExercise = (index: number, updates: Partial<QuickExercise>) => {
@@ -51,7 +150,6 @@ export function QuickWorkout() {
 
   const startWorkoutMutation = useMutation({
     mutationFn: async () => {
-      // Save as quick workout history
       const workoutData = {
         user_id: profile?.id,
         exercises: selectedExercises,
@@ -60,7 +158,6 @@ export function QuickWorkout() {
         title: 'Treino Rápido'
       }
       
-      // For now, just save to localStorage and navigate
       localStorage.setItem('quickWorkout', JSON.stringify(workoutData))
       return workoutData
     },
@@ -72,11 +169,10 @@ export function QuickWorkout() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24">
       <div>
-        <h1 className="text-3xl font-bold">Treino Rápido</h1>
+        <h1 className="text-3xl font-bold italic uppercase tracking-tighter">Treino Rápido</h1>
         <p className="text-gray-400">Crie um treino individual sem seguir um plano</p>
       </div>
 
-      {/* Selected Exercises */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">Exercícios Selecionados</h2>
@@ -86,58 +182,58 @@ export function QuickWorkout() {
         {selectedExercises.length > 0 ? (
           <div className="space-y-3">
             {selectedExercises.map((ex, idx) => {
-              const exercise = EXERCISES.find(e => e.id === ex.exerciseId)
+              const exercise = (availableExercises as Exercise[]).find(e => e.id === ex.exerciseId)
               return (
                 <motion.div
                   key={idx}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-start justify-between"
+                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between"
                 >
                   <div className="flex-1">
-                    <h3 className="font-bold text-white">{exercise?.name}</h3>
-                    <p className="text-sm text-gray-400 mt-1">{exercise?.muscleGroups.join(', ')}</p>
-                    
-                    {exercise?.imageUrl && (
-                      <img 
-                        src={exercise.imageUrl} 
-                        alt={exercise.name}
-                        className="w-16 h-16 rounded-lg mt-2 object-cover"
-                        onError={(e) => (e.currentTarget.style.display = 'none')}
-                      />
-                    )}
+                    <h3 className="font-bold text-white">
+                      {i18n.language.startsWith('pt') && exercise?.name_pt ? exercise.name_pt : exercise?.name}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">{exercise?.muscle_groups?.join(', ')}</p>
                   </div>
 
                   <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={ex.sets}
-                      onChange={(e) => updateExercise(idx, { sets: parseInt(e.target.value) || 1 })}
-                      placeholder="Sets"
-                      className="w-16 bg-surface-100 border border-surface-200 rounded px-2 py-1 text-white text-center text-sm"
-                      min="1"
-                    />
-                    <input
-                      type="number"
-                      value={ex.reps}
-                      onChange={(e) => updateExercise(idx, { reps: parseInt(e.target.value) || 1 })}
-                      placeholder="Reps"
-                      className="w-16 bg-surface-100 border border-surface-200 rounded px-2 py-1 text-white text-center text-sm"
-                      min="1"
-                    />
-                    <input
-                      type="number"
-                      value={ex.weight || ''}
-                      onChange={(e) => updateExercise(idx, { weight: e.target.value ? parseFloat(e.target.value) : 0 })}
-                      placeholder="kg"
-                      className="w-16 bg-surface-100 border border-surface-200 rounded px-2 py-1 text-white text-center text-sm"
-                      step="0.5"
-                    />
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Sets</span>
+                      <input
+                        type="number"
+                        value={ex.sets}
+                        onChange={(e) => updateExercise(idx, { sets: parseInt(e.target.value) || 1 })}
+                        className="w-14 bg-surface-100 border border-surface-200 rounded-lg px-2 py-1.5 text-white text-center text-sm focus:border-primary focus:outline-none"
+                        min="1"
+                      />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Reps</span>
+                      <input
+                        type="number"
+                        value={ex.reps}
+                        onChange={(e) => updateExercise(idx, { reps: parseInt(e.target.value) || 1 })}
+                        className="w-14 bg-surface-100 border border-surface-200 rounded-lg px-2 py-1.5 text-white text-center text-sm focus:border-primary focus:outline-none"
+                        min="1"
+                      />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Kg</span>
+                      <input
+                        type="number"
+                        value={ex.weight || ''}
+                        onChange={(e) => updateExercise(idx, { weight: e.target.value ? parseFloat(e.target.value) : 0 })}
+                        placeholder="kg"
+                        className="w-14 bg-surface-100 border border-surface-200 rounded-lg px-2 py-1.5 text-white text-center text-sm focus:border-primary focus:outline-none"
+                        step="0.5"
+                      />
+                    </div>
                     <button
                       onClick={() => removeExercise(idx)}
-                      className="text-red-400 hover:text-red-300 transition-colors"
+                      className="self-end p-2 text-gray-500 hover:text-red-400 transition-colors"
                     >
-                      ✕
+                      <Plus className="w-5 h-5 rotate-45" />
                     </button>
                   </div>
                 </motion.div>
@@ -146,60 +242,66 @@ export function QuickWorkout() {
           </div>
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
-            <Zap className="w-12 h-12 mx-auto mb-2 opacity-30" />
+            <Dumbbell className="w-12 h-12 mx-auto mb-2 opacity-30" />
             <p>Nenhum exercício selecionado ainda</p>
           </div>
         )}
       </div>
 
-      {/* Add Exercise Button */}
       <Button
         onClick={() => setShowExerciseModal(true)}
-        className="w-full bg-primary hover:bg-primary/90 text-black rounded-xl py-3"
+        className="w-full h-14 bg-surface-200 border border-dashed border-surface-100 hover:border-primary/50 text-white rounded-xl"
       >
-        <Plus className="w-5 h-5 mr-2" />
+        <Plus className="w-5 h-5 mr-2 text-primary" />
         Adicionar Exercício
       </Button>
 
-      {/* Start Button */}
       {selectedExercises.length > 0 && (
         <Button
           onClick={() => startWorkoutMutation.mutate()}
           disabled={startWorkoutMutation.isPending}
-          className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3"
+          className="w-full h-14 bg-primary text-black font-black uppercase tracking-tighter italic rounded-xl shadow-lg shadow-primary/20"
         >
-          Começar Treino
+          {startWorkoutMutation.isPending ? 'A iniciar...' : 'Começar Treino'}
         </Button>
       )}
 
-      {/* Exercise Selection Modal */}
       <Modal
         isOpen={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
         title="Selecionar Exercício"
-        closeButton
+        size="lg"
       >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar exercício..."
-              className="w-full pl-10 pr-4 py-2 bg-surface-100 border border-surface-200 rounded-lg text-white placeholder-gray-500"
-            />
-          </div>
+        <div className="space-y-4">
+          <Input
+            placeholder="Pesquisar ou criar exercício..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
-          {/* Muscle Filter */}
-          <div className="flex gap-2 flex-wrap">
+          {searchTerm.trim().length > 1 && (
+            <button
+              onClick={handleCreateCustomExercise}
+              disabled={creatingCustom}
+              className="w-full text-left p-3 bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors border border-primary/30 flex items-center gap-3"
+            >
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-primary">
+                  {creatingCustom ? 'A criar...' : `Criar "${searchTerm.trim()}"`}
+                </h4>
+                <p className="text-[10px] text-primary/60 uppercase font-black">Adicionar como exercício personalizado</p>
+              </div>
+            </button>
+          )}
+
+          <div className="flex gap-2 flex-wrap mb-2">
             <button
               onClick={() => setSelectedMuscle(null)}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                selectedMuscle === null
-                  ? 'bg-primary text-black'
-                  : 'bg-surface-100 text-gray-400'
+              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                selectedMuscle === null ? 'bg-primary text-black' : 'bg-surface-100 text-gray-500 hover:text-white'
               }`}
             >
               Todos
@@ -208,10 +310,8 @@ export function QuickWorkout() {
               <button
                 key={muscle}
                 onClick={() => setSelectedMuscle(muscle)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                  selectedMuscle === muscle
-                    ? 'bg-primary text-black'
-                    : 'bg-surface-100 text-gray-400'
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                  selectedMuscle === muscle ? 'bg-primary text-black' : 'bg-surface-100 text-gray-500 hover:text-white'
                 }`}
               >
                 {muscle}
@@ -219,23 +319,32 @@ export function QuickWorkout() {
             ))}
           </div>
 
-          {/* Exercise List */}
-          <div className="space-y-2">
-            {filteredExercises.map(exercise => (
-              <motion.button
-                key={exercise.id}
-                onClick={() => addExercise(exercise.id)}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="w-full text-left p-3 bg-surface-100 hover:bg-surface-200 rounded-lg transition-colors flex items-center justify-between group"
-              >
-                <div>
-                  <p className="font-medium text-white group-hover:text-primary transition-colors">{exercise.name}</p>
-                  <p className="text-xs text-gray-500">{exercise.muscleGroups.join(' • ')}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors" />
-              </motion.button>
-            ))}
+          <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+            {filteredExercises.length > 0 ? (
+              filteredExercises.map(exercise => (
+                <button
+                  key={exercise.id}
+                  onClick={() => addExercise(exercise)}
+                  className="w-full text-left p-4 bg-surface-100 hover:bg-surface-200 rounded-xl transition-all border border-transparent hover:border-primary/30 group"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-white group-hover:text-primary transition-colors">
+                        {i18n.language.startsWith('pt') && exercise.name_pt ? exercise.name_pt : exercise.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-1">
+                        {exercise.muscle_groups?.join(' • ')}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {searchTerm ? 'Nenhum exercício encontrado.' : 'Começa a escrever para pesquisar...'}
+              </div>
+            )}
           </div>
         </div>
       </Modal>

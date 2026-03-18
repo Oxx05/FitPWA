@@ -73,11 +73,19 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
     authStore.addXp(xpGained)
 
     // Check Achievements
+    const now = new Date()
+    const durationMin = (now.getTime() - activeSession.startedAt.getTime()) / (1000 * 60)
+    
     const newAchievements = await achievementsStore.checkAchievements(session.user.id, {
-      workoutsCount: 1, // This should ideally be fetched from history
+      workoutsCount: 1, // Incremental check
       streakDays: authStore.profile?.login_streak || 1,
       sessionVolume: stats.volume,
-      isEarly: new Date().getHours() < 8
+      level: authStore.profile?.level || 1,
+      isEarly: now.getHours() >= 5 && now.getHours() < 9,
+      isMidnight: now.getHours() >= 23 || now.getHours() < 4,
+      isExtreme: xpGained > 400 || stats.volume > 5000,
+      isSpeed: stats.exercisesCount >= 4 && durationMin < 25,
+      isWeekend: [0, 6].includes(now.getDay())
     })
 
     // Store in global state or show toast (we'll need a way to show these)

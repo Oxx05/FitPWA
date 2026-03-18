@@ -98,6 +98,24 @@ export function SessionSummary() {
           <Share2 className="w-5 h-5 mr-2" />
           Partilhar Resultado
         </Button>
+
+        {stats.exercisesCount > 0 && (
+          <Link 
+            to="/workouts/new" 
+            state={{ 
+              initialData: {
+                name: `Plano de ${new Date().toLocaleDateString('pt-PT')}`,
+                description: 'Criado a partir de um treino rápido',
+                exercises: location.state?.exercises || []
+              }
+            }}
+          >
+            <Button variant="ghost" className="w-full text-white border border-white/10 font-black h-14 uppercase tracking-tighter italic">
+              Converter para Plano
+            </Button>
+          </Link>
+        )}
+
         <Link to="/dashboard">
           <Button variant="ghost" className="w-full text-gray-500 hover:text-white font-black uppercase tracking-tight">
             Finalizar

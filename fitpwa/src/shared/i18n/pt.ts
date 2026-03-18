@@ -181,6 +181,11 @@ const pt = {
     soundEnabled: 'Som Ativado',
     soundDisabled: 'Som Desativado',
     soundAlerts: 'Sons e Alertas',
+    chooseAvatar: 'Escolher Foto de Perfil',
+    avatarUpdated: 'Foto de perfil atualizada!',
+    featuredMedals: 'Medalhas em Destaque',
+    noMedalsEquipped: 'Sem medalhas equipadas',
+    achievementsLink: 'Conquistas & Medalhas',
   },
 
   // ─── Session / Timer ───
@@ -350,6 +355,16 @@ const pt = {
     levelUp: 'Subiste de Nível!',
     newLevel: 'Nível {{level}}',
     achievementUnlocked: 'Conquista Desbloqueada!',
+    listTitle: 'Conquistas & Medalhas',
+    unlocked: 'Desbloqueadas',
+    toEarn: 'Por Ganhar',
+    categories: {
+      streak: 'Streaks',
+      workouts: 'Treinos',
+      level: 'Nível',
+      volume: 'Volume',
+      social: 'Social'
+    }
   },
 }
 

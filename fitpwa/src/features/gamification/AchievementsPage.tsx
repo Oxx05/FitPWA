@@ -1,0 +1,183 @@
+import { useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { ChevronLeft, Lock, Trophy, Star, Zap, Target, History, HelpCircle } from 'lucide-react'
+import { Button } from '@/shared/components/Button'
+import { useNavigate } from 'react-router-dom'
+import { useAchievementsStore, type Achievement } from './useAchievementsStore'
+import { useAuthStore } from '@/features/auth/authStore'
+
+export function AchievementsPage() {
+  const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const { achievements, unlockedIds, fetchAchievements } = useAchievementsStore()
+  const isPt = i18n.language === 'pt'
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchAchievements(user.id)
+    }
+  }, [user?.id, fetchAchievements])
+
+  const categories = [
+    { id: 'streak', icon: <Zap className="w-4 h-4" />, label: t('gamification.categories.streak') },
+    { id: 'workouts', icon: <History className="w-4 h-4" />, label: t('gamification.categories.workouts') },
+    { id: 'volume', icon: <Target className="w-4 h-4" />, label: t('gamification.categories.volume') },
+    { id: 'level', icon: <Star className="w-4 h-4" />, label: t('gamification.categories.level') },
+    { id: 'secret', icon: <HelpCircle className="w-4 h-4" />, label: 'Segredos' },
+  ]
+
+  // Group achievements by groupId to show levels/tiers
+  const groupedAchievements = achievements.reduce((acc, curr) => {
+    if (!acc[curr.groupId]) {
+      acc[curr.groupId] = []
+    }
+    acc[curr.groupId].push(curr)
+    return acc
+  }, {} as Record<string, Achievement[]>)
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4">
+        <div className="max-w-4xl mx-auto flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="p-2">
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-xl font-bold text-white flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-yellow-500" />
+            {t('gamification.listTitle')}
+          </h1>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-12">
+        {/* Stats Summary */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-surface-200 p-6 rounded-3xl border border-surface-100 text-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Trophy className="w-16 h-16 text-primary" />
+            </div>
+            <p className="text-4xl font-black text-primary mb-1">{unlockedIds.length}</p>
+            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{t('gamification.unlocked')}</p>
+          </div>
+          <div className="bg-surface-200 p-6 rounded-3xl border border-surface-100 text-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Lock className="w-16 h-16 text-gray-500" />
+            </div>
+            <p className="text-4xl font-black text-white mb-1">
+              {Object.keys(groupedAchievements).length - 
+               Object.values(groupedAchievements).filter(list => list.some(a => unlockedIds.includes(a.id))).length}
+            </p>
+            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{t('gamification.toEarn')}</p>
+          </div>
+        </div>
+
+        {/* Categories / Medals Grid */}
+        <div className="space-y-16">
+          {categories.map((category) => {
+            const catGroups = Object.entries(groupedAchievements).filter(([_, list]) => 
+              (category.id === 'secret' ? list.some(a => a.secret) : list.some(a => a.requirement === category.id && !a.secret))
+            )
+            
+            if (catGroups.length === 0) return null
+
+            return (
+              <section key={category.id} className="space-y-8">
+                <div className="flex items-center gap-2 px-2">
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                    {category.icon}
+                  </div>
+                  <h2 className="text-lg font-black text-white uppercase tracking-tighter">{category.label}</h2>
+                  <div className="flex-grow h-px bg-surface-100 ml-2" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {catGroups.map(([groupId, list], gIdx) => {
+                    // Sort by level to find current progress
+                    const sorted = [...list].sort((a, b) => a.level - b.level)
+                    const lastUnlocked = [...sorted].reverse().find(a => unlockedIds.includes(a.id))
+                    
+                    const displayed = lastUnlocked || sorted[0]
+                    const isFullyLocked = !lastUnlocked
+                    const isSecret = displayed.secret && isFullyLocked
+
+                    return (
+                      <motion.div
+                        key={groupId}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: gIdx * 0.05 }}
+                        className={`relative p-6 rounded-[32px] border transition-all duration-500 flex flex-col items-center text-center gap-4 overflow-hidden ${
+                          !isFullyLocked 
+                            ? 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl' 
+                            : 'bg-surface-200/40 border-white/5 opacity-50'
+                        }`}
+                      >
+                        {/* Background Rank Indicator */}
+                        {!isFullyLocked && (
+                          <div className={`absolute -top-1 -right-1 w-12 h-12 flex items-center justify-center rotate-12 opacity-20 text-white font-black text-xl`}>
+                            {displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
+                          </div>
+                        )}
+
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative z-10 ${
+                          !isFullyLocked ? 'bg-primary/10 animate-float' : 'bg-surface-100'
+                        }`}>
+                          {isSecret ? <HelpCircle className="w-10 h-10 text-gray-600" /> : displayed.icon}
+                          {isFullyLocked && !isSecret && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                              <Lock className="w-6 h-6 text-white/50" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="relative z-10 w-full">
+                          <h3 className={`text-base font-black tracking-tight mb-1 ${!isFullyLocked ? 'text-white' : 'text-gray-500'}`}>
+                            {isSecret ? '???' : (isPt ? displayed.title_pt : displayed.title)}
+                          </h3>
+                          <p className="text-xs text-gray-500 leading-snug px-2">
+                            {isSecret ? 'Continua a treinar para descobrir...' : (isPt ? displayed.description_pt : displayed.description)}
+                          </p>
+                        </div>
+
+                        {/* Level Progress dots */}
+                        {list.length > 1 && !isSecret && (
+                          <div className="flex gap-1.5 mt-2">
+                            {list.map(a => (
+                              <div 
+                                key={a.id} 
+                                className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                                  unlockedIds.includes(a.id) ? 'bg-primary scale-110 shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-surface-300'
+                                }`} 
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Secret Glow */}
+                        {isSecret && (
+                          <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      </main>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  )
+}

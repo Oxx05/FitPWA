@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Maximize2, Minimize2, Zap, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Mic, MicOff, Search, StickyNote, TrendingUp, RotateCcw } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -74,6 +74,14 @@ export function SessionScreen() {
   const [isDesktop, setIsDesktop] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
+  const [exerciseSearchTerm, setExerciseSearchTerm] = useState('')
+  const [availableExercises, setAvailableExercises] = useState<any[]>([])
+  const [previousExerciseData, setPreviousExerciseData] = useState<{
+    date: string;
+    sets: { weight_kg: number; reps: number }[];
+    notes: string | null;
+  } | null>(null)
   const { speak } = useVoiceGuide()
 
   // Effect to announce rest end or new exercise
@@ -84,6 +92,40 @@ export function SessionScreen() {
       speak('Descanso terminado. Próxima série agora!')
     }
   }, [restTimer, voiceEnabled, speak])
+
+  const handleAddInSessionExercise = async (exercise: any) => {
+    const newEx: ExerciseInSession = {
+      id: `ext-${Date.now()}`,
+      order: exercises.length,
+      exerciseId: exercise.id,
+      name: exercise.name_pt || exercise.name,
+      sets: Array.from({ length: 3 }, (_, i) => ({
+        id: `ext-${Date.now()}-${i}`,
+        setNumber: i + 1,
+        reps: null,
+        weight: null,
+        completed: false
+      })),
+      muscleGroups: exercise.muscle_groups || [],
+      repsMin: 8,
+      repsMax: 12,
+      restSeconds: 90
+    }
+    setExercises([...exercises, newEx])
+    setShowAddExerciseModal(false)
+    showToast(`${newEx.name} adicionado ao treino`, 'success')
+  }
+
+  const fetchAvailableExercises = async () => {
+    const { data } = await supabase.from('exercises').select('*').limit(100)
+    if (data) setAvailableExercises(data)
+  }
+
+  useEffect(() => {
+    if (showAddExerciseModal && availableExercises.length === 0) {
+      fetchAvailableExercises()
+    }
+  }, [showAddExerciseModal])
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ type, message })
@@ -102,6 +144,12 @@ export function SessionScreen() {
     if (restTimer === null) return
     if (restTimer <= 0) {
       setRestTimer(null)
+      
+      // Haptic Feedback
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([200, 100, 200])
+      }
+
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         new Notification(t('session.restFinished'), {
           body: t('session.restFinishedBody'),
@@ -116,15 +164,72 @@ export function SessionScreen() {
       } catch { /* audio playback can fail silently on mobile */ }
       return
     }
+
+    // Audio Countdown for last 3 seconds
+    if (voiceEnabled && restTimer <= 3 && restTimer > 0) {
+      speak(restTimer.toString())
+    }
+
     const interval = setInterval(() => setRestTimer(t => (t ?? 0) - 1), 1000)
-    return () => clearInterval(interval)
-  }, [restTimer, t, profile?.sound_enabled])
+    
+    // Update document title for background visibility
+    const originalTitle = document.title
+    document.title = `DESCANSAR ${restTimer}s | FitPWA`
+    
+    return () => {
+      clearInterval(interval)
+      document.title = originalTitle
+    }
+  }, [restTimer, t, profile?.sound_enabled, voiceEnabled, speak])
 
   // Load plan data
   useEffect(() => {
     const loadPlanData = async () => {
       try {
-        if (!planId) throw new Error('Plan ID missing')
+        if (!planId) {
+          // Handle Quick Workout
+          const quickData = localStorage.getItem('quickWorkout')
+          if (!quickData) throw new Error('No workout data found')
+          
+          const workout = JSON.parse(quickData)
+          setPlanName(workout.title || 'Treino Rápido')
+          
+          const exerciseIds = workout.exercises.map((ex: any) => ex.exerciseId)
+          const { data: exerciseDetails, error: exError } = await supabase
+            .from('exercises')
+            .select('id, name, name_pt, muscle_groups')
+            .in('id', exerciseIds)
+            
+          if (exError) throw exError
+          
+          const exerciseMap = new Map(exerciseDetails.map(ex => [ex.id, ex]))
+          
+          const sessionExercises = workout.exercises.map((ex: any, idx: number) => {
+            const detail = exerciseMap.get(ex.exerciseId)
+            return {
+              id: `${ex.exerciseId}-${idx}`,
+              order: idx,
+              exerciseId: ex.exerciseId,
+              name: (detail?.name_pt) || (detail?.name) || 'Exercício',
+              sets: Array.from({ length: ex.sets || 3 }, (_, i) => ({
+                id: `${ex.exerciseId}-${idx}-${i}`,
+                setNumber: i + 1,
+                reps: null,
+                weight: ex.weight || null,
+                completed: false,
+                notes: ''
+              })),
+              muscleGroups: detail?.muscle_groups || [],
+              repsMin: 8,
+              repsMax: 12,
+              restSeconds: 90
+            }
+          })
+          
+          setExercises(sessionExercises)
+          setIsLoading(false)
+          return
+        }
 
         const { data: planData, error: planError } = await supabase
           .from('workout_plans')
@@ -188,6 +293,58 @@ export function SessionScreen() {
     loadPlanData()
   }, [planId, user?.id, profile?.default_sets, profile?.default_reps_min, profile?.default_reps_max, profile?.default_rest_seconds, profile?.last_xp_date])
 
+  // Fetch previous experience for the current exercise
+  useEffect(() => {
+    const fetchPreviousData = async () => {
+      if (!user || exercises.length === 0) return
+      
+      const currentEx = exercises[currentExerciseIndex]
+      if (!currentEx) return
+
+      try {
+        // Find the last session that included this exercise
+        const { data: lastSet, error } = await supabase
+          .from('workout_sets')
+          .select(`
+            weight_kg,
+            reps,
+            notes,
+            created_at,
+            workout_session_id
+          `)
+          .eq('exercise_id', currentEx.exerciseId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (error) throw error
+
+        if (lastSet && lastSet.length > 0) {
+          // Get the most recent session's sets
+          const lastSessionId = lastSet[0].workout_session_id
+          const sessionSets = lastSet
+            .filter(s => s.workout_session_id === lastSessionId)
+            .map(s => ({
+              weight_kg: s.weight_kg,
+              reps: s.reps
+            }))
+            .reverse() // Keep original order if possible
+
+          setPreviousExerciseData({
+            date: lastSet[0].created_at,
+            sets: sessionSets,
+            notes: lastSet.find(s => s.workout_session_id === lastSessionId && s.notes)?.notes || null
+          })
+        } else {
+          setPreviousExerciseData(null)
+        }
+      } catch (err) {
+        console.error('Error fetching previous data:', err)
+      }
+    }
+
+    fetchPreviousData()
+  }, [currentExerciseIndex, exercises, user])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const media = window.matchMedia('(min-width: 768px)')
@@ -231,7 +388,7 @@ export function SessionScreen() {
     const storedState = getStoredSpotifyState()
     if (!code || !state || state !== storedState) return
 
-    const redirectUri = `${window.location.origin}/session`
+    const redirectUri = window.location.origin + '/session'
     exchangeSpotifyCode(code, redirectUri).then((token) => {
       if (token) {
         setSpotifyConnected(true)
@@ -539,11 +696,30 @@ export function SessionScreen() {
                 
                 // CELEBRATION! 🎉
                 confetti({
-                  particleCount: 150,
-                  spread: 70,
+                  particleCount: 200,
+                  spread: 100,
                   origin: { y: 0.6 },
-                  colors: ['#00ff87', '#ffffff', '#00e5ff']
+                  colors: ['#00ff87', '#ffffff', '#00e5ff'],
+                  scalar: 1.2,
+                  gravity: 0.8
                 })
+                // Secondary burst for PR
+                setTimeout(() => {
+                  confetti({
+                    particleCount: 100,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#00ff87', '#00e5ff']
+                  })
+                  confetti({
+                    particleCount: 100,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#00ff87', '#00e5ff']
+                  })
+                }, 250)
               }
             }
             showToast('Treino guardado na cloud.', 'success')
@@ -630,11 +806,11 @@ export function SessionScreen() {
         }
 
         addXp(xpGained)
-        navigate('/session/summary', { state: { stats, duration, xpGained, newPrs } })
+        navigate('/session/summary', { state: { stats, duration, xpGained, newPrs, exercises } })
         return
       }
 
-      navigate('/session/summary', { state: { stats, duration, xpGained } })
+      navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
     } catch (error) {
       console.error('Error finishing workout:', error)
       showToast('Erro ao finalizar treino.', 'error')
@@ -642,7 +818,7 @@ export function SessionScreen() {
   }
 
   const handleSpotifyConnect = async () => {
-    const redirectUri = `${window.location.origin}/session`
+    const redirectUri = window.location.origin + '/session'
     const authUrl = await getSpotifyAuthUrl(redirectUri)
     if (!authUrl) {
       showToast('Configura VITE_SPOTIFY_CLIENT_ID para ligar o Spotify.', 'error')
@@ -731,10 +907,17 @@ export function SessionScreen() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsFocusMode(!isFocusMode)}
-              className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
+              className={`p-2 rounded-xl transition-all border border-white/5 active:scale-90 ${isFocusMode ? 'bg-primary text-black' : 'bg-surface-100 text-primary hover:bg-primary/20'}`}
               title={isFocusMode ? "Sair Modo Foco" : "Modo Foco Imersivo"}
             >
-              {isFocusMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+              <Target className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setRestTimer(prev => prev === null ? 90 : prev + 30)}
+              className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
+              title="Descanso Manual (+30s)"
+            >
+              <Clock className="w-5 h-5" />
             </button>
             <div className="text-right flex items-center gap-3">
               {restTimer !== null && (
@@ -812,6 +995,59 @@ export function SessionScreen() {
                   {currentExercise.repsMin}–{currentExercise.repsMax} reps
                 </span>
               </div>
+
+              {/* Pro Insights: Last Performance (Normal UI) */}
+              <AnimatePresence>
+                {previousExerciseData && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mb-6 bg-surface-100 border border-primary/20 p-4 rounded-2xl overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">Última Vez</span>
+                      </div>
+                      <span className="text-[10px] text-gray-500 font-bold">{new Date(previousExerciseData.date).toLocaleDateString()}</span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {previousExerciseData.sets.map((s, i) => (
+                        <div key={i} className="bg-background px-3 py-1.5 rounded-xl border border-white/5 flex flex-col items-center min-w-[60px]">
+                           <span className="text-[8px] text-gray-500 font-bold uppercase">S{i+1}</span>
+                           <span className="text-xs text-white font-black">{s.weight_kg}kg × {s.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {previousExerciseData.notes && (
+                      <div className="mt-2 flex items-start gap-2 bg-black/10 p-3 rounded-xl border border-white/5">
+                        <StickyNote className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                        <p className="text-[10px] text-gray-300 font-medium leading-relaxed italic">
+                          "{previousExerciseData.notes}"
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Progressive Overload Suggestion */}
+                    {(() => {
+                      const totalReps = previousExerciseData.sets.reduce((acc, s) => acc + (s.reps || 0), 0)
+                      const avgReps = totalReps / previousExerciseData.sets.length
+                      
+                      if (avgReps >= currentExercise.repsMax) {
+                        return (
+                          <div className="mt-3 flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-lg border border-primary/20">
+                            <TrendingUp className="w-3 h-3 text-primary animate-bounce-slow" />
+                            <span className="text-[10px] font-black text-white uppercase italic tracking-tight">Evolução: Recomenda-se +2.5kg</span>
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="grid grid-cols-[32px_1fr_1fr_64px] gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider px-2 mb-2 items-center">
                 <span className="text-center">Set</span>
@@ -905,6 +1141,14 @@ export function SessionScreen() {
                 Adicionar Série
               </button>
             </div>
+
+            <button
+              onClick={() => setShowAddExerciseModal(true)}
+              className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-gray-400 hover:text-primary hover:border-primary/20 transition-all font-black uppercase text-xs tracking-widest bg-surface-200/50"
+            >
+              <Plus className="w-4 h-4 mx-auto mb-1" />
+              Adicionar Exercício
+            </button>
 
           </>
         ) : (
@@ -1148,7 +1392,7 @@ export function SessionScreen() {
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[60] bg-[#0A0A0B] flex flex-col p-6"
+            className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-3xl flex flex-col p-6 overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-2">
@@ -1165,7 +1409,7 @@ export function SessionScreen() {
                   className={`p-3 rounded-2xl transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
                   title={t('profile.notifications')}
                 >
-                  <Zap className={`w-6 h-6 ${voiceEnabled ? 'animate-pulse' : ''}`} />
+                  {voiceEnabled ? <Mic className="w-6 h-6 animate-pulse" /> : <MicOff className="w-6 h-6" />}
                 </button>
                 <button 
                   onClick={() => setIsFocusMode(false)}
@@ -1176,53 +1420,106 @@ export function SessionScreen() {
               </div>
             </div>
 
-            <div className="flex-grow flex flex-col justify-center gap-8 max-w-lg mx-auto w-full">
-              <div className="text-center space-y-2">
-                <p className="text-primary font-black uppercase tracking-widest text-xs">{t('session.trainingNow')}</p>
-                <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-4">
+            <div className="flex-grow flex flex-col justify-center gap-6 max-w-lg mx-auto w-full">
+              <div className="text-center space-y-1">
+                <p className="text-primary font-black uppercase tracking-widest text-[10px]">{t('session.trainingNow')}</p>
+                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-2">
                   {currentExercise.name}
                 </h2>
-                <div className="inline-flex bg-surface-200 px-6 py-2 rounded-full border border-white/10 gap-6">
+                <div className="inline-flex bg-surface-200 px-4 py-1.5 rounded-full border border-white/10 gap-4">
                    <div className="flex flex-col">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t('common.goal')}</span>
-                      <span className="text-sm text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} {t('session.reps')}</span>
+                      <span className="text-[8px] text-gray-500 font-bold uppercase">{t('common.goal')}</span>
+                      <span className="text-xs text-white font-black">{currentExercise.repsMin}-{currentExercise.repsMax} {t('session.reps')}</span>
                    </div>
                    <div className="flex flex-col">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t('editor.rest')}</span>
-                      <span className="text-sm text-white font-black">{currentExercise.restSeconds}s</span>
+                      <span className="text-[8px] text-gray-500 font-bold uppercase">{t('editor.rest')}</span>
+                      <span className="text-xs text-white font-black">{currentExercise.restSeconds}s</span>
                    </div>
                 </div>
               </div>
 
+              {/* Pro Insights: Last Performance */}
+              <AnimatePresence>
+                {previousExerciseData && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-primary/5 border border-primary/20 p-4 rounded-3xl"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black text-primary uppercase tracking-tighter">Última Vez</span>
+                      </div>
+                      <span className="text-[10px] text-gray-500 font-bold">{new Date(previousExerciseData.date).toLocaleDateString()}</span>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {previousExerciseData.sets.map((s, i) => (
+                        <div key={i} className="bg-surface-200/50 px-3 py-1.5 rounded-xl border border-white/5 flex flex-col items-center min-w-[60px]">
+                           <span className="text-[8px] text-gray-500 font-bold uppercase">S{i+1}</span>
+                           <span className="text-xs text-white font-black">{s.weight_kg}kg × {s.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {previousExerciseData.notes && (
+                      <div className="mt-2 flex items-start gap-2 bg-black/20 p-3 rounded-2xl border border-white/5">
+                        <StickyNote className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                        <p className="text-[10px] text-gray-300 font-medium leading-relaxed italic line-clamp-2">
+                          "{previousExerciseData.notes}"
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Progressive Overload Suggestion */}
+                    {(() => {
+                      const totalReps = previousExerciseData.sets.reduce((acc, s) => acc + (s.reps || 0), 0)
+                      const avgReps = totalReps / previousExerciseData.sets.length
+                      
+                      if (avgReps >= currentExercise.repsMax) {
+                        return (
+                          <div className="mt-3 flex items-center gap-2 bg-primary/20 px-3 py-2 rounded-xl animate-pulse border border-primary/30">
+                            <TrendingUp className="w-3 h-3 text-primary" />
+                            <span className="text-[10px] font-black text-white uppercase italic tracking-tight">Sugerido: +2.5kg 🔥</span>
+                          </div>
+                        )
+                      }
+                      return null
+                    })()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Huge Active Set Display */}
-              <div className="bg-surface-200 border-2 border-primary/20 p-8 rounded-[40px] shadow-2xl shadow-primary/5 flex flex-col gap-8">
+              <div className="bg-surface-200/40 backdrop-blur-md border border-white/10 p-6 rounded-[32px] shadow-2xl flex flex-col gap-6">
                  {(() => {
                     const activeSet = currentExercise.sets.find(s => !s.completed) || currentExercise.sets[currentExercise.sets.length - 1]
                     return (
                       <>
-                        <div className="flex justify-between items-center px-4">
-                          <span className="text-gray-500 font-black text-sm uppercase">{t('session.set')} {activeSet.setNumber}</span>
+                        <div className="flex justify-between items-center px-2">
+                          <span className="text-gray-500 font-black text-xs uppercase">{t('session.set')} {activeSet.setNumber}</span>
                           {restTimer !== null && (
-                            <span className="text-primary font-black animate-pulse">{t('session.restTimer').toUpperCase()}: {formatTime(restTimer)}</span>
+                            <span className="text-primary font-black animate-pulse text-sm">{t('session.restTimer').toUpperCase()}: {formatTime(restTimer)}</span>
                           )}
                         </div>
 
                         <div className="flex items-center gap-4">
-                           <div className="flex-1 space-y-2">
-                             <p className="text-xs font-bold text-gray-500 uppercase text-center">{t('editor.weight')}</p>
+                           <div className="flex-1 space-y-1 text-center">
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('editor.weight')}</p>
                              <DebouncedNumericInput
                                 value={activeSet.weight}
                                 onChange={val => handleSetChange(activeSet.id, 'weight', val)}
-                                className="w-full h-24 bg-background border-2 border-surface-100 rounded-3xl text-center text-5xl font-black text-white focus:border-primary transition-all"
+                                className="w-full h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-4xl font-black text-white focus:border-primary transition-all shadow-inner"
                              />
                            </div>
-                           <div className="text-4xl font-black text-gray-700 mt-6">×</div>
-                           <div className="flex-1 space-y-2">
-                             <p className="text-xs font-bold text-gray-500 uppercase text-center">{t('session.reps')}</p>
+                           <div className="text-3xl font-black text-gray-700 mt-6">×</div>
+                           <div className="flex-1 space-y-1 text-center">
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.reps')}</p>
                              <DebouncedNumericInput
                                 value={activeSet.reps}
                                 onChange={val => handleSetChange(activeSet.id, 'reps', val)}
-                                className="w-full h-24 bg-background border-2 border-surface-100 rounded-3xl text-center text-5xl font-black text-white focus:border-primary transition-all"
+                                className="w-full h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-4xl font-black text-white focus:border-primary transition-all shadow-inner"
                              />
                            </div>
                         </div>
@@ -1230,7 +1527,7 @@ export function SessionScreen() {
                         <Button 
                           size="lg"
                           variant={activeSet.completed ? "secondary" : "primary"}
-                          className="h-20 rounded-3xl text-2xl font-black uppercase italic tracking-tighter active:scale-95 transition-transform"
+                          className="h-16 rounded-3xl text-xl font-black uppercase italic tracking-tighter active:scale-95 transition-transform shadow-lg shadow-primary/10"
                           onClick={() => handleCompleteSet(activeSet.id)}
                         >
                           {activeSet.completed ? t('session.setCompleted') : t('session.completeSet')}
@@ -1239,20 +1536,50 @@ export function SessionScreen() {
                     )
                  })()}
               </div>
+
+              {/* Spotify Controls in Focus Mode */}
+              {spotifyConnected && (
+                <div className="bg-surface-200/50 border border-white/5 rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-surface-100 overflow-hidden shrink-0 border border-white/10">
+                      {spotifyTrack?.albumArt ? (
+                        <img src={spotifyTrack.albumArt} alt="Album" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><Music className="w-5 h-5 text-primary/40" /></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 pr-2">
+                       <p className="text-xs font-black text-white truncate italic uppercase tracking-tighter leading-none mb-1">{spotifyTrack?.name || 'Sem música'}</p>
+                       <p className="text-[9px] font-bold text-gray-500 truncate uppercase tracking-widest leading-none">{spotifyTrack?.artist || 'Spotify'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-4">
+                    <button onClick={handleSpotifyPrev} className="p-3 bg-surface-100 rounded-xl text-gray-400 hover:text-white transition-colors active:scale-90"><SkipBack className="w-5 h-5" /></button>
+                    <button 
+                      onClick={handleSpotifyPlayPause} 
+                      className="w-12 h-12 bg-primary text-black rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                    >
+                      {spotifyPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+                    </button>
+                    <button onClick={handleSpotifyNext} className="p-3 bg-surface-100 rounded-xl text-gray-400 hover:text-white transition-colors active:scale-90"><SkipForward className="w-5 h-5" /></button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="mt-auto flex justify-between gap-4 pt-8">
+            <div className="mt-auto flex justify-between gap-4">
               <Button 
                 variant="ghost" 
-                className="flex-1 h-16 rounded-2xl text-gray-400 font-black uppercase"
+                className="flex-1 h-14 rounded-2xl text-gray-500 font-black uppercase text-xs"
                 disabled={currentExerciseIndex === 0}
                 onClick={() => setCurrentExerciseIndex(i => i - 1)}
               >
+                <ChevronLeft className="w-4 h-4 mr-1" />
                 {t('common.back')}
               </Button>
               <Button 
                 variant="ghost" 
-                className="flex-1 h-16 rounded-2xl text-white font-black uppercase border border-white/10 active:scale-95 transition-all bg-primary/10 border-primary/20"
+                className="flex-[1.5] h-14 rounded-2xl text-primary font-black uppercase text-xs border border-primary/20 bg-primary/5 active:scale-95 transition-all"
                 onClick={() => {
                   if (currentExerciseIndex === exercises.length - 1) {
                     setShowFinishModal(true)
@@ -1262,7 +1589,72 @@ export function SessionScreen() {
                 }}
               >
                 {currentExerciseIndex === exercises.length - 1 ? t('session.finishWorkout') : t('session.nextExercise')}
+                {currentExerciseIndex !== exercises.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
               </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Rest Overlay - Non-Blocking Bottom Sheet */}
+      <AnimatePresence>
+        {restTimer !== null && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 left-0 right-0 z-[70] bg-surface-200/95 backdrop-blur-2xl border-t border-primary/20 rounded-t-[32px] p-6 pb-12 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col items-center"
+          >
+            {/* Handle for the bottom sheet */}
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6" />
+
+            <div className="w-full max-w-sm flex flex-col items-center">
+              <div className="flex items-center gap-8 mb-4">
+                <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin-slow flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-primary font-black uppercase tracking-widest text-[10px] mb-1">{t('session.restInProgress')}</p>
+                  <h2 className="text-6xl font-black italic tabular-nums text-white tracking-tighter">
+                    {formatTime(restTimer)}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="flex gap-2 w-full mb-8">
+                {[-15, +15].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setRestTimer(prev => Math.max(0, (prev ?? 0) + val))}
+                    className="flex-1 bg-surface-100 h-12 rounded-xl border border-white/5 font-black text-sm active:scale-95 transition-all hover:bg-white/5"
+                  >
+                    {val > 0 ? `+${val}` : val}s
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="primary"
+                  className="flex-[2] h-14 rounded-2xl text-lg font-black uppercase italic tracking-tighter shadow-lg shadow-primary/20"
+                  onClick={() => setRestTimer(null)}
+                >
+                  {t('session.ignore')} (Pular)
+                </Button>
+                <button
+                  onClick={() => setRestTimer(null)} // Or minimize logic if we had more space
+                  className="flex-1 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+                  title="Minimizar"
+                >
+                   <Minimize2 className="w-6 h-6 text-gray-400" />
+                </button>
+              </div>
+              
+              <div className="mt-6 flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase truncate max-w-full">
+                <span>Próximo:</span>
+                <span className="text-white truncate">{currentExercise.name}</span>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1392,6 +1784,50 @@ export function SessionScreen() {
             >
               Cancelar
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Exercise Modal */}
+      <Modal
+        isOpen={showAddExerciseModal}
+        onClose={() => setShowAddExerciseModal(false)}
+        title="Adicionar Exercício"
+        size="md"
+        closeButton
+      >
+        <div className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Pesquisar exercício..."
+              value={exerciseSearchTerm}
+              onChange={e => setExerciseSearchTerm(e.target.value)}
+              className="w-full bg-surface-100 border border-surface-200 rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+
+          <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+            {availableExercises
+              .filter(ex => 
+                ex.name.toLowerCase().includes(exerciseSearchTerm.toLowerCase()) || 
+                ex.name_pt?.toLowerCase().includes(exerciseSearchTerm.toLowerCase())
+              )
+              .slice(0, 10)
+              .map(ex => (
+                <button
+                  key={ex.id}
+                  onClick={() => handleAddInSessionExercise(ex)}
+                  className="w-full flex items-center justify-between p-4 bg-surface-100 hover:bg-primary/10 border border-white/5 rounded-xl transition-all group"
+                >
+                  <div className="text-left">
+                    <p className="font-bold text-white group-hover:text-primary transition-colors">{ex.name_pt || ex.name}</p>
+                    <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || 'Geral'}</p>
+                  </div>
+                  <Plus className="w-5 h-5 text-gray-600 group-hover:text-primary" />
+                </button>
+              ))}
           </div>
         </div>
       </Modal>

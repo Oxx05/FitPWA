@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Heart, Share2, Save, MessageCircle, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
+import { Heart, Save, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
@@ -223,21 +223,69 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                   <span className="text-sm">{workout.likes}</span>
                 </button>
                 
-                <button
+                <button 
                   onClick={() => handleSave(workout.id)}
                   className="flex-1 flex items-center gap-2 justify-center py-2 rounded-lg bg-surface-100 hover:bg-primary/20 text-gray-400 hover:text-blue-400 transition-colors"
+                  title="Guardar nos favoritos"
                 >
                   <Save className="w-4 h-4" />
                   <span className="text-sm">{workout.saves}</span>
                 </button>
 
-                <button className="flex-1 flex items-center gap-2 justify-center py-2 rounded-lg bg-surface-100 hover:bg-primary/20 text-gray-400 hover:text-green-400 transition-colors">
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm">{workout.comments}</span>
-                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Clone logic: Create a new plan for the current user based on this one
+                      const { data: newPlan, error: planErr } = await supabase
+                        .from('workout_plans')
+                        .insert({
+                          user_id: profile?.id,
+                          name: `${workout.name} (Clone)`,
+                          description: workout.description,
+                          difficulty: workout.difficulty,
+                          days_per_week: workout.days_per_week,
+                          type: 'custom',
+                          is_public: false
+                        })
+                        .select()
+                        .single()
 
-                <button className="flex-1 flex items-center gap-2 justify-center py-2 rounded-lg bg-surface-100 hover:bg-primary/20 text-gray-400 hover:text-primary transition-colors">
-                  <Share2 className="w-4 h-4" />
+                      if (planErr) throw planErr
+
+                      // Fetch original exercises
+                      const { data: originalEx, error: exErr } = await supabase
+                        .from('plan_exercises')
+                        .select('*')
+                        .eq('plan_id', workout.id)
+
+                      if (exErr) throw exErr
+
+                      if (originalEx && originalEx.length > 0) {
+                        await supabase
+                          .from('plan_exercises')
+                          .insert(originalEx.map(ex => ({
+                            plan_id: newPlan.id,
+                            exercise_id: ex.exercise_id,
+                            order_index: ex.order_index,
+                            sets: ex.sets,
+                            reps_min: ex.reps_min,
+                            reps_max: ex.reps_max,
+                            rest_seconds: ex.rest_seconds,
+                            weight_kg: ex.weight_kg,
+                            is_superset: ex.is_superset
+                          })))
+                      }
+                      
+                      alert('Plano clonado com sucesso! Já o podes encontrar nos teus treinos.')
+                    } catch (err) {
+                      console.error('Erro ao clonar plano:', err)
+                      alert('Erro ao clonar plano.')
+                    }
+                  }}
+                  className="flex-[2] flex items-center gap-2 justify-center py-2 rounded-lg bg-primary text-black font-bold hover:bg-primary/90 transition-colors"
+                >
+                  <Dumbbell className="w-4 h-4" />
+                  <span className="text-sm">Usar Plano</span>
                 </button>
               </div>
             </motion.div>
