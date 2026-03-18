@@ -71,6 +71,7 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
     const achievementsStore = useAchievementsStore.getState()
 
     authStore.addXp(xpGained)
+    authStore.addVolume(stats.volume)
 
     // Check Achievements
     const now = new Date()
@@ -80,6 +81,7 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
       workoutsCount: 1, // Incremental check
       streakDays: authStore.profile?.login_streak || 1,
       sessionVolume: stats.volume,
+      totalVolume: (authStore.profile?.total_volume_kg || 0) + stats.volume,
       level: authStore.profile?.level || 1,
       isEarly: now.getHours() >= 5 && now.getHours() < 9,
       isMidnight: now.getHours() >= 23 || now.getHours() < 4,

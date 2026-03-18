@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, Lock, Trophy, Star, Zap, Target, History, HelpCircle } from 'lucide-react'
+import { ChevronLeft, Lock, Trophy, Star, Zap, Target, History, Users, HelpCircle } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { useNavigate } from 'react-router-dom'
 import { useAchievementsStore, type Achievement } from './useAchievementsStore'
@@ -11,14 +11,15 @@ export function AchievementsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { achievements, unlockedIds, fetchAchievements } = useAchievementsStore()
+  const { achievements, unlockedIds, fetchAchievements, fetchRarityStats } = useAchievementsStore()
   const isPt = i18n.language === 'pt'
 
   useEffect(() => {
     if (user?.id) {
       fetchAchievements(user.id)
+      fetchRarityStats()
     }
-  }, [user?.id, fetchAchievements])
+  }, [user?.id, fetchAchievements, fetchRarityStats])
 
   const categories = [
     { id: 'streak', icon: <Zap className="w-4 h-4" />, label: t('gamification.categories.streak') },
@@ -29,13 +30,15 @@ export function AchievementsPage() {
   ]
 
   // Group achievements by groupId to show levels/tiers
-  const groupedAchievements = achievements.reduce((acc, curr) => {
-    if (!acc[curr.groupId]) {
-      acc[curr.groupId] = []
-    }
-    acc[curr.groupId].push(curr)
-    return acc
-  }, {} as Record<string, Achievement[]>)
+  const groupedAchievements = useMemo(() => {
+    return achievements.reduce((acc, curr) => {
+      if (!acc[curr.groupId]) {
+        acc[curr.groupId] = []
+      }
+      acc[curr.groupId].push(curr)
+      return acc
+    }, {} as Record<string, Achievement[]>)
+  }, [achievements])
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -98,7 +101,10 @@ export function AchievementsPage() {
                     const sorted = [...list].sort((a, b) => a.level - b.level)
                     const lastUnlocked = [...sorted].reverse().find(a => unlockedIds.includes(a.id))
                     
-                    const displayed = lastUnlocked || sorted[0]
+                    // Show highest unlocked, or the next one to earn, or the first one if all locked
+                    const nextToEarn = sorted.find(a => !unlockedIds.includes(a.id))
+                    const displayed = lastUnlocked || nextToEarn || sorted[0]
+                    
                     const isFullyLocked = !lastUnlocked
                     const isSecret = displayed.secret && isFullyLocked
 
@@ -110,19 +116,29 @@ export function AchievementsPage() {
                         transition={{ delay: gIdx * 0.05 }}
                         className={`relative p-6 rounded-[32px] border transition-all duration-500 flex flex-col items-center text-center gap-4 overflow-hidden ${
                           !isFullyLocked 
-                            ? 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl' 
+                            ? (displayed.level === 4 ? 'bg-blue-500/10 border-blue-400/30' : 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl') 
                             : 'bg-surface-200/40 border-white/5 opacity-50'
                         }`}
                       >
+                        {/* Rarity Badge */}
+                        {!isSecret && displayed.rarity !== undefined && (
+                          <div className="absolute top-4 left-4 flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                            <Users className="w-2.5 h-2.5 text-gray-500" />
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">{displayed.rarity}%</span>
+                          </div>
+                        )}
+
                         {/* Background Rank Indicator */}
                         {!isFullyLocked && (
                           <div className={`absolute -top-1 -right-1 w-12 h-12 flex items-center justify-center rotate-12 opacity-20 text-white font-black text-xl`}>
-                            {displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
+                            {displayed.level === 4 ? 'PLAT' : displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
                           </div>
                         )}
 
                         <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative z-10 ${
-                          !isFullyLocked ? 'bg-primary/10 animate-float' : 'bg-surface-100'
+                          !isFullyLocked 
+                            ? (displayed.level === 4 ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-slow' : 'bg-primary/10 animate-float') 
+                            : 'bg-surface-100'
                         }`}>
                           {isSecret ? <HelpCircle className="w-10 h-10 text-gray-600" /> : displayed.icon}
                           {isFullyLocked && !isSecret && (
@@ -174,8 +190,15 @@ export function AchievementsPage() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-5px); }
         }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
         .animate-float {
           animation: float 3s ease-in-out infinite;
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
         }
       `}</style>
     </div>

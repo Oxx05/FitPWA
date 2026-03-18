@@ -4,6 +4,7 @@ import { Heart, Save, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useAchievementsStore } from '@/features/gamification/useAchievementsStore'
 
 interface PublicWorkout {
   id: string
@@ -90,6 +91,18 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
         .from('workout_plans')
         .update({ likes: (workouts?.find(w => w.id === workoutId)?.likes || 0) + 1 })
         .eq('id', workoutId)
+      // Increment achievement counter
+      const auth = useAuthStore.getState()
+      auth.incrementSocialLikes()
+      const achStore = useAchievementsStore.getState()
+      achStore.checkAchievements(auth.user!.id, {
+        workoutsCount: 0,
+        streakDays: auth.profile?.login_streak || 0,
+        sessionVolume: 0,
+        totalVolume: auth.profile?.total_volume_kg || 0,
+        socialLikes: (auth.profile?.social_likes_given || 0) + 1,
+        level: auth.profile?.level || 0
+      })
     } catch (error) {
       console.error('Error liking workout:', error)
     }

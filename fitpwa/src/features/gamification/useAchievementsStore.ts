@@ -4,7 +4,7 @@ import { supabase } from '@/shared/lib/supabase'
 
 export interface Achievement {
   id: string
-  groupId: string // To group upgrades (e.g., 'streak')
+  groupId: string 
   level: number // 1: Bronze, 2: Silver, 3: Gold, 4: Platinum
   title: string
   title_pt: string
@@ -12,15 +12,18 @@ export interface Achievement {
   description_pt: string
   icon: string
   unlockedAt?: string
-  requirement: string // 'workouts_count', 'streak_days', 'total_volume', etc.
+  requirement: string 
   threshold: number
   secret?: boolean
+  rarity?: number // Percentage 0-100
 }
 
 export interface AchievementStats {
   workoutsCount: number
   streakDays: number
   sessionVolume: number
+  totalVolume?: number
+  socialLikes?: number
   level: number
   isEarly?: boolean
   isMidnight?: boolean
@@ -32,9 +35,12 @@ export interface AchievementStats {
 interface AchievementsState {
   achievements: Achievement[]
   unlockedIds: string[]
+  pendingUnlocks: Achievement[]
   isLoading: boolean
   fetchAchievements: (userId: string) => Promise<void>
+  fetchRarityStats: () => Promise<void>
   checkAchievements: (userId: string, stats: AchievementStats) => Promise<Achievement[]>
+  clearPendingUnlocks: () => void
 }
 
 export const useAchievementsStore = create<AchievementsState>()(
@@ -45,22 +51,30 @@ export const useAchievementsStore = create<AchievementsState>()(
         { id: 'streak_3', groupId: 'streak', level: 1, title: 'Right Rhythm', title_pt: 'Ritmo Certo', description: '3-day streak!', description_pt: 'Streak de 3 dias!', icon: '🔥', requirement: 'streak_days', threshold: 3 },
         { id: 'streak_7', groupId: 'streak', level: 2, title: 'Unstoppable', title_pt: 'Imparável', description: '7-day streak!', description_pt: 'Streak de 7 dias!', icon: '⚡', requirement: 'streak_days', threshold: 7 },
         { id: 'streak_30', groupId: 'streak', level: 3, title: 'Iron Habit', title_pt: 'Hábito de Ferro', description: '30-day streak!', description_pt: 'Streak de 30 dias!', icon: '👑', requirement: 'streak_days', threshold: 30 },
+        { id: 'streak_365', groupId: 'streak', level: 4, title: 'Legendary Habit', title_pt: 'Hábito Lendário', description: '365-day streak! Pure discipline.', description_pt: 'Streak de 365 dias! Disciplina pura.', icon: '💎', requirement: 'streak_days', threshold: 365 },
         
         // WORKOUTS COUNT
         { id: 'workouts_1', groupId: 'workouts', level: 1, title: 'First Step', title_pt: 'Primeiro Passo', description: 'First workout completed!', description_pt: 'Primeiro treino concluído!', icon: '🏁', requirement: 'workouts_count', threshold: 1 },
         { id: 'workouts_25', groupId: 'workouts', level: 2, title: 'Regular', title_pt: 'Habitué', description: '25 workouts completed!', description_pt: '25 treinos concluídos!', icon: '🏃', requirement: 'workouts_count', threshold: 25 },
         { id: 'workouts_100', groupId: 'workouts', level: 3, title: 'Century Club', title_pt: 'Clube dos 100', description: '100 workouts! You are a machine.', description_pt: '100 treinos! És uma máquina.', icon: '🦾', requirement: 'workouts_count', threshold: 100 },
+        { id: 'workouts_1000', groupId: 'workouts', level: 4, title: 'Immortal', title_pt: 'Imortal', description: '1000 workouts. You are the gym.', description_pt: '1000 treinos. Tu és o ginásio.', icon: '🌌', requirement: 'workouts_count', threshold: 1000 },
 
         // VOLUME
         { id: 'volume_1000', groupId: 'volume', level: 1, title: 'Heavyweight', title_pt: 'Peso Pesado', description: 'Lifted 1,000kg in one workout!', description_pt: 'Levantaste 1.000kg num treino!', icon: '🐘', requirement: 'session_volume', threshold: 1000 },
         { id: 'volume_5000', groupId: 'volume', level: 2, title: 'Iron Titan', title_pt: 'Titã de Ferro', description: 'Lifted 5,000kg in one workout!', description_pt: 'Levantaste 5.000kg num treino!', icon: '🏗️', requirement: 'session_volume', threshold: 5000 },
         { id: 'volume_10000', groupId: 'volume', level: 3, title: 'Earth Shaker', title_pt: 'Sismo Humano', description: '10,000kg in a single session!', description_pt: '10.000kg numa única sessão!', icon: '🌎', requirement: 'session_volume', threshold: 10000 },
+        { id: 'volume_1000000', groupId: 'volume', level: 4, title: 'Titan of Earth', title_pt: 'Titã da Terra', description: 'Lifted 1,000,000kg total volume!', description_pt: 'Levantaste 1.000.000kg de volume total!', icon: '☄️', requirement: 'total_volume', threshold: 1000000 },
 
         // SECRETS
         { id: 'midnight_trainer', groupId: 'secret_time', level: 1, title: 'Night Owl', title_pt: 'Coruja da Noite', description: 'Workout between 11PM and 4AM.', description_pt: 'Treinaste entre as 23h e as 4h.', icon: '🦉', requirement: 'midnight_workout', threshold: 1, secret: true },
-        { id: 'viking_spirit', groupId: 'secret_viking', level: 1, title: 'Viking Spirit', title_pt: 'Espírito Viking', description: 'Workout during a lightning storm (or just high intensity!).', description_pt: 'Treino de altíssima intensidade.', icon: '🪓', requirement: 'extreme_intensity', threshold: 1, secret: true },
+        { id: 'viking_spirit', groupId: 'secret_viking', level: 1, title: 'Viking Spirit', title_pt: 'Espírito Viking', description: 'Extreme intensity session.', description_pt: 'Treino de altíssima intensidade.', icon: '🪓', requirement: 'extreme_intensity', threshold: 1, secret: true },
+        { id: 'dawn_patrol', groupId: 'secret_dawn', level: 1, title: 'Dawn Patrol', title_pt: 'Patrulha do Amanhecer', description: 'Workout before 7AM.', description_pt: 'Treino antes das 7h da manhã.', icon: '🌅', requirement: 'early_workout', threshold: 1, secret: true },
+        { id: 'weekend_warrior', groupId: 'secret_weekend', level: 1, title: 'Weekend Warrior', title_pt: 'Guerreiro de Fim de Semana', description: 'Train on both Saturday and Sunday.', description_pt: 'Treina no Sábado e no Domingo.', icon: '🛡️', requirement: 'weekend_training', threshold: 2, secret: true },
+        { id: 'speed_demon', groupId: 'secret_speed', level: 1, title: 'Speed Demon', title_pt: 'Demónio Veloz', description: 'High intensity in under 20 mins.', description_pt: 'Alta intensidade em menos de 20 min.', icon: '🏎️', requirement: 'speed_workout', threshold: 1, secret: true },
+        { id: 'social_butterfly', groupId: 'secret_social', level: 1, title: 'Social Butterfly', title_pt: 'Socialite', description: 'Like 50 community workouts.', description_pt: 'Gostaste de 50 treinos da comunidade.', icon: '🦋', requirement: 'social_likes', threshold: 50, secret: true },
       ],
       unlockedIds: [],
+      pendingUnlocks: [],
       isLoading: false,
 
       fetchAchievements: async (userId) => {
@@ -77,6 +91,36 @@ export const useAchievementsStore = create<AchievementsState>()(
         }
       },
 
+      fetchRarityStats: async () => {
+        // Fetch total profiles count
+        const { count: totalUsers } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+
+        if (!totalUsers) return
+
+        // Fetch counts per achievement
+        const { data: counts } = await supabase
+          .from('user_achievements')
+          .select('achievement_id')
+        
+        if (!counts) return
+
+        const idCounts = counts.reduce((acc, curr) => {
+          acc[curr.achievement_id] = (acc[curr.achievement_id] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+
+        set(state => ({
+          achievements: state.achievements.map(a => ({
+            ...a,
+            rarity: Math.round(((idCounts[a.id] || 0) / totalUsers) * 1000) / 10 // Store as 0.0 - 100.0
+          }))
+        }))
+      },
+
+      clearPendingUnlocks: () => set({ pendingUnlocks: [] }),
+
       checkAchievements: async (userId, stats) => {
         const { achievements, unlockedIds } = get()
         const newUnlocks: Achievement[] = []
@@ -90,6 +134,8 @@ export const useAchievementsStore = create<AchievementsState>()(
           if (achievement.requirement === 'session_volume' && stats.sessionVolume >= achievement.threshold) met = true
           if (achievement.requirement === 'early_workout' && stats.isEarly) met = true
           if (achievement.requirement === 'level' && stats.level >= achievement.threshold) met = true
+          if (achievement.requirement === 'total_volume' && (stats.totalVolume || 0) >= achievement.threshold) met = true
+          if (achievement.requirement === 'social_likes' && (stats.socialLikes || 0) >= achievement.threshold) met = true
           if (achievement.requirement === 'midnight_workout' && stats.isMidnight) met = true
           if (achievement.requirement === 'extreme_intensity' && stats.isExtreme) met = true
           if (achievement.requirement === 'speed_workout' && stats.isSpeed) met = true
@@ -111,7 +157,10 @@ export const useAchievementsStore = create<AchievementsState>()(
         }
 
         if (newUnlocks.length > 0) {
-          set({ unlockedIds: [...unlockedIds, ...newUnlocks.map(a => a.id)] })
+          set({ 
+            unlockedIds: [...unlockedIds, ...newUnlocks.map(a => a.id)],
+            pendingUnlocks: [...get().pendingUnlocks, ...newUnlocks]
+          })
         }
 
         return newUnlocks

@@ -30,6 +30,9 @@ const PremiumPage = React.lazy(() => import('@/features/premium/PremiumPage').th
 const FriendsPage = React.lazy(() => import('@/features/social/FriendsPage').then(m => ({ default: m.FriendsPage })))
 const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const AchievementsPage = React.lazy(() => import('@/features/gamification/AchievementsPage').then(m => ({ default: m.AchievementsPage })))
+const AchievementUnlockOverlay = React.lazy(() => import('@/features/gamification/AchievementUnlockOverlay').then(m => ({ default: m.AchievementUnlockOverlay })))
+
+import { useAchievementsStore } from '@/features/gamification/useAchievementsStore'
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background text-white">
@@ -46,9 +49,10 @@ function App() {
         <ActiveSessionProvider>
           <Router>
             <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-20 md:pb-0 md:pl-24">
-              <Navbar />
-              <LevelUpOverlay />
-              <Suspense fallback={<PageLoader />}>
+            <Navbar />
+            <LevelUpOverlay />
+            <AchievementCelebration />
+            <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -118,6 +122,21 @@ function App() {
       </ToastProvider>
     </QueryClientProvider>
     </ErrorBoundary>
+  )
+}
+
+function AchievementCelebration() {
+  const { pendingUnlocks, clearPendingUnlocks } = useAchievementsStore()
+  
+  if (pendingUnlocks.length === 0) return null
+
+  return (
+    <Suspense fallback={null}>
+      <AchievementUnlockOverlay 
+        unlocks={pendingUnlocks} 
+        onClose={clearPendingUnlocks} 
+      />
+    </Suspense>
   )
 }
 
