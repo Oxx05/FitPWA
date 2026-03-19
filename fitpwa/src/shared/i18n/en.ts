@@ -36,6 +36,7 @@ const en = {
     comments: 'Comments',
     create: 'Create',
     by: 'by',
+    all: 'All',
     muscles: {
       chest: 'Chest',
       back: 'Back',
@@ -262,6 +263,9 @@ const en = {
     soundAlerts: 'Sounds & Alerts',
     chooseAvatar: 'Choose Profile Photo',
     avatarUpdated: 'Profile photo updated!',
+    uploadPhoto: 'Upload Photo',
+    removeAvatar: 'Remove Avatar',
+    avatarRemoved: 'Avatar removed.',
     featuredMedals: 'Featured Medals',
     noMedalsEquipped: 'No medals equipped',
     achievementsLink: 'Achievements & Medals',
@@ -462,6 +466,8 @@ const en = {
     createAndPublish: 'Create and Publish Plan',
     clonedSuccess: 'Plan cloned successfully! You can find it in your workouts.',
     clonedError: 'Error cloning plan.',
+    cloneAndUse: 'Clone & Use',
+    noExercises: 'This plan has no exercises.',
   },
 
   // ─── Evolution ───
@@ -640,6 +646,7 @@ const en = {
     silver: 'Silver',
     gold: 'Gold',
     platinum: 'Platinum',
+    diamond: 'Diamond',
   },
 
 }

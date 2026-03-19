@@ -112,7 +112,7 @@ export function SessionScreen() {
   const handleAddInSessionExercise = async (exercise: any) => {
     const newEx: ExerciseInSession = {
       id: `ext-${Date.now()}`,
-      order: exercises.length,
+      order: currentExerciseIndex + 1,
       exerciseId: exercise.id,
       name: exercise.name,
       name_pt: exercise.name_pt,
@@ -128,7 +128,11 @@ export function SessionScreen() {
       repsMax: 12,
       restSeconds: 90
     }
-    setExercises([...exercises, newEx])
+    // Insert after current exercise instead of at end
+    const newList = [...exercises]
+    newList.splice(currentExerciseIndex + 1, 0, newEx)
+    // Re-index order
+    setExercises(newList.map((ex, idx) => ({ ...ex, order: idx })))
     setShowAddExerciseModal(false)
     showToast(`${newEx.name} ${t('session.setAdded').toLowerCase()}`, 'success')
   }

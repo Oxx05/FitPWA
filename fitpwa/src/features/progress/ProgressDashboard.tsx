@@ -404,14 +404,14 @@ export function ProgressDashboard() {
                   </div>
                   <div>
                     <h4 className="font-bold text-white">{session.plan_name || t('workouts.deletedPlan')}</h4>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {formatDuration(session.duration_seconds)}
+                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-gray-500 flex-wrap">
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-3 h-3 shrink-0" /> {formatDuration(session.duration_seconds)}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Weight className="w-3 h-3" /> {formatVolume(session.total_volume_kg)}kg
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Weight className="w-3 h-3 shrink-0" /> {formatVolume(session.total_volume_kg)} {session.total_volume_kg >= 1000 ? 'ton' : 'kg'}
                       </span>
-                      <span>{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: currentLocale })}</span>
+                      <span className="whitespace-nowrap">{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: currentLocale })}</span>
                     </div>
                   </div>
                 </div>
@@ -563,9 +563,9 @@ export function ProgressDashboard() {
                   {selectedSessionForDetails && format(new Date(selectedSessionForDetails.finished_at!), "dd MMM yyyy, HH:mm", { locale: currentLocale })}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {formatDuration(selectedSessionForDetails?.duration_seconds || 0)}</span>
-                <span className="flex items-center gap-1"><Weight className="w-4 h-4" /> {formatVolume(selectedSessionForDetails?.total_volume_kg || 0)}kg</span>
+              <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-400 flex-wrap">
+                <span className="flex items-center gap-1 whitespace-nowrap"><Clock className="w-4 h-4" /> {formatDuration(selectedSessionForDetails?.duration_seconds || 0)}</span>
+                <span className="flex items-center gap-1 whitespace-nowrap"><Weight className="w-4 h-4" /> {formatVolume(selectedSessionForDetails?.total_volume_kg || 0)} {(selectedSessionForDetails?.total_volume_kg || 0) >= 1000 ? 'ton' : 'kg'}</span>
               </div>
             </div>
 

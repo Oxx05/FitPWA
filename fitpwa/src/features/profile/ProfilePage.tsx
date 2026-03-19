@@ -614,65 +614,93 @@ export function ProfilePage() {
         closeButton
       >
         <div className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1594381898411-846e7d193883?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1599058917232-d750c18590e6?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1518310382917-450c893b3ce2?w=200&h=200&fit=crop',
-              'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=200&h=200&fit=crop',
-            ].map((url, i) => (
+          {/* Current Avatar Preview */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-28 h-28 rounded-full bg-primary/20 flex items-center justify-center border-4 border-primary text-primary overflow-hidden">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-14 h-14" />
+              )}
+            </div>
+          </div>
+
+          {/* Upload Button */}
+          <div className="space-y-3">
+            <label className="block w-full cursor-pointer">
+              <div className="flex items-center justify-center gap-3 p-4 bg-primary/10 border-2 border-dashed border-primary/30 rounded-2xl hover:bg-primary/20 hover:border-primary/50 transition-all">
+                <Pencil className="w-5 h-5 text-primary" />
+                <span className="text-primary font-bold text-sm uppercase tracking-wider">
+                  {t('profile.uploadPhoto')}
+                </span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file || !user) return
+                  
+                  // Convert to base64
+                  const reader = new FileReader()
+                  reader.onload = async (ev) => {
+                    const base64 = ev.target?.result as string
+                    if (!base64) return
+                    
+                    // Resize image to max 200x200 for storage
+                    const img = new Image()
+                    img.onload = async () => {
+                      const canvas = document.createElement('canvas')
+                      const size = 200
+                      canvas.width = size
+                      canvas.height = size
+                      const ctx = canvas.getContext('2d')!
+                      const minDim = Math.min(img.width, img.height)
+                      const sx = (img.width - minDim) / 2
+                      const sy = (img.height - minDim) / 2
+                      ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size)
+                      const resized = canvas.toDataURL('image/jpeg', 0.8)
+                      
+                      const { error } = await supabase
+                        .from('profiles')
+                        .update({ avatar_url: resized })
+                        .eq('id', user.id)
+                      
+                      if (!error) {
+                        useAuthStore.getState().fetchProfile(user.id)
+                        setShowAvatarModal(false)
+                        showToast(t('profile.avatarUpdated'), 'success')
+                      }
+                    }
+                    img.src = base64
+                  }
+                  reader.readAsDataURL(file)
+                }}
+              />
+            </label>
+
+            {/* Remove Avatar */}
+            {profile?.avatar_url && (
               <button
-                key={i}
                 onClick={async () => {
                   if (!user) return
                   const { error } = await supabase
                     .from('profiles')
-                    .update({ avatar_url: url })
+                    .update({ avatar_url: null })
                     .eq('id', user.id)
                   
                   if (!error) {
                     useAuthStore.getState().fetchProfile(user.id)
                     setShowAvatarModal(false)
-                    showToast(t('profile.avatarUpdated'), 'success')
+                    showToast(t('profile.avatarRemoved'), 'success')
                   }
                 }}
-                className={`w-full aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
-                  profile?.avatar_url === url ? 'border-primary scale-90' : 'border-transparent hover:border-white/20'
-                }`}
+                className="w-full p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-bold text-sm uppercase tracking-wider hover:bg-red-500/20 transition-colors"
               >
-                <img src={url} alt="Avatar option" className="w-full h-full object-cover" />
+                {t('profile.removeAvatar')}
               </button>
-            ))}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-400 uppercase tracking-widest text-[10px]">{t('profile.orImageLink')}</label>
-            <div className="flex gap-2">
-              <Input 
-                placeholder="https://..." 
-                className="flex-grow"
-                onKeyDown={async (e) => {
-                  if (e.key === 'Enter') {
-                    const url = (e.target as HTMLInputElement).value
-                    if (!url || !user) return
-                    const { error } = await supabase
-                      .from('profiles')
-                      .update({ avatar_url: url })
-                      .eq('id', user.id)
-                    
-                    if (!error) {
-                      useAuthStore.getState().fetchProfile(user.id)
-                      setShowAvatarModal(false)
-                      showToast(t('profile.avatarUpdated'), 'success')
-                    }
-                  }
-                }}
-              />
-            </div>
+            )}
           </div>
         </div>
       </Modal>

@@ -123,7 +123,7 @@ export function AchievementsPage() {
                           transition={{ delay: gIdx * 0.05 }}
                           className={`relative p-6 rounded-[32px] border transition-all duration-500 flex flex-col items-center text-center gap-4 overflow-hidden ${
                             !isFullyLocked 
-                              ? (displayed.level === 4 ? 'bg-blue-500/10 border-blue-400/30' : 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl') 
+                              ? (displayed.level === 5 ? 'bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-400/30' : displayed.level === 4 ? 'bg-cyan-500/10 border-cyan-400/30' : 'bg-surface-200 border-primary/20 hover:border-primary/40 shadow-xl') 
                               : 'bg-surface-200/40 border-white/5 opacity-50'
                           }`}
                         >
@@ -138,13 +138,13 @@ export function AchievementsPage() {
                           {/* Background Rank Indicator */}
                           {!isFullyLocked && (
                             <div className={`absolute -top-1 -right-1 w-12 h-12 flex items-center justify-center rotate-12 opacity-20 text-white font-black text-xl`}>
-                              {displayed.level === 4 ? 'PLAT' : displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
+                              {displayed.level === 5 ? 'PLAT' : displayed.level === 4 ? 'DIAM' : displayed.level === 3 ? 'GOLD' : displayed.level === 2 ? 'SILV' : 'BRNZ'}
                             </div>
                           )}
 
                           <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner relative z-10 ${
                             !isFullyLocked 
-                              ? (displayed.level === 4 ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-slow' : 'bg-primary/10 animate-float') 
+                              ? (displayed.level === 5 ? 'bg-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse-slow' : displayed.level === 4 ? 'bg-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'bg-primary/10 animate-float') 
                               : 'bg-surface-100'
                           }`}>
                             {isSecret ? <HelpCircle className="w-10 h-10 text-gray-600" /> : displayed.icon}

@@ -246,7 +246,7 @@ export function PetWidget() {
           </div>
 
           {/* Speech Bubble - Compact & Characterful */}
-          <div className="mb-6 h-12 flex items-center">
+          <div className="mb-6 min-h-[48px] flex items-center">
             <AnimatePresence mode="wait">
               {message && (
                 <motion.div
@@ -254,12 +254,12 @@ export function PetWidget() {
                   initial={{ scale: 0.8, opacity: 0, y: 10 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.8, opacity: 0, y: -10 }}
-                  className="bg-white rounded-2xl p-3 shadow-lg relative border-2 border-primary/30 w-fit max-w-[90%] mx-auto sm:mx-0"
+                  className="bg-white rounded-2xl p-2.5 sm:p-3 shadow-lg relative border-2 border-primary/30 w-full sm:w-fit sm:max-w-[90%] mx-auto sm:mx-0"
                 >
                   {/* Speech Bubble Tail */}
-                  <div className="absolute bottom-[-8px] left-6 w-4 h-4 bg-white border-r-2 border-b-2 border-primary/30 rotate-45 transform" />
+                  <div className="hidden sm:block absolute bottom-[-8px] left-6 w-4 h-4 bg-white border-r-2 border-b-2 border-primary/30 rotate-45 transform" />
 
-                  <p className="text-sm text-black font-black leading-tight tracking-tight">
+                  <p className="text-xs sm:text-sm text-black font-black leading-tight tracking-tight break-words">
                     {message}
                   </p>
                 </motion.div>

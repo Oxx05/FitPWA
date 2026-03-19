@@ -5,7 +5,7 @@ import { supabase } from '@/shared/lib/supabase'
 export interface Achievement {
   id: string
   groupId: string 
-  level: number // 1: Bronze, 2: Silver, 3: Gold, 4: Platinum
+  level: number // 1: Bronze, 2: Silver, 3: Gold, 4: Diamond, 5: Platinum
   title: string
   title_pt: string
   description: string
@@ -51,31 +51,36 @@ export const useAchievementsStore = create<AchievementsState>()(
         { id: 'streak_3', groupId: 'streak', level: 1, title: 'Right Rhythm', title_pt: 'Ritmo Certo', description: '3-day streak!', description_pt: 'Streak de 3 dias!', icon: '🔥', requirement: 'streak_days', threshold: 3 },
         { id: 'streak_7', groupId: 'streak', level: 2, title: 'Unstoppable', title_pt: 'Imparável', description: '7-day streak!', description_pt: 'Streak de 7 dias!', icon: '⚡', requirement: 'streak_days', threshold: 7 },
         { id: 'streak_30', groupId: 'streak', level: 3, title: 'Iron Habit', title_pt: 'Hábito de Ferro', description: '30-day streak!', description_pt: 'Streak de 30 dias!', icon: '👑', requirement: 'streak_days', threshold: 30 },
-        { id: 'streak_365', groupId: 'streak', level: 4, title: 'Legendary Habit', title_pt: 'Hábito Lendário', description: '365-day streak! Pure discipline.', description_pt: 'Streak de 365 dias! Disciplina pura.', icon: '💎', requirement: 'streak_days', threshold: 365 },
+        { id: 'streak_90', groupId: 'streak', level: 4, title: 'Diamond Discipline', title_pt: 'Disciplina Diamante', description: '90-day streak!', description_pt: 'Streak de 90 dias!', icon: '💠', requirement: 'streak_days', threshold: 90 },
+        { id: 'streak_365', groupId: 'streak', level: 5, title: 'Legendary Habit', title_pt: 'Hábito Lendário', description: '365-day streak! Pure discipline.', description_pt: 'Streak de 365 dias! Disciplina pura.', icon: '💎', requirement: 'streak_days', threshold: 365 },
         
         // WORKOUTS COUNT
         { id: 'workouts_1', groupId: 'workouts', level: 1, title: 'First Step', title_pt: 'Primeiro Passo', description: 'First workout completed!', description_pt: 'Primeiro treino concluído!', icon: '🏁', requirement: 'workouts_count', threshold: 1 },
         { id: 'workouts_25', groupId: 'workouts', level: 2, title: 'Regular', title_pt: 'Habitué', description: '25 workouts completed!', description_pt: '25 treinos concluídos!', icon: '🏃', requirement: 'workouts_count', threshold: 25 },
         { id: 'workouts_100', groupId: 'workouts', level: 3, title: 'Century Club', title_pt: 'Clube dos 100', description: '100 workouts! You are a machine.', description_pt: '100 treinos! És uma máquina.', icon: '🦾', requirement: 'workouts_count', threshold: 100 },
-        { id: 'workouts_1000', groupId: 'workouts', level: 4, title: 'Immortal', title_pt: 'Imortal', description: '1000 workouts. You are the gym.', description_pt: '1000 treinos. Tu és o ginásio.', icon: '🌌', requirement: 'workouts_count', threshold: 1000 },
+        { id: 'workouts_500', groupId: 'workouts', level: 4, title: 'Half Millennium', title_pt: 'Meio Milénio', description: '500 workouts! Diamond grind.', description_pt: '500 treinos! Moagem diamante.', icon: '💠', requirement: 'workouts_count', threshold: 500 },
+        { id: 'workouts_1000', groupId: 'workouts', level: 5, title: 'Immortal', title_pt: 'Imortal', description: '1000 workouts. You are the gym.', description_pt: '1000 treinos. Tu és o ginásio.', icon: '🌌', requirement: 'workouts_count', threshold: 1000 },
 
         // VOLUME
         { id: 'volume_1000', groupId: 'volume', level: 1, title: 'Heavyweight', title_pt: 'Peso Pesado', description: 'Lifted 1,000kg in one workout!', description_pt: 'Levantaste 1.000kg num treino!', icon: '🐘', requirement: 'session_volume', threshold: 1000 },
         { id: 'volume_5000', groupId: 'volume', level: 2, title: 'Iron Titan', title_pt: 'Titã de Ferro', description: 'Lifted 5,000kg in one workout!', description_pt: 'Levantaste 5.000kg num treino!', icon: '🏗️', requirement: 'session_volume', threshold: 5000 },
         { id: 'volume_10000', groupId: 'volume', level: 3, title: 'Earth Shaker', title_pt: 'Sismo Humano', description: '10,000kg in a single session!', description_pt: '10.000kg numa única sessão!', icon: '🌎', requirement: 'session_volume', threshold: 10000 },
-        { id: 'volume_1000000', groupId: 'volume', level: 4, title: 'Titan of Earth', title_pt: 'Titã da Terra', description: 'Lifted 1,000,000kg total volume!', description_pt: 'Levantaste 1.000.000kg de volume total!', icon: '☄️', requirement: 'total_volume', threshold: 1000000 },
+        { id: 'volume_500000', groupId: 'volume', level: 4, title: 'Mountain Mover', title_pt: 'Move Montanhas', description: '500,000kg total volume!', description_pt: '500.000kg de volume total!', icon: '⛰️', requirement: 'total_volume', threshold: 500000 },
+        { id: 'volume_1000000', groupId: 'volume', level: 5, title: 'Titan of Earth', title_pt: 'Titã da Terra', description: 'Lifted 1,000,000kg total volume!', description_pt: 'Levantaste 1.000.000kg de volume total!', icon: '☄️', requirement: 'total_volume', threshold: 1000000 },
 
         // LEVEL
         { id: 'level_5', groupId: 'level', level: 1, title: 'Ascending', title_pt: 'A Ascender', description: 'Reached Level 5!', description_pt: 'Chegaste ao Nível 5!', icon: '🌱', requirement: 'level', threshold: 5 },
         { id: 'level_20', groupId: 'level', level: 2, title: 'Elite Athlete', title_pt: 'Atleta de Elite', description: 'Reached Level 20!', description_pt: 'Chegaste ao Nível 20!', icon: '🌟', requirement: 'level', threshold: 20 },
         { id: 'level_50', groupId: 'level', level: 3, title: 'Master of Gym', title_pt: 'Mestre do Ginásio', description: 'Reached Level 50!', description_pt: 'Chegaste ao Nível 50!', icon: '🌋', requirement: 'level', threshold: 50 },
-        { id: 'level_100', groupId: 'level', level: 4, title: 'Living God', title_pt: 'Deus Vivo', description: 'Reached Level 100!', description_pt: 'Chegaste ao Nível 100!', icon: '💠', requirement: 'level', threshold: 100 },
+        { id: 'level_75', groupId: 'level', level: 4, title: 'Diamond Rank', title_pt: 'Rank Diamante', description: 'Reached Level 75!', description_pt: 'Chegaste ao Nível 75!', icon: '💠', requirement: 'level', threshold: 75 },
+        { id: 'level_100', groupId: 'level', level: 5, title: 'Living God', title_pt: 'Deus Vivo', description: 'Reached Level 100!', description_pt: 'Chegaste ao Nível 100!', icon: '💎', requirement: 'level', threshold: 100 },
 
         // SOCIAL
         { id: 'social_10', groupId: 'social', level: 1, title: 'Community Spirit', title_pt: 'Espírito de Equipa', description: 'Inspired 10 athletes!', description_pt: 'Inspiraste 10 atletas!', icon: '❤️', requirement: 'social_likes', threshold: 10 },
         { id: 'social_50', groupId: 'social', level: 2, title: 'Inspiration Hub', title_pt: 'Centro de Inspiração', description: 'Inspired 50 athletes!', description_pt: 'Inspiraste 50 atletas!', icon: '✨', requirement: 'social_likes', threshold: 50 },
         { id: 'social_200', groupId: 'social', level: 3, title: 'Influencer', title_pt: 'Influencer', description: 'Inspired 200 athletes!', description_pt: 'Inspiraste 200 atletas!', icon: '📣', requirement: 'social_likes', threshold: 200 },
-        { id: 'social_1000', groupId: 'social', level: 4, title: 'Icon', title_pt: 'Ícone', description: 'Inspired 1000 athletes!', description_pt: 'Inspiraste 1000 atletas!', icon: '🌍', requirement: 'social_likes', threshold: 1000 },
+        { id: 'social_500', groupId: 'social', level: 4, title: 'Fitness Star', title_pt: 'Estrela Fitness', description: 'Inspired 500 athletes!', description_pt: 'Inspiraste 500 atletas!', icon: '💠', requirement: 'social_likes', threshold: 500 },
+        { id: 'social_1000', groupId: 'social', level: 5, title: 'Icon', title_pt: 'Ícone', description: 'Inspired 1000 athletes!', description_pt: 'Inspiraste 1000 atletas!', icon: '🌍', requirement: 'social_likes', threshold: 1000 },
 
         // SECRETS
         { id: 'midnight_trainer', groupId: 'secret_time', level: 1, title: 'Night Owl', title_pt: 'Coruja da Noite', description: 'Workout between 11PM and 4AM.', description_pt: 'Treinaste entre as 23h e as 4h.', icon: '🦉', requirement: 'midnight_workout', threshold: 1, secret: true },

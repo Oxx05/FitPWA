@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Heart, Save, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
+import { Heart, Save, Dumbbell, Loader2, Zap, Clock, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useToast } from '@/shared/contexts/ToastContext'
+import { Modal } from '@/shared/components/Modal'
+import { Button } from '@/shared/components/Button'
 
 
 export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) {
@@ -14,6 +16,10 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
   const { showToast } = useToast()
   const [selectedSort, setSelectedSort] = useState<'trending' | 'recent' | 'saves'>('trending')
   const [searchQuery, setSearchQuery] = useState('')
+  const [previewPlan, setPreviewPlan] = useState<any>(null)
+  const [previewExercises, setPreviewExercises] = useState<any[]>([])
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [cloningPlan, setCloningPlan] = useState(false)
 
   const { data: workouts, isLoading } = useQuery({
     queryKey: ['public-workouts', selectedSort, searchQuery],
@@ -257,57 +263,28 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
 
                 <button
                   onClick={async () => {
+                    // Preview the plan first
+                    setPreviewPlan(workout)
+                    setLoadingPreview(true)
                     try {
-                      // Clone logic: Create a new plan for the current user based on this one
-                      const { data: newPlan, error: planErr } = await supabase
-                        .from('workout_plans')
-                        .insert({
-                          user_id: profile?.id,
-                          name: `${workout.name} (Clone)`,
-                          description: workout.description,
-                          difficulty: workout.difficulty,
-                          days_per_week: workout.days_per_week,
-                          type: 'custom',
-                          is_public: false
-                        })
-                        .select()
-                        .single()
-
-                      if (planErr) throw planErr
-
-                      // Fetch original exercises
-                      const { data: originalEx, error: exErr } = await supabase
+                      const { data: exercises } = await supabase
                         .from('plan_exercises')
-                        .select('*')
+                        .select(`
+                          id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg,
+                          exercises ( id, name, name_pt, muscle_groups )
+                        `)
                         .eq('plan_id', workout.id)
-
-                      if (exErr) throw exErr
-
-                      if (originalEx && originalEx.length > 0) {
-                        await supabase
-                          .from('plan_exercises')
-                          .insert(originalEx.map(ex => ({
-                            plan_id: newPlan.id,
-                            exercise_id: ex.exercise_id,
-                            order_index: ex.order_index,
-                            sets: ex.sets,
-                            reps_min: ex.reps_min,
-                            reps_max: ex.reps_max,
-                            rest_seconds: ex.rest_seconds,
-                            weight_kg: ex.weight_kg,
-                            is_superset: ex.is_superset
-                          })))
-                      }
-                      
-                      showToast(t('community.clonedSuccess'), 'success')
-                    } catch (err) {
-                      console.error('Erro ao clonar plano:', err)
-                      showToast(t('community.clonedError'), 'error')
+                        .order('order_index', { ascending: true })
+                      setPreviewExercises(exercises || [])
+                    } catch {
+                      setPreviewExercises([])
+                    } finally {
+                      setLoadingPreview(false)
                     }
                   }}
                   className="flex-[2] flex items-center gap-2 justify-center py-2 rounded-lg bg-primary text-black font-bold hover:bg-primary/90 transition-colors"
                 >
-                  <Dumbbell className="w-4 h-4" />
+                  <Eye className="w-4 h-4" />
                   <span className="text-sm">{t('workouts.usePlan')}</span>
                 </button>
               </div>
@@ -330,6 +307,133 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
           </a>
         </motion.div>
       )}
+
+      {/* Plan Preview Modal */}
+      <Modal
+        isOpen={!!previewPlan}
+        onClose={() => { setPreviewPlan(null); setPreviewExercises([]) }}
+        title={previewPlan?.name || ''}
+        size="lg"
+        closeButton
+      >
+        <div className="space-y-4">
+          {previewPlan?.description && (
+            <p className="text-sm text-gray-400">{previewPlan.description}</p>
+          )}
+          <div className="flex gap-2 flex-wrap">
+            <span className="text-xs bg-primary/20 text-primary px-2.5 py-1 rounded-full capitalize font-bold">
+              {previewPlan?.difficulty}
+            </span>
+            <span className="text-xs bg-surface-100 text-gray-300 px-2.5 py-1 rounded-full font-bold">
+              {previewPlan?.days_per_week}x/{t('common.week')}
+            </span>
+            <span className="text-xs bg-surface-100 text-gray-300 px-2.5 py-1 rounded-full font-bold">
+              {previewExercises.length} {t('common.exercises')}
+            </span>
+          </div>
+
+          {loadingPreview ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {previewExercises.map((pe: any, idx: number) => {
+                const ex = pe.exercises
+                return (
+                  <div key={pe.id || idx} className="flex items-center gap-3 bg-surface-100 p-3 rounded-lg">
+                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0 text-sm font-bold">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <h4 className="font-medium text-white text-sm truncate">
+                        {ex?.name || t('common.exercise')}
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        {pe.sets} × {pe.reps_min === pe.reps_max ? pe.reps_min : `${pe.reps_min}-${pe.reps_max}`} reps
+                        {pe.weight_kg ? ` · ${pe.weight_kg}kg` : ''}
+                      </p>
+                    </div>
+                    {ex?.muscle_groups && (
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        {(ex.muscle_groups as string[]).slice(0, 2).map((mg: string) => (
+                          <span key={mg} className="text-[9px] bg-surface-200 text-gray-500 px-1.5 py-0.5 rounded capitalize">{mg}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {previewExercises.length === 0 && (
+                <p className="text-sm text-gray-500 italic text-center p-4">{t('community.noExercises')}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => { setPreviewPlan(null); setPreviewExercises([]) }}
+            >
+              {t('common.close')}
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              disabled={cloningPlan || previewExercises.length === 0}
+              onClick={async () => {
+                if (!previewPlan || !profile?.id) return
+                setCloningPlan(true)
+                try {
+                  const { data: newPlan, error: planErr } = await supabase
+                    .from('workout_plans')
+                    .insert({
+                      user_id: profile.id,
+                      name: `${previewPlan.name} (Clone)`,
+                      description: previewPlan.description,
+                      difficulty: previewPlan.difficulty,
+                      days_per_week: previewPlan.days_per_week,
+                      type: 'custom',
+                      is_public: false
+                    })
+                    .select()
+                    .single()
+
+                  if (planErr) throw planErr
+
+                  if (previewExercises.length > 0) {
+                    await supabase
+                      .from('plan_exercises')
+                      .insert(previewExercises.map((ex: any) => ({
+                        plan_id: newPlan.id,
+                        exercise_id: ex.exercise_id,
+                        order_index: ex.order_index,
+                        sets: ex.sets,
+                        reps_min: ex.reps_min,
+                        reps_max: ex.reps_max,
+                        rest_seconds: ex.rest_seconds,
+                        weight_kg: ex.weight_kg,
+                        is_superset: ex.is_superset
+                      })))
+                  }
+
+                  showToast(t('community.clonedSuccess'), 'success')
+                  setPreviewPlan(null)
+                  setPreviewExercises([])
+                } catch (err) {
+                  console.error('Error cloning plan:', err)
+                  showToast(t('community.clonedError'), 'error')
+                } finally {
+                  setCloningPlan(false)
+                }
+              }}
+            >
+              {cloningPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : <Dumbbell className="w-4 h-4" />}
+              {t('community.cloneAndUse')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

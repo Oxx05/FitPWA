@@ -289,15 +289,31 @@ const BearBody = ({ color, accent }: any) => (
 
 const WolfBody = ({ color, accent }: any) => (
   <g className="howl-breath">
-    {/* Premium Aura */}
-    <circle cx="60" cy="70" r="55" fill="none" stroke={accent} strokeWidth="1" opacity="0.4" className="animate-pulse" />
+    {/* Premium Aura - Multi-layered radial glow */}
+    <defs>
+      <radialGradient id="wolfAura" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stopColor={accent} stopOpacity="0.15" />
+        <stop offset="60%" stopColor={accent} stopOpacity="0.08" />
+        <stop offset="100%" stopColor={accent} stopOpacity="0" />
+      </radialGradient>
+      <filter id="wolfGlow">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+    <circle cx="60" cy="70" r="60" fill="url(#wolfAura)" />
+    <circle cx="60" cy="70" r="52" fill="none" stroke={accent} strokeWidth="1.5" opacity="0.25" strokeDasharray="6 4" className="animate-wiggle" />
+    <circle cx="60" cy="70" r="58" fill="none" stroke={accent} strokeWidth="0.8" opacity="0.15" className="animate-pulse" />
     
     {/* Sharp Ears */}
     <path d="M30 40 L35 15 L50 40" fill={accent} className="ear-twitch" />
     <path d="M90 40 L85 15 L70 40" fill={accent} className="ear-twitch" style={{ animationDelay: '0.2s' }} />
     
     {/* Main Body - Sharper corners for a tougher look */}
-    <rect x="25" y="40" width="70" height="70" rx="10" fill={color} className="pet-path" />
+    <rect x="25" y="40" width="70" height="70" rx="10" fill={color} className="pet-path" filter="url(#wolfGlow)" />
     
     {/* Chest Fur */}
     <path d="M60 110 L40 90 L80 90 Z" fill="white" opacity="0.8" />

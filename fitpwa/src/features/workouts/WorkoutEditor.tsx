@@ -127,6 +127,8 @@ export function WorkoutEditor() {
   const [searchTerm, setSearchTerm] = useState('')
   const [creatingCustom, setCreatingCustom] = useState(false)
   const [isActivePlan, setIsActivePlan] = useState(false)
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('')
+  const [currentEditIndex, setCurrentEditIndex] = useState<number>(-1)
   const location = useLocation()
 
   const sensors = useSensors(
@@ -309,9 +311,17 @@ export function WorkoutEditor() {
       weight_kg: null,
       is_superset: false
     }
-    setExercises([...exercises, newExercise])
+    // Insert after the current edit index (or at the end if -1)
+    if (currentEditIndex >= 0 && currentEditIndex < exercises.length) {
+      const newList = [...exercises]
+      newList.splice(currentEditIndex + 1, 0, newExercise)
+      setExercises(newList)
+    } else {
+      setExercises([...exercises, newExercise])
+    }
     setShowExerciseModal(false)
     setSearchTerm('')
+    setSelectedMuscleGroup('')
   }
 
   const handleCreateCustomExercise = async () => {
@@ -453,10 +463,25 @@ export function WorkoutEditor() {
     ignoreLocation: true,
   }), [availableExercises])
 
+  const allMuscleGroups = useMemo(() => {
+    const groups = new Set<string>()
+    availableExercises.forEach(ex => {
+      (ex.muscle_groups || []).forEach((g: string) => groups.add(g))
+    })
+    return Array.from(groups).sort()
+  }, [availableExercises])
+
   const filteredExercises = useMemo(() => {
-    if (!searchTerm.trim()) return availableExercises
-    return fuse.search(searchTerm).map(result => result.item)
-  }, [searchTerm, availableExercises, fuse])
+    let list = availableExercises
+    if (selectedMuscleGroup) {
+      list = list.filter(ex => (ex.muscle_groups || []).includes(selectedMuscleGroup))
+    }
+    if (!searchTerm.trim()) return list
+    return fuse.search(searchTerm).map(result => result.item).filter(ex => {
+      if (!selectedMuscleGroup) return true
+      return (ex.muscle_groups || []).includes(selectedMuscleGroup)
+    })
+  }, [searchTerm, availableExercises, fuse, selectedMuscleGroup])
 
   if (loading && (id || templateId)) {
     return (
@@ -553,7 +578,7 @@ export function WorkoutEditor() {
       <Button 
         variant="secondary" 
         className="w-full h-14 border border-dashed border-gray-600 hover:border-primary/50 text-gray-400 hover:bg-primary/5"
-        onClick={() => setShowExerciseModal(true)}
+        onClick={() => { setCurrentEditIndex(exercises.length - 1); setShowExerciseModal(true) }}
       >
         <Plus className="w-5 h-5 mr-2 text-primary" />
         {t('editor.addExercise')}
@@ -580,7 +605,7 @@ export function WorkoutEditor() {
       {/* Exercise Selection Modal */}
       <Modal
         isOpen={showExerciseModal}
-        onClose={() => { setShowExerciseModal(false); setSearchTerm('') }}
+        onClose={() => { setShowExerciseModal(false); setSearchTerm(''); setSelectedMuscleGroup('') }}
         title={t('editor.selectExercise')}
         size="lg"
       >
@@ -590,6 +615,25 @@ export function WorkoutEditor() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+
+          {/* Muscle group filter chips */}
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setSelectedMuscleGroup('')}
+              className={`text-xs px-2.5 py-1 rounded-full border font-bold transition-all ${!selectedMuscleGroup ? 'bg-primary text-black border-primary' : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-primary/50'}`}
+            >
+              {t('common.all')}
+            </button>
+            {allMuscleGroups.map(group => (
+              <button
+                key={group}
+                onClick={() => setSelectedMuscleGroup(selectedMuscleGroup === group ? '' : group)}
+                className={`text-xs px-2.5 py-1 rounded-full border font-bold capitalize transition-all ${selectedMuscleGroup === group ? 'bg-primary text-black border-primary' : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-primary/50'}`}
+              >
+                {group}
+              </button>
+            ))}
+          </div>
 
           {/* Custom exercise creation */}
           {searchTerm.trim().length > 1 && (

@@ -31,6 +31,7 @@ const pt = {
     comments: 'Comentários',
     create: 'Criar',
     by: 'por',
+    all: 'Todos',
     muscles: {
       chest: 'Peito',
       back: 'Costas',
@@ -257,6 +258,9 @@ const pt = {
     soundAlerts: 'Sons e Alertas',
     chooseAvatar: 'Escolher Foto de Perfil',
     avatarUpdated: 'Foto de perfil atualizada!',
+    uploadPhoto: 'Carregar Foto',
+    removeAvatar: 'Remover Avatar',
+    avatarRemoved: 'Avatar removido.',
     featuredMedals: 'Medalhas em Destaque',
     noMedalsEquipped: 'Sem medalhas equipadas',
     achievementsLink: 'Conquistas & Medalhas',
@@ -465,6 +469,8 @@ const pt = {
     createAndPublish: 'Criar e Publicar Plano',
     clonedSuccess: 'Plano clonado com sucesso! Já o podes encontrar nos teus treinos.',
     clonedError: 'Erro ao clonar plano.',
+    cloneAndUse: 'Clonar e Usar',
+    noExercises: 'Este plano não tem exercícios.',
   },
 
   // ─── Evolution ───
@@ -643,6 +649,7 @@ const pt = {
     silver: 'Prata',
     gold: 'Ouro',
     platinum: 'Platina',
+    diamond: 'Diamante',
   },
 
 }
