@@ -206,46 +206,48 @@ export function ProfilePage() {
           )}
           
           {/* Featured Medals (Highest Tier for each group) */}
-          <div className="flex gap-2 mt-4 justify-center md:justify-start">
-            <h4 className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1 w-full block md:hidden">{t('profile.featuredMedals')}</h4>
-            {(() => {
-              const featured = unlockedIds
-                .map(id => achievements.find(a => a.id === id)!)
-                .filter(Boolean)
-                // Group by groupId and take highest level
-                .reduce((acc, curr) => {
-                  const existing = acc.find(a => a.groupId === curr.groupId)
-                  if (!existing || curr.level > existing.level) {
-                    const filtered = acc.filter(a => a.groupId !== curr.groupId)
-                    filtered.push(curr)
-                    return filtered
-                  }
-                  return acc
-                }, [] as Achievement[])
-                .sort((a, b) => b.level - a.level)
-                .slice(0, 3)
+          <div className="flex flex-col md:flex-row gap-2 mt-5 items-center md:items-start justify-center md:justify-start w-full">
+            <h4 className="text-[10px] text-gray-500 uppercase font-black tracking-widest block md:hidden w-full text-center">{t('profile.featuredMedals')}</h4>
+            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+              {(() => {
+                const featured = unlockedIds
+                  .map(id => achievements.find(a => a.id === id)!)
+                  .filter(Boolean)
+                  // Group by groupId and take highest level
+                  .reduce((acc, curr) => {
+                    const existing = acc.find(a => a.groupId === curr.groupId)
+                    if (!existing || curr.level > existing.level) {
+                      const filtered = acc.filter(a => a.groupId !== curr.groupId)
+                      filtered.push(curr)
+                      return filtered
+                    }
+                    return acc
+                  }, [] as Achievement[])
+                  .sort((a, b) => b.level - a.level)
+                  .slice(0, 3)
 
-              return featured.map(achievement => (
-                <div 
-                  key={achievement.id} 
-                  className={`w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-xl border shadow-inner relative group/medal ${
-                    achievement.level === 3 ? 'border-yellow-500/50' : achievement.level === 2 ? 'border-gray-400/50' : 'border-surface-300'
-                  }`} 
-                  title={i18n.language === 'pt' ? achievement.title_pt : achievement.title}
-                >
-                  {achievement.icon}
-                  {/* Rank Badge */}
-                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white ${
-                    achievement.level === 3 ? 'bg-yellow-500' : achievement.level === 2 ? 'bg-gray-400' : 'bg-amber-700'
-                  }`}>
-                    {achievement.level}
+                return featured.map(achievement => (
+                  <div 
+                    key={achievement.id} 
+                    className={`w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-xl border shadow-inner relative group/medal ${
+                      achievement.level === 3 ? 'border-yellow-500/50' : achievement.level === 2 ? 'border-gray-400/50' : 'border-surface-300'
+                    }`} 
+                    title={i18n.language === 'pt' ? achievement.title_pt : achievement.title}
+                  >
+                    {achievement.icon}
+                    {/* Rank Badge */}
+                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white ${
+                      achievement.level === 3 ? 'bg-yellow-500' : achievement.level === 2 ? 'bg-gray-400' : 'bg-amber-700'
+                    }`}>
+                      {achievement.level}
+                    </div>
                   </div>
-                </div>
-              ))
-            })()}
-            {unlockedIds.length === 0 && (
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-2">{t('profile.noMedalsEquipped')}</p>
-            )}
+                ))
+              })()}
+              {unlockedIds.length === 0 && (
+                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-1 text-center w-full">{t('profile.noMedalsEquipped')}</p>
+              )}
+            </div>
           </div>
         </div>
         <Button variant="ghost" className="text-gray-500 hover:text-white" onClick={signOut}>
@@ -254,24 +256,24 @@ export function ProfilePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-surface-200 p-4 rounded-2xl text-center border border-surface-100">
-          <p className="text-2xl font-bold text-primary">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-surface-200 p-3 sm:p-4 rounded-2xl text-center border border-surface-100 flex flex-col items-center justify-center min-w-0">
+          <p className="text-2xl font-black text-primary leading-none mb-1.5">
             {workouts?.filter(w => w.isPublic).length || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{t('common.published')}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider leading-tight">{t('common.published')}</p>
         </div>
-        <div className="bg-surface-200 p-4 rounded-2xl text-center border border-surface-100">
-          <p className="text-2xl font-bold text-red-400">
+        <div className="bg-surface-200 p-3 sm:p-4 rounded-2xl text-center border border-surface-100 flex flex-col items-center justify-center min-w-0">
+          <p className="text-2xl font-black text-red-400 leading-none mb-1.5">
             {workouts?.reduce((sum, w) => sum + w.likes, 0) || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{t('common.likes')}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider leading-tight">{t('common.likes')}</p>
         </div>
-        <div className="bg-surface-200 p-4 rounded-2xl text-center border border-surface-100">
-          <p className="text-2xl font-bold text-blue-400">
+        <div className="bg-surface-200 p-3 sm:p-4 rounded-2xl text-center border border-surface-100 flex flex-col items-center justify-center min-w-0">
+          <p className="text-2xl font-black text-blue-400 leading-none mb-1.5">
             {workouts?.reduce((sum, w) => sum + w.saves, 0) || 0}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{t('common.saved')}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider leading-tight">{t('common.saved')}</p>
         </div>
       </div>
 

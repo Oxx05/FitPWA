@@ -3,7 +3,7 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { Button } from '@/shared/components/Button'
 import { getLevelProgress } from '@/shared/utils/gamification'
 import { GamificationManager } from '@/features/gamification/GamificationManager'
-import { AiWorkoutGenerator } from '@/features/workouts/AiWorkoutGenerator'
+
 import { Crown, TrendingUp, Flame, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { FeatureGate } from '../premium/FeatureGate'
@@ -66,7 +66,7 @@ export function Dashboard() {
               />
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-white h-auto py-0">
+          <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-white h-auto py-0 px-0 text-xs">
             {t('auth.logout')}
           </Button>
         </div>
@@ -148,10 +148,7 @@ export function Dashboard() {
         </motion.div>
       </div>
 
-      {/* AI Coach */}
-      <motion.div variants={itemVariants}>
-        <AiWorkoutGenerator />
-      </motion.div>
+
 
       <motion.div variants={itemVariants}>
         <FeatureGate featureName={t('dashboard.advancedMuscleAnalysis')}>

@@ -30,37 +30,43 @@ export function ConquestCard({ title, subtitle, value, label, achievementIcon, s
     }
   }
 
+  const isCompact = !showShare
+
   return (
-    <div className="flex flex-col gap-6 items-center p-2">
+    <div className="flex flex-col gap-6 items-center p-2 w-full">
       <div 
         ref={cardRef}
-        className="w-full max-w-[320px] aspect-[4/5] bg-[#0A0A0B] border-[12px] border-primary rounded-[40px] p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl"
+        className={`w-full max-w-[320px] bg-[#0A0A0B] border-primary flex flex-col justify-between relative overflow-hidden shadow-2xl ${
+          isCompact 
+            ? 'aspect-[4/3] border-[6px] rounded-[32px] p-6'
+            : 'aspect-[4/5] border-[12px] rounded-[40px] p-8'
+        }`}
       >
         {/* Design Elements */}
         <div className="absolute top-[-50px] left-[-50px] w-48 h-48 bg-primary/20 blur-[80px] rounded-full" />
         <div className="absolute bottom-[-50px] right-[-50px] w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full" />
         
         <div className="relative z-10 flex flex-col items-center text-center gap-2">
-          <div className="w-16 h-16 rounded-3xl bg-surface-100 flex items-center justify-center text-primary mb-4 border border-white/10 rotate-3">
-             {achievementIcon || <Trophy className="w-10 h-10" />}
+          <div className={`${isCompact ? 'w-14 h-14 mb-2' : 'w-16 h-16 mb-4'} rounded-3xl bg-surface-100 flex items-center justify-center text-primary border border-white/10 rotate-3`}>
+             {achievementIcon || <Trophy className={isCompact ? 'w-7 h-7' : 'w-10 h-10'} />}
           </div>
-          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">
+          <h2 className={`${isCompact ? 'text-[22px]' : 'text-3xl'} font-black text-white italic uppercase tracking-tighter leading-none`}>
             {title}
           </h2>
-          <p className="text-primary font-bold text-xs uppercase tracking-[0.2em]">{subtitle}</p>
+          <p className="text-primary font-bold text-[10px] uppercase tracking-[0.2em]">{subtitle}</p>
         </div>
 
-        <div className="relative z-10 flex flex-col items-center gap-1">
-          <span className="text-6xl font-black text-white italic tracking-tighter">{value}</span>
+        <div className="relative z-10 flex flex-col items-center gap-1 my-auto py-2">
+          <span className={`${isCompact ? 'text-5xl' : 'text-6xl'} font-black text-white italic tracking-tighter`}>{value}</span>
           <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{label}</span>
         </div>
 
-        <div className="relative z-10 flex justify-between items-center w-full pt-6 border-t border-white/10">
+        <div className={`relative z-10 flex justify-between items-center w-full border-t border-white/10 ${isCompact ? 'pt-4' : 'pt-6'}`}>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-primary flex items-center justify-center text-black font-black text-[10px]">FP</div>
+            <div className={`rounded-lg bg-primary flex items-center justify-center text-black font-black text-[10px] ${isCompact ? 'w-5 h-5' : 'w-6 h-6'}`}>FP</div>
             <span className="text-[10px] font-black text-white uppercase tracking-tighter italic">TitanPulse</span>
           </div>
-          <Crown className="w-4 h-4 text-primary opacity-50" />
+          <Crown className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} text-primary opacity-50`} />
         </div>
       </div>
 

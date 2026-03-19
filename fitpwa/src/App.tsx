@@ -48,7 +48,7 @@ function App() {
       <AuthProvider>
         <ActiveSessionProvider>
           <Router>
-            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-20 md:pb-0 md:pl-24">
+            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-32 md:pb-0 md:pl-24">
             <Navbar />
             <LevelUpOverlay />
             <AchievementCelebration />

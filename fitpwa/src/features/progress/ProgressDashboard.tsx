@@ -315,23 +315,23 @@ export function ProgressDashboard() {
 
       {/* 1RM Records Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" /> {t('progress.prsTitle')}
+            <Zap className="w-5 h-5 text-primary shrink-0" /> <span className="truncate">{t('progress.prsTitle')}</span>
           </h3>
-          <Link to="/records" className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
+          <Link to="/records" className="text-primary text-sm font-medium hover:underline flex items-center gap-1 shrink-0 px-3 py-1.5 bg-primary/10 rounded-xl transition-colors hover:bg-primary/20">
             {t('progress.viewAll')} <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {safeStats.prs.slice(0, 3).map((pr, idx) => (
-            <div key={idx} className="bg-surface-200 border border-surface-100 p-5 rounded-xl hover:border-primary/30 transition-all flex justify-between items-center group">
-              <div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">{pr.exercise_name}</p>
-                <p className="text-2xl font-bold text-white">{Math.round(pr.one_rep_max)} <span className="text-sm font-normal text-gray-500">kg</span></p>
+            <div key={idx} className="bg-surface-200 border border-surface-100 p-5 rounded-xl hover:border-primary/30 transition-all flex justify-between items-center group gap-4 overflow-hidden">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1 truncate">{pr.exercise_name}</p>
+                <p className="text-2xl font-bold text-white truncate">{Math.round(pr.one_rep_max)} <span className="text-sm font-normal text-gray-500">kg</span></p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-[10px] text-gray-500 uppercase font-bold">{t('progress.basedOn')}</p>
                 <p className="text-xs font-medium text-gray-300">{pr.weight_kg}kg × {pr.reps}</p>
               </div>

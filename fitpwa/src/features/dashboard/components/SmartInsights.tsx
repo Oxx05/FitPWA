@@ -101,10 +101,10 @@ export function SmartInsights() {
             transition={{ delay: i * 0.1 }}
             className="bg-surface-200/50 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-all group"
           >
-            <div className="bg-surface-100 p-2.5 rounded-xl group-hover:scale-110 transition-transform">
+            <div className="bg-surface-100 p-2.5 rounded-xl group-hover:scale-110 transition-transform shrink-0 mt-0.5">
               {insight.icon}
             </div>
-            <div>
+            <div className="flex-1">
               <h4 className="font-bold text-white text-sm">{insight.title}</h4>
               <p className="text-xs text-gray-500 leading-relaxed font-medium">{insight.desc}</p>
             </div>

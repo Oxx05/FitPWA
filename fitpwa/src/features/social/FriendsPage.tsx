@@ -148,7 +148,7 @@ export function FriendsPage() {
         </motion.div>
         
         {/* Modern Tabs */}
-        <div className="flex flex-wrap gap-2 bg-surface-200/50 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-fit border border-white/5">
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 bg-surface-200/50 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-fit border border-white/5">
           {[
             { id: 'mural', label: t('social.mural'), icon: Globe },
             { id: 'social', label: t('social.friends'), icon: Users },

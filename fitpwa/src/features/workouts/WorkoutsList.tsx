@@ -9,6 +9,7 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { useTranslation } from 'react-i18next'
 
 import { useOfflinePlans } from '@/shared/hooks/useOfflineData'
+import { AiWorkoutGenerator } from '@/features/workouts/AiWorkoutGenerator'
 import { supabase } from '@/shared/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/shared/contexts/ToastContext'
@@ -177,6 +178,10 @@ export function WorkoutsList() {
             </motion.div>
           </Link>
         ))}
+      </div>
+
+      <div className="my-8">
+        <AiWorkoutGenerator />
       </div>
 
       {/* Divider */}
