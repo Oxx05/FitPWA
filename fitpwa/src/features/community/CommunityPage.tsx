@@ -270,7 +270,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                       const { data: exercises } = await supabase
                         .from('plan_exercises')
                         .select(`
-                          id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg,
+                          id, exercise_id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg, is_superset,
                           exercises ( id, name, name_pt, muscle_groups )
                         `)
                         .eq('plan_id', workout.id)

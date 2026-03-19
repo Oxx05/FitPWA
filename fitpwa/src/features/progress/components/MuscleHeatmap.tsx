@@ -57,9 +57,10 @@ export function MuscleHeatmap() {
 
       const volume: MuscleVolume = {}
       sessions?.forEach(session => {
-        const sets = session.session_sets as unknown as Array<{ exercises: Array<{ muscle_groups: string[] }> | null }>
+        const sets = session.session_sets as any[]
         sets?.forEach(set => {
-          const muscles = set.exercises?.[0]?.muscle_groups || []
+          const exerciseData = Array.isArray(set.exercises) ? set.exercises[0] : set.exercises
+          const muscles = exerciseData?.muscle_groups || []
           muscles.forEach((m: string) => {
             volume[m] = (volume[m] || 0) + 1
           })

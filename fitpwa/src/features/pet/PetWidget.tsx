@@ -298,7 +298,7 @@ export function PetWidget() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center mt-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center mt-3 justify-between">
             <div className={`flex gap-1.5 ${(!canInteract() || mood === 'sleeping') ? 'opacity-50 pointer-events-none' : ''}`}>
               <button
                 onClick={() => handleInteract('bath')}
@@ -329,6 +329,13 @@ export function PetWidget() {
                 <Feather className="w-4 h-4" />
               </button>
             </div>
+            
+            <button
+              onClick={() => setShowSelector(!showSelector)}
+              className="text-[10px] uppercase font-bold text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-surface-100 bg-surface-100/50 hover:bg-surface-100 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
+            >
+              {t('gamification.changeMascot')}
+            </button>
           </div>
         </div>
 

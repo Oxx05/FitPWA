@@ -2141,7 +2141,10 @@ export function SessionScreen() {
             </Button>
             <Button
               variant="danger"
-              onClick={() => navigate('/workouts')}
+              onClick={() => {
+                localStorage.removeItem('titanpulse_active_session')
+                navigate('/workouts')
+              }}
               className="flex-1"
             >
               {t('common.cancel')}
