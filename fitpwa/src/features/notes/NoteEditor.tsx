@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
+import { useTranslation } from 'react-i18next'
 
 interface NoteEditorProps {
   initialContent?: string
@@ -12,6 +13,7 @@ interface NoteEditorProps {
 const AVAILABLE_TAGS = ['PR', 'Lesão', 'Fácil', 'Difícil', 'Foco', 'Cansado']
 
 export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCancel }: NoteEditorProps) {
+  const { t } = useTranslation()
   const [content, setContent] = useState(initialContent)
   const [tags, setTags] = useState<string[]>(initialTags)
   const [painLevel, setPainLevel] = useState(0)
@@ -27,17 +29,17 @@ export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCa
 
   return (
     <div className="bg-surface-200 border border-surface-100 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-      <h3 className="text-xl font-bold text-white">Adicionar Nota</h3>
+      <h3 className="text-xl font-bold text-white">{t('notes.addNote')}</h3>
       
       <textarea
         className="w-full bg-surface-100 border border-surface-200 rounded-lg p-3 text-white placeholder:text-gray-500 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-        placeholder="O que sentiste durante o exercício/sessão?"
+        placeholder={t('session.addNotePlaceholder')}
         value={content}
         onChange={e => setContent(e.target.value)}
       />
 
       <div>
-        <label className="text-sm text-gray-400 font-medium mb-2 block">Tags Rápidas</label>
+        <label className="text-sm text-gray-400 font-medium mb-2 block">{t('notes.quickTags')}</label>
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_TAGS.map(tag => (
             <button
@@ -58,7 +60,7 @@ export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCa
       {tags.includes('Lesão') && (
         <div className="animate-in slide-in-from-top-2 fade-in duration-200">
           <label className="text-sm text-gray-400 font-medium mb-2 flex justify-between">
-            <span>Nível de Dor</span>
+            <span>{t('notes.painLevel')}</span>
             <span className="text-error">{painLevel}/5</span>
           </label>
           <input 
@@ -73,7 +75,7 @@ export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCa
 
       <div>
         <label className="text-sm text-gray-400 font-medium mb-2 flex justify-between">
-          <span>Nível de Fadiga</span>
+          <span>{t('notes.fatigueLevel')}</span>
           <span className="text-primary">{fatigueLevel}/5</span>
         </label>
         <input 
@@ -87,10 +89,10 @@ export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCa
 
       <div className="flex justify-end gap-2 mt-2">
         <Button variant="ghost" onClick={onCancel} className="text-gray-400">
-          <X className="w-5 h-5 mr-1" /> Cancelar
+          <X className="w-5 h-5 mr-1" /> {t('common.cancel')}
         </Button>
         <Button onClick={handleSave}>
-          <Check className="w-5 h-5 mr-1" /> Guardar
+          <Check className="w-5 h-5 mr-1" /> {t('common.save')}
         </Button>
       </div>
     </div>

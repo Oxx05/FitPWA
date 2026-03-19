@@ -5,8 +5,10 @@ import { Trophy, Zap, Star, Gift, ChevronRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function LevelUpOverlay() {
+  const { t } = useTranslation()
   const { pendingLevelUp, clearPendingLevelUp } = useAuthStore()
 
   useEffect(() => {
@@ -23,9 +25,9 @@ export function LevelUpOverlay() {
   if (!pendingLevelUp) return null
 
   const rewards = [
-    { icon: <Zap className="w-5 h-5 text-yellow-400" />, text: "Aumento de stamina +5%" },
-    { icon: <Star className="w-5 h-5 text-primary" />, text: "Nova Badge de Nível" },
-    { icon: <Gift className="w-5 h-5 text-blue-400" />, text: "Acesso a Dicas de Performance" }
+    { icon: <Zap className="w-5 h-5 text-yellow-400" />, text: t('gamification.staminaBoost') },
+    { icon: <Star className="w-5 h-5 text-primary" />, text: t('gamification.newBadge') },
+    { icon: <Gift className="w-5 h-5 text-blue-400" />, text: t('gamification.performanceTips') }
   ]
 
   return (
@@ -45,12 +47,12 @@ export function LevelUpOverlay() {
         </motion.div>
         
         <div>
-          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Level Up!</h2>
-          <p className="text-gray-400 mt-1">Alcançaste o Nível <span className="text-primary font-bold">{pendingLevelUp}</span></p>
+          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">{t('gamification.levelUp')}</h2>
+          <p className="text-gray-400 mt-1">{t('gamification.reachedLevel')} <span className="text-primary font-bold">{pendingLevelUp}</span></p>
         </div>
 
         <div className="bg-surface-100 rounded-2xl p-4 space-y-3 text-left border border-surface-200">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">As tuas Recompensas</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-1">{t('gamification.yourRewards')}</p>
           <div className="space-y-2">
             {rewards.map((reward, i) => (
               <motion.div 
@@ -71,7 +73,7 @@ export function LevelUpOverlay() {
           onClick={clearPendingLevelUp}
           className="w-full bg-primary hover:bg-primary/90 text-black font-black uppercase italic gap-2"
         >
-          Continuar Jornada
+          {t('gamification.continueJourney')}
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

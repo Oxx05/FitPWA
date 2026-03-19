@@ -4,8 +4,10 @@ import { CheckCircle, Share2, TrendingUp, Trophy } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { ConquestCard } from '@/shared/components/ConquestCard'
+import { useTranslation } from 'react-i18next'
 
 export function SessionSummary() {
+  const { t } = useTranslation()
   const location = useLocation()
   const stats = location.state?.stats || { volume: 0, exercisesCount: 0, setsCount: 0 }
   const duration = location.state?.duration || 0
@@ -33,18 +35,18 @@ export function SessionSummary() {
 
       <div>
         <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent italic">
-          Treino Concluído!
+          {t('session.workoutCompleted')}
         </h1>
         <p className="text-primary font-bold mt-2 text-xl tracking-tighter italic">+ {xpGained} XP</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-left">
         <div className="bg-surface-200 p-4 rounded-xl border border-white/5 shadow-lg">
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Duração</p>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{t('session.duration')}</p>
           <p className="text-2xl font-black text-white italic">{formatTime(duration)}</p>
         </div>
         <div className="bg-surface-200 p-4 rounded-xl border border-white/5 shadow-lg">
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Volume Total</p>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{t('session.volume')}</p>
           <p className="text-2xl font-black text-white italic">{stats.volume.toLocaleString()} kg</p>
         </div>
       </div>
@@ -53,7 +55,7 @@ export function SessionSummary() {
         <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
         <div className="flex items-center gap-2 mb-4 relative z-10">
           <TrendingUp className="text-primary w-6 h-6" />
-          <h3 className="font-black text-lg text-white italic uppercase tracking-tighter">Novos PRs!</h3>
+          <h3 className="font-black text-lg text-white italic uppercase tracking-tighter">{t('session.newPrs')}</h3>
         </div>
         {newPrs.length > 0 ? (
           <ul className="space-y-3 relative z-10">
@@ -71,12 +73,12 @@ export function SessionSummary() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-500 font-medium italic">Sem novos PRs nesta sessão.</p>
+          <p className="text-sm text-gray-500 font-medium italic">{t('session.noNewPrs')}</p>
         )}
       </div>
 
       <div className="bg-surface-200 p-6 rounded-3xl border border-white/5 shadow-md">
-        <h3 className="text-white font-black italic uppercase tracking-tighter mb-4">Como te sentiste hoje?</h3>
+        <h3 className="text-white font-black italic uppercase tracking-tighter mb-4">{t('session.howDidYouFeel')}</h3>
         <div className="flex justify-around text-4xl">
           {['😫', '😕', '😐', '🙂', '🤩'].map(emoji => (
             <button
@@ -96,7 +98,7 @@ export function SessionSummary() {
           className="w-full text-black font-black h-14 uppercase tracking-tighter italic text-lg"
         >
           <Share2 className="w-5 h-5 mr-2" />
-          Partilhar Resultado
+          {t('session.shareResult')}
         </Button>
 
         {stats.exercisesCount > 0 && (
@@ -111,14 +113,14 @@ export function SessionSummary() {
             }}
           >
             <Button variant="ghost" className="w-full text-white border border-white/10 font-black h-14 uppercase tracking-tighter italic">
-              Converter para Plano
+              {t('session.convertToPlan')}
             </Button>
           </Link>
         )}
 
         <Link to="/dashboard">
           <Button variant="ghost" className="w-full text-gray-500 hover:text-white font-black uppercase tracking-tight">
-            Finalizar
+            {t('session.finish')}
           </Button>
         </Link>
       </div>
@@ -126,20 +128,20 @@ export function SessionSummary() {
       <Modal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title="Partilhar Conquista"
+        title={t('session.shareAchievement')}
         size="md"
         closeButton
       >
         <div className="flex flex-col items-center">
           <ConquestCard 
-            title={bestPr ? "Novo Recorde!" : "Treino Concluído"}
+            title={bestPr ? t('progress.newRecord') : t('session.workoutCompleted')}
             subtitle={bestPr ? bestPr.exerciseName : "TitanPulse Session"}
             value={bestPr ? `${Math.round(bestPr.oneRepMax || 0)}` : `${stats.volume}`}
-            label={bestPr ? "1RM ESTIMADO (kg)" : "VOLUME TOTAL (kg)"}
+            label={bestPr ? t('progress.estimated1rm') : t('social.feed.valueVolume')}
             achievementIcon={bestPr ? <Trophy className="w-10 h-10" /> : <TrendingUp className="w-10 h-10" />}
           />
-          <p className="text-[10px] text-gray-500 mt-4 uppercase font-black tracking-widest">
-            Dica: Guarda a imagem para partilhar no Instagram Stories!
+          <p className="text-[10px] text-gray-500 mt-4 uppercase font-black tracking-widest text-center">
+            {t('session.shareTip')}
           </p>
         </div>
       </Modal>

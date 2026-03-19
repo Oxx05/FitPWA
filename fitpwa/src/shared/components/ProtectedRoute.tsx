@@ -1,13 +1,15 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/authStore'
+import { useTranslation } from 'react-i18next'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, profile, isLoading } = useAuthStore()
   const location = useLocation()
+  const { t } = useTranslation()
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background text-white flex items-center justify-center">A verificar sessão...</div>
+    return <div className="min-h-screen bg-background text-white flex items-center justify-center">{t('authExtra.checkingSession')}</div>
   }
 
   if (!session) {

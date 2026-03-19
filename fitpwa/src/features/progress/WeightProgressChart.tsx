@@ -9,6 +9,7 @@ import {
   Legend,
 } from 'recharts'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import type { PersonalRecord } from '@/shared/types'
 
 interface WeightProgressChartProps {
@@ -16,6 +17,7 @@ interface WeightProgressChartProps {
 }
 
 export function WeightProgressChart({ records }: WeightProgressChartProps) {
+  const { t } = useTranslation()
   // Group by exercise and get weight progression over time
   const exerciseProgress = records.reduce(
     (acc, record) => {
@@ -67,7 +69,7 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
         className="p-6 bg-slate-900/50 border border-slate-800 rounded-lg"
       >
         <p className="text-slate-400 text-center">
-          Sem dados de progresso ainda. Complete alguns treinos para ver o gráfico!
+          {t('progress.noProgressData')}
         </p>
       </motion.div>
     )
@@ -111,7 +113,7 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
       animate={{ opacity: 1, y: 0 }}
       className="p-6 bg-slate-900/50 border border-slate-800 rounded-lg"
     >
-      <h3 className="text-lg font-semibold text-white mb-4">📈 Evolução de Peso</h3>
+      <h3 className="text-lg font-semibold text-white mb-4">📈 {t('session.evolution')}</h3>
 
       <div className="w-full h-80">
         <ResponsiveContainer width="100%" height="100%">

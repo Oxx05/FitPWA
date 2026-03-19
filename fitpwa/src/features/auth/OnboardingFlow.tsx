@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from './authStore'
 import { supabase } from '@/shared/lib/supabase'
 
 export function OnboardingFlow() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { session, profile, setProfile, isLoading: authLoading } = useAuthStore()
   
@@ -83,10 +85,10 @@ export function OnboardingFlow() {
 
         {step === 1 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-2xl font-bold text-white mb-2">Bem-vindo(a)!</h2>
-            <p className="text-gray-400 mb-6">Como te chamas?</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.welcome')}</h2>
+            <p className="text-gray-400 mb-6">{t('onboarding.step1Title')}</p>
             <Input 
-              placeholder="O teu nome ou apelido" 
+              placeholder={t('onboarding.step1Placeholder')} 
               value={name}
               onChange={e => setName(e.target.value)}
             />
@@ -95,32 +97,32 @@ export function OnboardingFlow() {
 
         {step === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-2xl font-bold text-white mb-2">Os teus objetivos</h2>
-            <p className="text-gray-400 mb-6">Ajuda-nos a personalizar o teu plano.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.yourGoals')}</h2>
+            <p className="text-gray-400 mb-6">{t('onboarding.goalsDesc')}</p>
             
             <div className="flex flex-col gap-4">
-              <label className="text-sm font-medium text-gray-300">Objetivo principal:</label>
+              <label className="text-sm font-medium text-gray-300">{t('onboarding.mainGoal')}</label>
               <select 
                 className="w-full bg-surface-100 border border-surface-200 text-white rounded-md h-10 px-3"
                 value={goal}
                 onChange={e => setGoal(e.target.value)}
               >
-                <option value="strength">Força</option>
-                <option value="hypertrophy">Hipertrofia</option>
-                <option value="endurance">Resistência</option>
-                <option value="weight_loss">Perda de peso</option>
-                <option value="general">Fitness Geral</option>
+                <option value="strength">{t('onboarding.goalStrength')}</option>
+                <option value="hypertrophy">{t('onboarding.goalHypertrophy')}</option>
+                <option value="endurance">{t('onboarding.goalEndurance')}</option>
+                <option value="weight_loss">{t('onboarding.goalLoseWeight')}</option>
+                <option value="general">{t('onboarding.goalGeneral')}</option>
               </select>
 
-              <label className="text-sm font-medium text-gray-300 mt-2">Nível de experiência:</label>
+              <label className="text-sm font-medium text-gray-300 mt-2">{t('onboarding.experienceLevel')}</label>
               <select 
                 className="w-full bg-surface-100 border border-surface-200 text-white rounded-md h-10 px-3"
                 value={experience}
                 onChange={e => setExperience(e.target.value)}
               >
-                <option value="beginner">Iniciante</option>
-                <option value="intermediate">Intermédio</option>
-                <option value="advanced">Avançado</option>
+                <option value="beginner">{t('onboarding.levelBeginner')}</option>
+                <option value="intermediate">{t('onboarding.levelIntermediate')}</option>
+                <option value="advanced">{t('onboarding.levelAdvanced')}</option>
               </select>
             </div>
           </div>
@@ -128,16 +130,16 @@ export function OnboardingFlow() {
 
         {step === 3 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-2xl font-bold text-white mb-2">Equipamento</h2>
-            <p className="text-gray-400 mb-6">Onde costumas treinar?</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.equipment')}</h2>
+            <p className="text-gray-400 mb-6">{t('onboarding.whereTrain')}</p>
             
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: 'barbell', label: 'Barras' },
-                { id: 'dumbbell', label: 'Halteres' },
-                { id: 'bodyweight', label: 'Peso do Corpo' },
-                { id: 'cables', label: 'Cabos/Polias' },
-                { id: 'machines', label: 'Máquinas' }
+                { id: 'barbell', label: t('onboarding.eqBarbell') },
+                { id: 'dumbbell', label: t('onboarding.eqDumbbell') },
+                { id: 'bodyweight', label: t('onboarding.eqBodyweight') },
+                { id: 'cables', label: t('onboarding.eqCables') },
+                { id: 'machines', label: t('onboarding.eqMachines') }
               ].map(eq => (
                 <button
                   key={eq.id}
@@ -155,13 +157,13 @@ export function OnboardingFlow() {
 
         {step === 4 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <h2 className="text-2xl font-bold text-white mb-2">Tudo pronto!</h2>
-            <p className="text-gray-400 mb-6">Baseado nas tuas escolhas, vamos criar o teu perfil e sugerir os melhores planos para ti.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.allSet')}</h2>
+            <p className="text-gray-400 mb-6">{t('onboarding.allSetDesc')}</p>
             
             <div className="bg-surface-100 p-4 rounded-lg flex flex-col gap-2">
-              <span className="text-sm text-gray-400">Objetivo: <strong className="text-white capitalize">{goal.replace('_',' ')}</strong></span>
-              <span className="text-sm text-gray-400">Nível: <strong className="text-white capitalize">{experience}</strong></span>
-              <span className="text-sm text-gray-400">Equipamento: <strong className="text-white">{equipment.length ? equipment.join(', ') : 'Nenhum especifico'}</strong></span>
+              <span className="text-sm text-gray-400">{t('common.goal')}: <strong className="text-white capitalize">{t(`onboarding.goal${goal.charAt(0).toUpperCase() + goal.slice(1).replace('_', 'L')}`)}</strong></span>
+              <span className="text-sm text-gray-400">{t('common.level')}: <strong className="text-white capitalize">{t(`onboarding.level${experience.charAt(0).toUpperCase() + experience.slice(1)}`)}</strong></span>
+              <span className="text-sm text-gray-400">{t('onboarding.equipment')}: <strong className="text-white">{equipment.length ? equipment.map(e => t(`onboarding.eq${e.charAt(0).toUpperCase() + e.slice(1)}`)).join(', ') : t('onboarding.noneSpecific')}</strong></span>
             </div>
           </div>
         )}
@@ -174,17 +176,17 @@ export function OnboardingFlow() {
             className={`gap-2 ${step === 1 ? 'invisible' : ''}`}
           >
             <ChevronLeft className="w-4 h-4" />
-            Voltar
+            {t('common.back')}
           </Button>
 
           {step < 4 ? (
             <Button onClick={handleNext} disabled={step === 1 && !name} className="gap-2">
-              Continuar
+              {t('common.next')}
               <ChevronRight className="w-4 h-4" />
             </Button>
           ) : (
             <Button onClick={finishOnboarding} isLoading={isLoading} className="gap-2">
-              Começar a Treinar!
+              {t('onboarding.finish')}
               <ChevronRight className="w-4 h-4" />
             </Button>
           )}

@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Trophy, Star, ChevronRight } from 'lucide-react'
 import type { Achievement } from './useAchievementsStore'
 import { SocialShare } from '../progress/SocialShare'
+import { useTranslation } from 'react-i18next'
 
 interface LevelUpModalProps {
   level: number
@@ -9,6 +10,7 @@ interface LevelUpModalProps {
 }
 
 export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
+  const { t } = useTranslation()
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -30,12 +32,12 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
               <Star className="w-12 h-12 text-black fill-black" />
             </motion.div>
 
-            <h2 className="text-3xl font-black text-white mb-2">LEVEL UP!</h2>
-            <p className="text-gray-400 mb-6 font-medium">Chegaste ao nível <span className="text-primary text-xl">{level}</span></p>
+            <h2 className="text-3xl font-black text-white mb-2">{t('gamification.levelUp')}</h2>
+            <p className="text-gray-400 mb-6 font-medium">{t('gamification.reachedLevel')} <span className="text-primary text-xl">{level}</span></p>
 
             <div className="p-4 bg-surface-100 rounded-2xl border border-surface-200 mb-8">
-              <p className="text-sm text-gray-300">Nova recompensa desbloqueada:</p>
-              <p className="text-primary font-bold">Inígnia de Veterano</p>
+              <p className="text-sm text-gray-300">{t('gamification.rewardUnlocked')}</p>
+              <p className="text-primary font-bold">{t('gamification.veteranBadge')}</p>
             </div>
 
             <div className="flex gap-2">
@@ -43,7 +45,7 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
                 onClick={onClose}
                 className="flex-1 h-12 bg-primary text-black font-bold rounded-xl hover:bg-primary-hover active:scale-95 transition-all flex items-center justify-center gap-2"
               >
-                Continuar
+                {t('common.continue')}
                 <ChevronRight className="w-4 h-4" />
               </button>
               <SocialShare 
@@ -64,6 +66,7 @@ interface AchievementToastProps {
 }
 
 export function AchievementToast({ achievement, onClose }: AchievementToastProps) {
+  const { t } = useTranslation()
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}
@@ -75,7 +78,7 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
       <div className="text-4xl">{achievement.icon}</div>
       <div className="flex-grow">
         <div className="flex items-center gap-1 text-primary text-xs font-bold uppercase tracking-wider mb-1">
-          <Trophy className="w-3 h-3" /> Conquista Desbloqueada
+          <Trophy className="w-3 h-3" /> {t('gamification.achievementUnlocked')}
         </div>
         <h4 className="text-white font-bold leading-tight">{achievement.title}</h4>
         <p className="text-gray-400 text-xs mt-1">{achievement.description}</p>

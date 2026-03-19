@@ -104,8 +104,8 @@ export function MuscleHeatmap() {
   return (
     <div className="bg-surface-200/50 border border-white/5 rounded-3xl p-6 flex flex-col items-center gap-6">
       <div className="text-center">
-        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Heatmap Muscular</h3>
-        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Últimos 7 dias</p>
+        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{t('progress.muscleHeatmap')}</h3>
+        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{t('progress.last7Days')}</p>
       </div>
 
       <div className="relative w-full max-w-[240px] aspect-[2/3]">
@@ -135,7 +135,7 @@ export function MuscleHeatmap() {
           {[10, 6, 3, 0].map((v, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getColor(v) }} />
-              <span className="text-[8px] text-gray-500 font-bold uppercase">{v === 0 ? 'Frio' : v >= 10 ? 'Elite' : 'Ativo'}</span>
+              <span className="text-[8px] text-gray-500 font-bold uppercase">{v === 0 ? t('progress.cold') : v >= 10 ? t('progress.elite') : t('progress.active')}</span>
             </div>
           ))}
         </div>

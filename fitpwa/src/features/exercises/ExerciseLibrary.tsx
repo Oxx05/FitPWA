@@ -67,7 +67,7 @@ export function ExerciseLibrary() {
   const muscleOptions = useMemo(() => {
     const uniqueMuscles = Array.from(new Set(exercises?.flatMap(e => e.muscle_groups) || []))
     return [
-      { value: 'all', label: 'Todos os Músculos' },
+      { value: 'all', label: t('common.all') },
       ...uniqueMuscles.map(m => ({ value: m, label: m }))
     ]
   }, [exercises])
@@ -75,14 +75,14 @@ export function ExerciseLibrary() {
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 pb-24">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-white">Exercícios</h1>
-        <p className="text-gray-400">Encontra a execução perfeita para cada movimento.</p>
+        <h1 className="text-3xl font-bold text-white">{t('exercisesExtra.libraryTitle')}</h1>
+        <p className="text-gray-400">{t('exercisesExtra.librarySubtitle')}</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-grow">
           <Input 
-            placeholder="Pesquisar exercício..."
+            placeholder={t('session.searchExercisePlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
