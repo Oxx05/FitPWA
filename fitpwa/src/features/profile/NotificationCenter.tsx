@@ -5,7 +5,8 @@ import { Modal } from '@/shared/components/Modal'
 import { Bell, Trash2, Zap, Clock, Trophy, Target } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { ptBR, enUS } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 
 interface Notification {
   id: string
@@ -22,8 +23,11 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
+  const { t, i18n } = useTranslation()
   const { profile } = useAuthStore()
   const queryClient = useQueryClient()
+
+  const currentLocale = i18n.language === 'pt' ? ptBR : enUS
 
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications', profile?.id],
@@ -76,21 +80,21 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Notificações"
+      title={t('profile.notificationsTitle')}
       size="md"
       closeButton
     >
       <div className="space-y-4 max-h-[70vh] flex flex-col">
         <div className="flex justify-between items-center px-1">
           <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-            Histórico Recente
+            {t('profile.recentHistory')}
           </p>
           {notifications && notifications.some(n => !n.is_read) && (
             <button 
               onClick={() => markAllAsRead.mutate()}
               className="text-xs text-primary hover:underline font-bold"
             >
-              Marcar lidas
+              {t('profile.markAsRead')}
             </button>
           )}
         </div>
@@ -99,7 +103,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
           {isLoading ? (
             <div className="py-20 text-center">
               <Clock className="w-8 h-8 text-gray-600 animate-spin mx-auto mb-2" />
-              <p className="text-sm text-gray-500 italic">A carregar notificações...</p>
+              <p className="text-sm text-gray-500 italic">{t('profile.loadingNotifications')}</p>
             </div>
           ) : notifications && notifications.length > 0 ? (
             <AnimatePresence mode="popLayout">
@@ -128,7 +132,7 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
                           {notif.title}
                         </h4>
                         <span className="text-[10px] text-gray-500 whitespace-nowrap mt-0.5">
-                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ptBR })}
+                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: currentLocale })}
                         </span>
                       </div>
                       <p className={`text-xs mt-1 leading-relaxed ${notif.is_read ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -151,8 +155,8 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
           ) : (
             <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
               <Bell className="w-12 h-12 text-gray-700 mx-auto mb-4 opacity-20" />
-              <p className="text-gray-500 text-sm">Ainda não tens notificações.</p>
-              <p className="text-xs text-gray-600 mt-1">Conquistas e segredos aparecem aqui! 😉</p>
+              <p className="text-gray-500 text-sm">{t('profile.noNotifications')}</p>
+              <p className="text-xs text-gray-600 mt-1">{t('profile.notificationsDesc')}</p>
             </div>
           )}
         </div>

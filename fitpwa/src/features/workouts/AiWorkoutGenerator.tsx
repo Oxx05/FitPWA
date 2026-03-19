@@ -8,32 +8,22 @@ import { useAuthStore } from '../auth/authStore'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
 import { useTranslation } from 'react-i18next'
 
-const SUGGESTION_CHIPS_PT = [
-  'Costas e tríceps, apenas halteres e elásticos, 30 min',
-  'Pernas para hipertrofia, mas tenho dores nos joelhos',
-  'Treino de 20 min sem equipamento (apenas peso corporal)',
-  'Peito e ombros pesados, 45 min, num ginásio completo',
-  'Cardio e abdominais intensos para suar rápido',
-  'Corpo inteiro avançado, 60 min, focado em força',
-  'Braços e glúteos, iniciante, tenho dores nas costas',
-]
-
-const SUGGESTION_CHIPS_EN = [
-  'Back and triceps, only dumbbells and bands, 30 min',
-  'Legs for hypertrophy, but I have knee pain',
-  '20 min workout bodyweight only (no equipment)',
-  'Heavy chest and shoulders, 45 min, full gym access',
-  'Intense cardio and abs to sweat fast',
-  'Full body advanced, 60 min, strength focused',
-  'Arms and glutes, beginner, I have back pain',
+const SUGGESTION_CHIPS = [
+  'ai.chips.backTriceps',
+  'ai.chips.legsKnee',
+  'ai.chips.bodyweightOnly',
+  'ai.chips.heavyChest',
+  'ai.chips.cardioAbs',
+  'ai.chips.fullBodyAdv',
+  'ai.chips.armsGlutes',
 ]
 
 export function AiWorkoutGenerator() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
-  const chips = i18n.language?.startsWith('en') ? SUGGESTION_CHIPS_EN : SUGGESTION_CHIPS_PT
+  const chips = SUGGESTION_CHIPS.map(key => t(key))
 
   const [isOpen, setIsOpen] = useState(false)
   const [prompt, setPrompt] = useState('')

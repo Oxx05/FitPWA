@@ -25,13 +25,21 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: 'FitPWA',
-        short_name: 'FitPWA',
+        name: 'TitanPulse',
+        short_name: 'TitanPulse',
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
         display: 'standalone',
         orientation: 'portrait',
         categories: ['fitness', 'health'],
+        icons: [
+          {
+            src: 'logo_tp.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ],
         screenshots: []
       }
     })

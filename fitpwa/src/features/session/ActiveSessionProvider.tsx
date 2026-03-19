@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { type ActiveSessionRecord, db } from '@/db/fitpwa.db'
+import { type ActiveSessionRecord, db } from '@/db/titanpulse.db'
 import { useAuthStore } from '../auth/authStore'
 import { v4 as uuidv4 } from 'uuid'
 import { XP_PER_SET, XP_PER_EXERCISE, XP_PER_WORKOUT } from '@/shared/utils/gamification'

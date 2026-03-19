@@ -165,7 +165,7 @@ export function QuickWorkout() {
 
   const startWorkoutMutation = useMutation({
     mutationFn: async () => {
-      const raw = localStorage.getItem('fitpwa_active_session')
+      const raw = localStorage.getItem('titanpulse_active_session')
       if (raw) {
         const session = JSON.parse(raw)
         setActiveSession(session)
@@ -190,7 +190,7 @@ export function QuickWorkout() {
   })
 
   const confirmDiscardAndStart = () => {
-    localStorage.removeItem('fitpwa_active_session')
+    localStorage.removeItem('titanpulse_active_session')
     setShowActiveSessionModal(false)
     startWorkoutMutation.mutate()
   }

@@ -1,5 +1,5 @@
 /**
- * Monitoring Service for FitPWA
+ * Monitoring Service for TitanPulse
  *
  * A lightweight wrapper around error/event tracking that can be plugged
  * into an external service (e.g. Sentry, LogRocket, Posthog) when ready.

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { Trophy, Users, Globe } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface LeaderboardUser {
@@ -13,6 +14,7 @@ interface LeaderboardUser {
 }
 
 export function LeaderboardPage({ hideHeader = false }: { hideHeader?: boolean }) {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: globalLeaderboard, isLoading: globalLoading } = useQuery({
@@ -147,7 +149,7 @@ export function LeaderboardPage({ hideHeader = false }: { hideHeader?: boolean }
         <div className="text-center space-y-2">
           <Trophy className="w-12 h-12 text-primary mx-auto mb-2" />
           <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter">Leaderboard</h1>
-          <p className="text-gray-400">Vê quem são os atletas mais dedicados da comunidade.</p>
+          <p className="text-gray-400">{t('social.leaderboardSubtitle')}</p>
         </div>
       )}
 
@@ -170,7 +172,7 @@ export function LeaderboardPage({ hideHeader = false }: { hideHeader?: boolean }
         <div className="space-y-6">
           <div className="flex items-center gap-2 px-2">
             <Users className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-bold text-white uppercase tracking-wider">Amigos</h2>
+            <h2 className="text-xl font-bold text-white uppercase tracking-wider">{t('social.friends')}</h2>
           </div>
 
           {friendsLoading ? (
@@ -179,7 +181,7 @@ export function LeaderboardPage({ hideHeader = false }: { hideHeader?: boolean }
             </div>
           ) : friendsLeaderboard && friendsLeaderboard.length > 1 ? renderList(friendsLeaderboard) : (
             <div className="bg-surface-200 border border-dashed border-surface-100 p-12 rounded-2xl text-center">
-              <p className="text-gray-500 text-sm">Adiciona amigos para veres como te comparas com eles.</p>
+              <p className="text-gray-500 text-sm">{t('social.noFriends')}</p>
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useMemo } from 'react'
-import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2 } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2, Heart, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { motion } from 'framer-motion'
@@ -8,15 +9,84 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { useTranslation } from 'react-i18next'
 
 import { useOfflinePlans } from '@/shared/hooks/useOfflineData'
+import { supabase } from '@/shared/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/shared/contexts/ToastContext'
 
 export function WorkoutsList() {
   const { profile } = useAuthStore()
   const { t } = useTranslation()
   
   const { data: plans, isLoading } = useOfflinePlans(profile?.id)
+  const queryClient = useQueryClient()
+  const { showToast } = useToast()
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [planToDelete, setPlanToDelete] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const displayPlans = useMemo(() => {
+    if (!plans) return []
+    if (!showFavoritesOnly) return plans
+    return plans.filter((p: any) => p.is_favorite)
+  }, [plans, showFavoritesOnly])
+
+  const toggleFavorite = async (planId: string, currentValue: boolean) => {
+    const newValue = !currentValue
+    // Optimistic update
+    queryClient.setQueryData(['plans', profile?.id], (old: any[]) =>
+      old?.map((p: any) => p.id === planId ? { ...p, is_favorite: newValue } : p)
+    )
+    const { error } = await supabase
+      .from('workout_plans')
+      .update({ is_favorite: newValue })
+      .eq('id', planId)
+    if (error) {
+      // Rollback
+      queryClient.setQueryData(['plans', profile?.id], (old: any[]) =>
+        old?.map((p: any) => p.id === planId ? { ...p, is_favorite: currentValue } : p)
+      )
+    } else {
+      showToast(newValue ? t('workouts.addedToFavorites') : t('workouts.removedFromFavorites'), 'success')
+    }
+  }
+
+  const confirmDelete = (plan: any) => {
+    setPlanToDelete(plan)
+  }
+
+  const handleDeletePlan = async () => {
+    if (!planToDelete || !profile?.id) return
+    
+    try {
+      setIsDeleting(true)
+      // Check if it's a "saved" workout (different table) or owned
+      // In this app, WorkoutsList currently only shows owned 'workout_plans'
+      // but we add a check just in case.
+      
+      const { error } = await supabase
+        .from('workout_plans')
+        .delete()
+        .eq('id', planToDelete.id)
+        .eq('user_id', profile.id)
+
+      if (error) throw error
+
+      queryClient.setQueryData(['plans', profile.id], (old: any[]) =>
+        old?.filter((p: any) => p.id !== planToDelete.id)
+      )
+      
+      showToast(t('workouts.planDeletedSuccess'), 'success')
+      setPlanToDelete(null)
+    } catch (err) {
+      console.error('Error deleting plan:', err)
+      showToast(t('workouts.planDeletedError'), 'error')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
   
   const activeSession = useMemo(() => {
-    const raw = localStorage.getItem('fitpwa_active_session')
+    const raw = localStorage.getItem('titanpulse_active_session')
     if (!raw) return null
     try {
       return JSON.parse(raw)
@@ -119,14 +189,31 @@ export function WorkoutsList() {
         </div>
       </div>
 
+      {/* Favorites Filter */}
+      {plans && plans.length > 0 && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-sm font-bold ${
+              showFavoritesOnly
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-surface-200 border-surface-100 text-gray-400 hover:border-primary/50'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-red-400' : ''}`} />
+            {t('workouts.favorites')}
+          </button>
+        </div>
+      )}
+
       {/* My Workouts */}
       {isLoading ? (
         <div className="flex justify-center p-12">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
-      ) : (plans && plans.length > 0) ? (
+      ) : (displayPlans && displayPlans.length > 0) ? (
         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {plans.map((plan, idx) => (
+          {displayPlans.map((plan: any, idx: number) => (
             <motion.div
               key={plan.id}
               layout
@@ -143,11 +230,19 @@ export function WorkoutsList() {
                 <div className="p-3 bg-surface-100 rounded-2xl text-primary group-hover:scale-110 transition-transform">
                   <Dumbbell className="w-6 h-6" />
                 </div>
-                {idx === 0 && (
-                  <span className="bg-primary text-black text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">
-                    {t('workouts.recent')}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(plan.id, !!plan.is_favorite) }}
+                    className="p-2 rounded-xl hover:bg-red-500/10 transition-colors"
+                  >
+                    <Heart className={`w-5 h-5 transition-colors ${plan.is_favorite ? 'fill-red-400 text-red-400' : 'text-gray-600 hover:text-red-400'}`} />
+                  </button>
+                  {idx === 0 && (
+                    <span className="bg-primary text-black text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-tighter">
+                      {t('workouts.recent')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <h3 className="text-xl font-black text-white capitalize italic tracking-tighter mb-2 group-hover:text-primary transition-colors">
@@ -168,9 +263,18 @@ export function WorkoutsList() {
                 <div className="flex gap-2">
                   <Link to={`/workouts/${plan.id}/edit`}>
                     <Button size="sm" variant="secondary" className="rounded-xl px-3 h-10 bg-surface-100 hover:bg-surface-200 border border-white/5" title={t('common.edit')}>
-                      <Plus className="w-4 h-4 rotate-45" />
+                      <Pencil className="w-4 h-4 text-primary" />
                     </Button>
                   </Link>
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="rounded-xl px-3 h-10 bg-surface-100 hover:text-red-400 border border-white/5" 
+                    title={t('common.delete')}
+                    onClick={(e) => { e.stopPropagation(); confirmDelete(plan) }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                   <Link to={`/workouts/${plan.id}/start`}>
                     <Button size="sm" variant="primary" className="rounded-xl font-black uppercase tracking-tighter text-xs h-10 px-6 shadow-lg shadow-primary/10 hover:scale-105 active:scale-95 transition-all">
                       {t('workouts.start')}
@@ -189,6 +293,46 @@ export function WorkoutsList() {
           description={t('workouts.noPlanDescription')}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!planToDelete}
+        onClose={() => setPlanToDelete(null)}
+        title={t('workouts.deletePlanTitle')}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-medium">
+              {t('workouts.deleteConfirmText', { name: planToDelete?.name })}
+            </p>
+          </div>
+          
+          <p className="text-xs text-gray-500 italic">
+            {t('workouts.deleteWarningText')}
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setPlanToDelete(null)}
+              disabled={isDeleting}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={handleDeletePlan}
+              isLoading={isDeleting}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

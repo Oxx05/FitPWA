@@ -12,6 +12,7 @@ import { motion } from 'framer-motion'
 import { MuscleHeatmap } from '../progress/components/MuscleHeatmap'
 import { SmartInsights } from './components/SmartInsights'
 import { CommunityChallenge } from '../social/components/CommunityChallenge'
+import { PetWidget } from '../pet/PetWidget'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -77,6 +78,11 @@ export function Dashboard() {
 
       <motion.div variants={itemVariants}>
         <SmartInsights />
+      </motion.div>
+
+      {/* Virtual Pet */}
+      <motion.div variants={itemVariants}>
+        <PetWidget />
       </motion.div>
 
       {/* Premium CTA */}

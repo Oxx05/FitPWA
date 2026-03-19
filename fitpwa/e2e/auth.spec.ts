@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FitPWA Auth Flows', () => {
+test.describe('TitanPulse Auth Flows', () => {
   test('should display the login page', async ({ page }) => {
     await page.goto('/login');
 

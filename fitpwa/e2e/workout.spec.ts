@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FitPWA Workout Flows', () => {
+test.describe('TitanPulse Workout Flows', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });

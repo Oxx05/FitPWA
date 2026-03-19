@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { subDays } from 'date-fns'
@@ -9,23 +10,26 @@ interface MuscleVolume {
   [key: string]: number
 }
 
-// Map database muscle groups to heatmap categories
+// Map database muscle groups (internal keys) to heatmap categories
 const CATEGORY_MAP: Record<string, string> = {
-  'Peito': 'chest',
-  'Costas': 'back',
-  'Ombros': 'shoulders',
-  'Bíceps': 'arms',
-  'Tríceps': 'arms',
-  'Pernas': 'legs',
-  'Quadríceps': 'legs',
-  'Isquiotibiais': 'legs',
-  'Glúteos': 'legs',
-  'Gémeos': 'legs',
-  'Abdominais': 'core',
-  'Lombar': 'core'
+  chest: 'chest',
+  back: 'back',
+  shoulders: 'shoulders',
+  biceps: 'arms',
+  triceps: 'arms',
+  forearms: 'arms',
+  legs: 'legs',
+  quads: 'legs',
+  hamstrings: 'legs',
+  glutes: 'legs',
+  calves: 'legs',
+  abs: 'core',
+  core: 'core',
+  obliques: 'core'
 }
 
 export function MuscleHeatmap() {
+  const { t } = useTranslation()
   const { profile } = useAuthStore()
 
   const { data: muscleData, isLoading } = useQuery({
@@ -90,7 +94,7 @@ export function MuscleHeatmap() {
 
     Object.entries(muscleData).forEach(([dbMuscle, count]) => {
       const cat = CATEGORY_MAP[dbMuscle]
-      if (cat) norm[cat] += count
+      if (cat) norm[cat] += count as number
     })
     return norm
   }, [muscleData])
@@ -141,7 +145,9 @@ export function MuscleHeatmap() {
         {Object.entries(normalizedVolume).map(([cat, val]) => (
           val > 0 && (
             <div key={cat} className="bg-surface-100 px-3 py-1.5 rounded-xl border border-white/5 flex justify-between items-center">
-              <span className="text-[10px] uppercase font-black text-gray-400 tracking-tighter">{cat}</span>
+              <span className="text-[10px] uppercase font-black text-gray-400 tracking-tighter">
+                {t(`common.muscles.${cat}`)}
+              </span>
               <span className="text-xs font-black text-primary">{val} sets</span>
             </div>
           )

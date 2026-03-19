@@ -56,7 +56,7 @@ export function LoginPage() {
     <div className="min-h-screen flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-sm flex flex-col gap-6 bg-surface-200 p-8 rounded-2xl shadow-xl">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-primary mb-2">FitPWA</h1>
+          <h1 className="text-3xl font-bold text-primary mb-2">TitanPulse</h1>
           <p className="text-gray-400">{t('auth.loginSubtitle')}</p>
         </div>
 
@@ -64,7 +64,7 @@ export function LoginPage() {
           <Input 
             label={t('auth.email')}
             type="email" 
-            placeholder="exemplo@fitpwa.com"
+            placeholder="exemplo@titanpulse.com"
             {...register('email')}
             error={errors.email?.message}
           />

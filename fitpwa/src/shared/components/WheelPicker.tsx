@@ -48,7 +48,7 @@ export function WheelPicker({ options, value, onChange, label, className }: Whee
     <div className={cn("flex flex-col items-center gap-1", className)}>
       {label && <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{label}</span>}
       
-      <div className="relative h-[132px] w-16 bg-surface-200/50 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
+      <div className="relative h-[132px] w-20 bg-surface-200/50 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
         {/* Selection Highlight */}
         <div className="absolute top-[44px] left-0 right-0 h-[44px] bg-primary/10 border-y border-primary/20 pointer-events-none z-10" />
         
@@ -60,7 +60,7 @@ export function WheelPicker({ options, value, onChange, label, className }: Whee
         <div 
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-full overflow-y-scroll no-scrollbar snap-y snap-mandatory py-[44px]"
+          className="h-full overflow-y-scroll snap-y snap-mandatory py-[44px] cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{ scrollBehavior: 'smooth' }}
         >
           {options.map((option) => (

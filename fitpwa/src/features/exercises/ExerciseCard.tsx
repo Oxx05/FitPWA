@@ -1,4 +1,5 @@
 import { cn } from '@/shared/utils/cn'
+import { useTranslation } from 'react-i18next'
 
 interface ExerciseCardProps {
   exercise: {
@@ -13,6 +14,7 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise, onClick, selected }: ExerciseCardProps) {
+  const { t } = useTranslation()
   return (
     <div 
       onClick={onClick}
@@ -25,7 +27,7 @@ export function ExerciseCard({ exercise, onClick, selected }: ExerciseCardProps)
         {exercise.gif_url ? (
           <img src={exercise.gif_url} alt={exercise.name} className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <span className="text-gray-500 text-xs">Sem Imagem</span>
+          <span className="text-gray-500 text-xs">{t('workouts.noImage')}</span>
         )}
       </div>
       <div className="flex-grow">

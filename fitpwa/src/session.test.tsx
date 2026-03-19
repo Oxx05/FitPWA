@@ -5,7 +5,7 @@ import { useActiveSession } from './features/session/ActiveSessionContext'
 import React from 'react'
 
 // Mock Dexie DB
-vi.mock('@/db/fitpwa.db', () => ({
+vi.mock('@/db/titanpulse.db', () => ({
   db: {
     activeSessions: {
       where: vi.fn(() => ({

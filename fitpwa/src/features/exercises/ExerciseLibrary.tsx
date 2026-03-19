@@ -1,27 +1,61 @@
 import { useState, useMemo } from 'react'
-import { Search, Filter, SearchIcon, Loader2 } from 'lucide-react'
+import { Search, Filter, SearchIcon, Loader2, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ExerciseCard } from './ExerciseCard'
 import { Input } from '@/shared/components/Input'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { CustomSelect } from '@/shared/components/CustomSelect'
+import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 
 import { useOfflineExercises } from '@/shared/hooks/useOfflineData'
 import { Modal } from '@/shared/components/Modal'
 import { ExerciseEvolution } from './components/ExerciseEvolution'
+import { supabase } from '@/shared/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/shared/contexts/ToastContext'
+import { useAuthStore } from '@/features/auth/authStore'
+import { useTranslation } from 'react-i18next'
 
 interface Exercise {
   id: string
   name: string
   muscle_groups: string[]
+  is_custom?: boolean
+  created_by?: string
 }
 
 export function ExerciseLibrary() {
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState<string>('all')
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
+  const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const { data: exercises, isLoading } = useOfflineExercises()
+  const queryClient = useQueryClient()
+  const { showToast } = useToast()
+  const { user } = useAuthStore()
+  const { t } = useTranslation()
+
+  const handleDeleteCustomExercise = async () => {
+    if (!exerciseToDelete) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('exercises')
+        .delete()
+        .eq('id', exerciseToDelete.id)
+      if (error) throw error
+      queryClient.invalidateQueries({ queryKey: ['exercises'] })
+      showToast(t('workouts.customExerciseDeleted'), 'success')
+      setExerciseToDelete(null)
+    } catch (err) {
+      console.error('Error deleting exercise:', err)
+      showToast(t('common.error'), 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const filteredExercises = useMemo(() => exercises?.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase())
@@ -79,11 +113,21 @@ export function ExerciseLibrary() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
+                className="relative group/card"
               >
                 <ExerciseCard 
                   exercise={exercise} 
                   onClick={() => setSelectedExercise(exercise)}
                 />
+                {exercise.is_custom && exercise.created_by === user?.id && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setExerciseToDelete(exercise) }}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-200/90 border border-surface-100 text-gray-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all opacity-0 group-hover/card:opacity-100"
+                    title={t('workouts.deleteCustomExercise')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -112,6 +156,16 @@ export function ExerciseLibrary() {
           />
         )}
       </Modal>
+      <ConfirmDialog
+        isOpen={!!exerciseToDelete}
+        onClose={() => setExerciseToDelete(null)}
+        onConfirm={handleDeleteCustomExercise}
+        title={t('workouts.deleteCustomExercise')}
+        message={t('workouts.deleteCustomConfirm')}
+        confirmText={t('common.delete')}
+        variant="danger"
+        isLoading={deleting}
+      />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Check, Zap, Shield, Crown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { useAuthStore } from '../auth/authStore'
@@ -9,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { useToast } from '@/shared/contexts/ToastContext'
 
 export function PremiumPage() {
+  const { t } = useTranslation()
   const { user, isPremium } = useAuthStore()
   const { showToast } = useToast()
   const navigate = useNavigate()
@@ -37,7 +39,7 @@ export function PremiumPage() {
           animate={{ scale: 1, opacity: 1 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold uppercase tracking-widest"
         >
-          <Crown className="w-4 h-4" /> FitPWA PRO
+          <Crown className="w-4 h-4" /> TitanPulse PRO
         </motion.div>
         <h1 className="text-4xl md:text-6xl font-black text-white">Leva o teu treino para o nível seguinte.</h1>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto italic">
@@ -159,7 +161,7 @@ export function PremiumPage() {
     <Modal
       isOpen={true}
       onClose={() => navigate(-1)}
-      title="FitPWA PRO"
+      title="TitanPulse PRO"
       size="lg"
       closeButton
     >
@@ -169,8 +171,8 @@ export function PremiumPage() {
           <ul className="space-y-4">
             {[
               { icon: <Zap />, title: 'Análise de Volume Ilimitada', desc: 'Gráficos detalhados por grupo muscular e tendências de longo prazo.' },
-              { icon: <Shield />, title: 'Backup na Nuvem automático', desc: 'Nunca percas o teu histórico de treinos, mesmo que mudes de telemóvel.' },
-              { icon: <Check />, title: 'Programas de Treino Exclusivos', desc: 'Acesso a rotinas criadas por especialistas para hipertrofia e força.' },
+              { icon: <Shield />, title: t('premium.feature4Title'), desc: t('premium.feature4Desc') },
+              { icon: <Check />, title: t('premium.feature5Title'), desc: t('premium.feature5Desc') },
             ].map((f, i) => (
               <li key={i} className="flex gap-3">
                 <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-surface-200 border border-surface-100 flex items-center justify-center text-primary">

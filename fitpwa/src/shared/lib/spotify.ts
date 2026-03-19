@@ -1,6 +1,6 @@
-const SPOTIFY_TOKEN_KEY = 'fitpwa.spotify.token'
-const SPOTIFY_VERIFIER_KEY = 'fitpwa.spotify.verifier'
-const SPOTIFY_STATE_KEY = 'fitpwa.spotify.state'
+const SPOTIFY_TOKEN_KEY = 'titanpulse.spotify.token'
+const SPOTIFY_VERIFIER_KEY = 'titanpulse.spotify.verifier'
+const SPOTIFY_STATE_KEY = 'titanpulse.spotify.state'
 
 const SPOTIFY_SCOPES = [
   'user-read-playback-state',

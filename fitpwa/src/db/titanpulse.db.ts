@@ -35,14 +35,14 @@ export interface WorkoutPlanRecord {
   // other fields omitted
 }
 
-export class FitPWADatabase extends Dexie {
+export class TitanPulseDatabase extends Dexie {
   activeSessions!: Table<ActiveSessionRecord>
   pendingSync!: Table<PendingSyncRecord>
   cachedExercises!: Table<ExerciseRecord>
   cachedPlans!: Table<WorkoutPlanRecord>
 
   constructor() {
-    super('FitPWADB')
+    super('TitanPulseDB')
     this.version(1).stores({
       activeSessions: 'id, userId, startedAt',
       pendingSync: '++id, type, createdAt, synced',
@@ -52,4 +52,4 @@ export class FitPWADatabase extends Dexie {
   }
 }
 
-export const db = new FitPWADatabase()
+export const db = new TitanPulseDatabase()

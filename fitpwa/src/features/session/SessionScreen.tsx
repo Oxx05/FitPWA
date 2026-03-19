@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, ExternalLink, Dumbbell, X } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -27,6 +27,7 @@ import {
   spotifyPlay,
   spotifyPrevious
 } from '@/shared/lib/spotify'
+import { usePetStore } from '@/features/pet/usePetStore'
 
 interface SetRecord {
   id: string
@@ -58,20 +59,23 @@ export function SessionScreen() {
   const { id: planId } = useParams<{ id?: string }>()
   const { user, profile, addXp } = useAuthStore()
   const { t, i18n } = useTranslation()
+  const isPt = i18n.language === 'pt'
 
   const [exercises, setExercises] = useState<ExerciseInSession[]>([])
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [isRunning, setIsRunning] = useState(true)
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasStartedSession, setHasStartedSession] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showFinishModal, setShowFinishModal] = useState(false)
   const [restTimer, setRestTimer] = useState<number | null>(null)
   const [targetRestTimer, setTargetRestTimer] = useState<number>(90)
   const [isRestTimerRunning, setIsRestTimerRunning] = useState(false)
+  const [showRestTimer, setShowRestTimer] = useState(false)
   const [sessionNotes, setSessionNotes] = useState('')
   const [planName, setPlanName] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'treino' | 'controlo'>('treino')
+  const [activeTab, setActiveTab] = useState<'workout' | 'control'>('workout')
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info', message: string } | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelReason, setCancelReason] = useState<string | null>(null)
@@ -154,14 +158,14 @@ export function SessionScreen() {
 
   // Document Title Effect
   useEffect(() => {
-    let title = 'FitPWA'
+    let title = 'TitanPulse'
     if (restTimer !== null) {
       const status = isRestTimerRunning ? t('session.resting') : t('session.restPaused')
-      title = `${status.toUpperCase()} ${formatTime(restTimer)} | FitPWA`
+      title = `${status.toUpperCase()} ${formatTime(restTimer)} | TitanPulse`
     } else if (isRunning && duration > 0) {
-      title = `${formatTime(duration)} | FitPWA`
+      title = `${formatTime(duration)} | TitanPulse`
     } else if (!isRunning) {
-      title = `(${t('session.pause')}) | FitPWA`
+      title = `(${t('session.pause')}) | TitanPulse`
     }
     document.title = title
   }, [isRunning, duration, restTimer, isRestTimerRunning, t])
@@ -181,7 +185,7 @@ export function SessionScreen() {
       planName,
       isRunning
     }
-    localStorage.setItem('fitpwa_active_session', JSON.stringify(currentState))
+    localStorage.setItem('titanpulse_active_session', JSON.stringify(currentState))
   }, [exercises, currentExerciseIndex, duration, restTimer, targetRestTimer, isRestTimerRunning, sessionNotes, planId, planName, isRunning])
 
   // Rest timer effet
@@ -226,7 +230,7 @@ export function SessionScreen() {
 
   // Load recent timers
   useEffect(() => {
-    const saved = localStorage.getItem('fitpwa_recent_timers')
+    const saved = localStorage.getItem('titanpulse_recent_timers')
     if (saved) {
       try {
         setRecentRestTimes(JSON.parse(saved))
@@ -237,12 +241,12 @@ export function SessionScreen() {
   }, [])
 
   const saveRecentTimer = (time: number) => {
-    localStorage.setItem('fitpwa_last_rest_time', time.toString())
+    localStorage.setItem('titanpulse_last_rest_time', time.toString())
     setTargetRestTimer(time)
     setRecentRestTimes(prev => {
       const filtered = prev.filter(t => t !== time)
       const next = [time, ...filtered].slice(0, 3)
-      localStorage.setItem('fitpwa_recent_timers', JSON.stringify(next))
+      localStorage.setItem('titanpulse_recent_timers', JSON.stringify(next))
       return next
     })
   }
@@ -253,7 +257,7 @@ export function SessionScreen() {
   useEffect(() => {
     const loadPlanData = async () => {
       try {
-        const rawActiveSession = localStorage.getItem('fitpwa_active_session')
+        const rawActiveSession = localStorage.getItem('titanpulse_active_session')
         if (rawActiveSession) {
           try {
             const activeSession = JSON.parse(rawActiveSession)
@@ -270,6 +274,7 @@ export function SessionScreen() {
               if (activeSession.isRunning !== undefined) {
                 setIsRunning(activeSession.isRunning)
               }
+              setHasStartedSession(true)
               setIsLoading(false)
               return
             } else {
@@ -403,25 +408,24 @@ export function SessionScreen() {
       try {
         // Find the last session that included this exercise
         const { data: lastSet, error } = await supabase
-          .from('workout_sets')
+          .from('session_sets')
           .select(`
             weight_kg,
             reps,
-            notes,
-            created_at,
-            workout_session_id
+            completed_at,
+            session_id
           `)
           .eq('exercise_id', currentEx.exerciseId)
-          .order('created_at', { ascending: false })
+          .order('completed_at', { ascending: false })
           .limit(10)
 
         if (error) throw error
 
         if (lastSet && lastSet.length > 0) {
           // Get the most recent session's sets
-          const lastSessionId = lastSet[0].workout_session_id
+          const lastSessionId = lastSet[0].session_id
           const sessionSets = lastSet
-            .filter(s => s.workout_session_id === lastSessionId)
+            .filter(s => s.session_id === lastSessionId)
             .map(s => ({
               weight_kg: s.weight_kg,
               reps: s.reps
@@ -429,9 +433,9 @@ export function SessionScreen() {
             .reverse() // Keep original order if possible
 
           setPreviousExerciseData({
-            date: lastSet[0].created_at,
+            date: lastSet[0].completed_at,
             sets: sessionSets,
-            notes: lastSet.find(s => s.workout_session_id === lastSessionId && s.notes)?.notes || null
+            notes: null // We don't fetch notes from session_sets anymore to avoid complex joins
           })
         } else {
           setPreviousExerciseData(null)
@@ -496,8 +500,8 @@ export function SessionScreen() {
         showToast(t('session.spotifyError'), 'error')
       }
       clearStoredSpotifyState()
-      const returnPath = sessionStorage.getItem('fitpwa.spotify.returnPath')
-      sessionStorage.removeItem('fitpwa.spotify.returnPath')
+      const returnPath = sessionStorage.getItem('titanpulse.spotify.returnPath')
+      sessionStorage.removeItem('titanpulse.spotify.returnPath')
       const nextPath = returnPath || window.location.pathname
       navigate(nextPath, { replace: true })
     }).catch(() => {
@@ -511,8 +515,11 @@ export function SessionScreen() {
   // Effect to announce new exercise (moved after currentExercise declaration)
   useEffect(() => {
     if (!voiceEnabled || !currentExercise) return
-    speak(`Próximo exercício: ${currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`)
-  }, [currentExerciseIndex, voiceEnabled, speak, currentExercise])
+    const msg = isPt 
+      ? `Próximo exercício: ${currentExercise.name_pt || currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`
+      : `Next exercise: ${currentExercise.name}. Goal: ${currentExercise.repsMin} to ${currentExercise.repsMax} reps.`
+    speak(msg)
+  }, [currentExerciseIndex, voiceEnabled, speak, currentExercise, isPt])
 
   const completedVolume = exercises.reduce((acc, ex) =>
     acc + ex.sets.reduce((setAcc, set) =>
@@ -576,11 +583,13 @@ export function SessionScreen() {
     // Start rest timer after completing a set
     const exercise = exercises[currentExerciseIndex]
     if (exercise && shouldStartRest) {
-      const lastRest = localStorage.getItem('fitpwa_last_rest_time')
-      const restTime = lastRest ? parseInt(lastRest) : exercise.restSeconds
+      const lastRest = localStorage.getItem('titanpulse_last_rest_time')
+      const restTime = lastRest ? parseInt(lastRest) : 90
       setTargetRestTimer(restTime)
-      setRestTimer(restTime)
-      setIsRestTimerRunning(true)
+      setRestTimer(null)
+      setIsRestTimerRunning(false)
+      setShowRestTimer(true)
+      setIsTimerMinimized(false)
       showToast(t('session.setCompletedSuccess'), 'success')
     }
   }
@@ -860,6 +869,8 @@ export function SessionScreen() {
               }
             }
             showToast(t('session.workoutSavedCloud'), 'success')
+            // Feed the virtual pet!
+            usePetStore.getState().feedPet(xpGained)
           } else {
             // New Robust Offline Saving
             await OfflineSyncService.saveSessionOffline(
@@ -901,6 +912,7 @@ export function SessionScreen() {
             }
 
             showToast(t('session.workoutSavedOffline'), 'info')
+            usePetStore.getState().feedPet(xpGained)
           }
         } catch (saveError) {
           console.error('Error saving workout:', saveError)
@@ -929,6 +941,7 @@ export function SessionScreen() {
             }))
           )
           showToast(t('session.workoutSavedOfflineFallback'), 'info')
+          usePetStore.getState().feedPet(xpGained)
         }
         
         // Update daily XP in profile
@@ -943,11 +956,12 @@ export function SessionScreen() {
         }
 
         addXp(xpGained)
+        localStorage.removeItem('titanpulse_active_session')
         navigate('/session/summary', { state: { stats, duration, xpGained, newPrs, exercises } })
         return
       }
 
-      localStorage.removeItem('fitpwa_active_session')
+      localStorage.removeItem('titanpulse_active_session')
       navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
     } catch (error) {
       console.error('Error finishing workout:', error)
@@ -962,7 +976,7 @@ export function SessionScreen() {
       showToast(t('session.spotifyConfigError'), 'error')
       return
     }
-    sessionStorage.setItem('fitpwa.spotify.returnPath', window.location.pathname)
+    sessionStorage.setItem('titanpulse.spotify.returnPath', window.location.pathname)
     window.location.href = authUrl
   }
 
@@ -1048,6 +1062,37 @@ export function SessionScreen() {
     )
   }
 
+  if (!hasStartedSession) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-24 h-24 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-8 border-4 border-primary shadow-[0_0_30px_rgba(var(--color-primary),0.3)]">
+          <Dumbbell className="w-12 h-12 rotate-[-45deg]" />
+        </div>
+        <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">{planName || t('session.workout')}</h1>
+        <p className="text-gray-400 mb-12 max-w-sm text-lg">
+          {exercises.length} {t('session.exercises')} • ~{exercises.reduce((acc, ex) => acc + (ex.sets.length * 2), 0)} min
+        </p>
+        <Button 
+          onClick={() => {
+            setHasStartedSession(true)
+            setIsRunning(true)
+          }} 
+          variant="primary" 
+          className="w-full max-w-xs h-16 rounded-3xl font-black uppercase italic tracking-widest text-xl shadow-xl shadow-primary/20 active:scale-95 transition-all"
+        >
+          {t('common.start')}
+        </Button>
+        <Button 
+          onClick={() => navigate('/workouts')} 
+          variant="ghost" 
+          className="mt-6 text-gray-500 hover:text-white font-bold uppercase tracking-widest text-sm"
+        >
+          {t('common.cancel')}
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24">
       {/* Header */}
@@ -1068,11 +1113,14 @@ export function SessionScreen() {
             <button 
               onClick={() => {
                 if (restTimer === null) {
+                  setTargetRestTimer(targetRestTimer)
                   setRestTimer(targetRestTimer)
                   setIsRestTimerRunning(true)
                 } else {
                   setRestTimer(prev => (prev ?? 0) + 30)
                 }
+                setShowRestTimer(true)
+                setIsTimerMinimized(false)
               }}
               className="p-2 bg-surface-100 rounded-xl text-primary hover:bg-primary/20 transition-all border border-white/5 active:scale-90"
               title={t('session.manualRest')}
@@ -1122,17 +1170,17 @@ export function SessionScreen() {
       <main className="flex-grow p-4 max-w-4xl mx-auto w-full space-y-6">
         <div className="flex gap-2 bg-surface-200/80 border border-surface-100 p-2 rounded-xl">
           <button
-            onClick={() => setActiveTab('treino')}
+            onClick={() => setActiveTab('workout')}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
-              activeTab === 'treino' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
+              activeTab === 'workout' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
             {t('session.workout')}
           </button>
           <button
-            onClick={() => setActiveTab('controlo')}
+            onClick={() => setActiveTab('control')}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
-              activeTab === 'controlo' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
+              activeTab === 'control' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
             {t('session.control')}
@@ -1140,7 +1188,7 @@ export function SessionScreen() {
         </div>
 
 
-        {activeTab === 'treino' ? (
+        {activeTab === 'workout' ? (
           <>
             {/* Exercise Card */}
             <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
@@ -1541,6 +1589,23 @@ export function SessionScreen() {
                   {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                 </button>
                 <button 
+                  onClick={() => {
+                    if (restTimer === null) {
+                      setTargetRestTimer(targetRestTimer)
+                      setRestTimer(targetRestTimer)
+                      setIsRestTimerRunning(true)
+                    } else {
+                      setRestTimer(prev => (prev ?? 0) + 30)
+                    }
+                    setShowRestTimer(true)
+                    setIsTimerMinimized(false)
+                  }}
+                  className="p-3 bg-surface-200 text-primary rounded-2xl hover:bg-primary/20 active:scale-90 transition-all border border-white/5"
+                  title={t('session.manualRest')}
+                >
+                  <Clock className="w-6 h-6" />
+                </button>
+                <button 
                   onClick={() => setIsFocusMode(false)}
                   className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20 active:scale-90 transition-all"
                 >
@@ -1681,7 +1746,7 @@ export function SessionScreen() {
               </div>
 
               {/* Spotify Controls in Focus Mode */}
-              {spotifyConnected && (
+              {spotifyConnected ? (
                 <div className="bg-surface-200/50 border border-white/5 rounded-3xl p-4 flex flex-col gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-surface-100 overflow-hidden shrink-0 border border-white/10">
@@ -1692,7 +1757,7 @@ export function SessionScreen() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 pr-2">
-                       <p className="text-xs font-black text-white truncate italic uppercase tracking-tighter leading-none mb-1">{spotifyTrack?.name || 'Sem música'}</p>
+                       <p className="text-xs font-black text-white truncate italic uppercase tracking-tighter leading-none mb-1">{spotifyTrack?.name || t('session.noMusic')}</p>
                        <p className="text-[9px] font-bold text-gray-500 truncate uppercase tracking-widest leading-none">{spotifyTrack?.artist || 'Spotify'}</p>
                     </div>
                   </div>
@@ -1705,7 +1770,17 @@ export function SessionScreen() {
                       {spotifyPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
                     </button>
                     <button onClick={handleSpotifyNext} className="p-3 bg-surface-100 rounded-xl text-gray-400 hover:text-white transition-colors active:scale-90"><SkipForward className="w-5 h-5" /></button>
+                    <button onClick={() => window.open('https://open.spotify.com', '_blank')} className="p-3 bg-surface-100 rounded-xl text-[#1db954] hover:bg-[#1db954]/20 transition-colors" title={t('session.openSpotify')}>
+                      <ExternalLink className="w-5 h-5" />
+                    </button>
                   </div>
+                </div>
+              ) : (
+                <div className="bg-surface-200/50 border border-white/5 rounded-3xl p-4 flex flex-col gap-3">
+                  <Button variant="secondary" onClick={handleSpotifyConnect} className="w-full h-12 gap-2 bg-[#1db954]/10 text-[#1db954] hover:bg-[#1db954]/20 border border-[#1db954]/20">
+                    <Music className="w-4 h-4" />
+                    {t('session.connectSpotify')}
+                  </Button>
                 </div>
               )}
             </div>
@@ -1741,18 +1816,18 @@ export function SessionScreen() {
 
       {/* Premium Rest Overlay - Non-Blocking Bottom Sheet */}
       <AnimatePresence>
-        {restTimer !== null && (
+        {showRestTimer && (
           isTimerMinimized ? (
              <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: 50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8, y: 50 }}
-                className="fixed bottom-24 right-4 z-[70] cursor-pointer"
+                className="fixed right-4 z-[70] cursor-pointer bottom-24 md:bottom-auto md:top-24"
                 onClick={() => setIsTimerMinimized(false)}
              >
                 <div className="bg-primary text-black px-4 py-2 rounded-full font-black tabular-nums shadow-xl border-2 border-white/20 flex items-center gap-2 active:scale-90 transition-transform">
                    <Clock className="w-4 h-4 animate-pulse" />
-                   {formatTime(restTimer)}
+                   {formatTime(restTimer ?? targetRestTimer)}
                 </div>
              </motion.div>
           ) : (
@@ -1763,11 +1838,17 @@ export function SessionScreen() {
                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                className="fixed bottom-0 left-0 right-0 z-[70] bg-surface-200/95 backdrop-blur-2xl border-t border-primary/20 rounded-t-[32px] p-6 pb-12 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] flex flex-col items-center"
              >
-               <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6 cursor-pointer" onClick={() => setIsTimerMinimized(true)} />
+               <div className="w-12 h-1.5 bg-white/10 rounded-full mb-6 cursor-pointer" onClick={() => {
+                 if (restTimer === null) setShowRestTimer(false)
+                 else setIsTimerMinimized(true)
+               }} />
 
                <div className="w-full max-w-sm flex flex-col items-center relative">
-                 <button onClick={() => setIsTimerMinimized(true)} className="absolute -top-4 right-0 p-2 text-gray-500 hover:text-white transition-colors bg-surface-100 rounded-full">
-                    <Minimize2 className="w-5 h-5" />
+                 <button onClick={() => {
+                   if (restTimer === null) setShowRestTimer(false)
+                   else setIsTimerMinimized(true)
+                 }} className="absolute -top-4 right-0 p-2 text-gray-500 hover:text-white transition-colors bg-surface-100 rounded-full">
+                    {restTimer === null ? <X className="w-5 h-5" /> : <Minimize2 className="w-5 h-5" />}
                  </button>
 
                   <div className="flex flex-col items-center gap-6 mb-8 mt-4">
@@ -1784,7 +1865,7 @@ export function SessionScreen() {
                     
                     <div className="text-center">
                       <p className="text-primary font-black uppercase tracking-widest text-[10px] mb-1">
-                        {restTimer !== null && restTimer > 0 ? t('session.restInProgress') : t('session.setRestTime')}
+                        {restTimer !== null && restTimer > 0 ? t('session.restInProgress') : t('session.restTimer')}
                       </p>
                       <h2 className="text-7xl font-black italic tabular-nums text-white tracking-tighter leading-none">
                         {formatTime(restTimer ?? targetRestTimer)}
@@ -1792,16 +1873,15 @@ export function SessionScreen() {
                     </div>
                   </div>
 
-                  {(!isRestTimerRunning || restTimer === null) && (
+                  {restTimer === null && (
                     <div className="flex justify-center items-center gap-8 py-6 mb-6 bg-surface-100/30 rounded-3xl w-full border border-white/5">
                       <WheelPicker 
                         label={t('session.minutes')}
                         options={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
-                        value={Math.floor((restTimer ?? targetRestTimer) / 60)}
+                        value={Math.floor((targetRestTimer) / 60)}
                         onChange={(mins) => {
-                          const secs = (restTimer ?? targetRestTimer) % 60
+                          const secs = (targetRestTimer) % 60
                           const next = mins * 60 + secs
-                          setRestTimer(next)
                           setTargetRestTimer(next)
                         }}
                       />
@@ -1809,11 +1889,10 @@ export function SessionScreen() {
                       <WheelPicker 
                         label={t('session.seconds')}
                         options={Array.from({ length: 60 }, (_, i) => i)}
-                        value={(restTimer ?? targetRestTimer) % 60}
+                        value={(targetRestTimer) % 60}
                         onChange={(secs) => {
-                          const mins = Math.floor((restTimer ?? targetRestTimer) / 60)
+                          const mins = Math.floor((targetRestTimer) / 60)
                           const next = mins * 60 + secs
-                          setRestTimer(next)
                           setTargetRestTimer(next)
                         }}
                       />
@@ -1822,9 +1901,22 @@ export function SessionScreen() {
 
                   <div className="flex flex-col gap-4 w-full mb-8">
                     <div className="flex gap-3">
+                      {restTimer !== null && (
+                        <Button
+                          variant="secondary"
+                          className="flex-1 h-16 rounded-2xl text-gray-400 hover:text-white"
+                          onClick={() => {
+                            setRestTimer(null)
+                            setIsRestTimerRunning(false)
+                          }}
+                        >
+                          <Square className="w-6 h-6 fill-current" />
+                        </Button>
+                      )}
+
                       <Button
                         variant={isRestTimerRunning ? "secondary" : "primary"}
-                        className="flex-[2] h-16 rounded-2xl text-xl font-black uppercase italic tracking-tighter shadow-lg"
+                        className={`${restTimer !== null ? 'flex-[2]' : 'w-full'} h-16 rounded-2xl text-xl font-black uppercase italic tracking-tighter shadow-lg`}
                         onClick={() => {
                           if (restTimer === null) {
                             setRestTimer(targetRestTimer)
@@ -1834,35 +1926,12 @@ export function SessionScreen() {
                         }}
                       >
                         {isRestTimerRunning ? (
-                          <><Pause className="w-6 h-6 mr-2" />{t('session.pause')}</>
+                          <><Pause className="w-6 h-6 mr-2 fill-current" />{t('session.pause')}</>
                         ) : (
                           <><Play className="w-6 h-6 mr-2 fill-current" />{restTimer === null ? t('common.start') : t('session.resume')}</>
                         )}
                       </Button>
-
-                      <Button
-                        variant="secondary"
-                        className="flex-1 h-16 rounded-2xl text-gray-400 hover:text-white"
-                        onClick={() => {
-                          setRestTimer(targetRestTimer)
-                          setIsRestTimerRunning(false)
-                        }}
-                        title={t('common.reset')}
-                      >
-                        <RotateCcw className="w-6 h-6" />
-                      </Button>
                     </div>
-
-                    <Button
-                      variant="ghost"
-                      className="w-full h-12 rounded-xl text-gray-500 font-bold uppercase text-xs hover:text-red-400 transition-colors"
-                      onClick={() => {
-                        setRestTimer(null)
-                        setIsRestTimerRunning(false)
-                      }}
-                    >
-                      {t('session.skip')}
-                    </Button>
                   </div>
 
                   <div className="w-full space-y-3">
@@ -1908,7 +1977,8 @@ export function SessionScreen() {
                  
                  <div className="mt-6 flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase truncate max-w-full">
                    <span>{t('session.nextTitle')}:</span>
-                   <span className="text-white truncate">{currentExercise.name}</span>
+                                       <span className="text-white truncate">{isPt ? currentExercise.name_pt || currentExercise.name : currentExercise.name}</span>
+
                  </div>
                </div>
              </motion.div>
@@ -2110,7 +2180,7 @@ export function SessionScreen() {
                   className="w-full flex items-center justify-between p-4 bg-surface-100 hover:bg-primary/10 border border-white/5 rounded-xl transition-all group"
                 >
                   <div className="text-left">
-                    <p className="font-bold text-white group-hover:text-primary transition-colors">{ex.name_pt || ex.name}</p>
+                    <p className="font-bold text-white group-hover:text-primary transition-colors">{isPt ? ex.name_pt || ex.name : ex.name}</p>
                     <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || t('session.general')}</p>
                   </div>
                   <Plus className="w-5 h-5 text-gray-600 group-hover:text-primary" />

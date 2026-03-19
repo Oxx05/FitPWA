@@ -108,10 +108,10 @@ class PushNotificationService {
   /**
    * Show PR notification
    */
-  showPRNotification(exerciseName: string, weight: number, reps: number): void {
+  showPRNotification(title: string, body: string, exerciseName: string): void {
     this.sendNotification({
-      title: `🏅 Novo PR! ${exerciseName}`,
-      body: `${weight}kg x ${reps} reps - Parabéns! 💪`,
+      title,
+      body,
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-72x72.png',
       tag: `pr-${exerciseName}`,
@@ -122,17 +122,10 @@ class PushNotificationService {
   /**
    * Show milestone notification
    */
-  showMilestoneNotification(milestone: string, count: number): void {
-    const milestoneMessages: Record<string, string> = {
-      workout: `Completou ${count} treinos! 💪`,
-      volume: `Levantou ${Math.round(count / 1000)}T em volume total! 🔥`,
-      streak: `${count} dias de treino seguido! 🔥`,
-      pr: `${count} PRs alcançados! 🏆`,
-    }
-
+  showMilestoneNotification(title: string, body: string, milestone: string): void {
     this.sendNotification({
-      title: '🎯 Marco Atingido!',
-      body: milestoneMessages[milestone] || `Marco: ${count}`,
+      title,
+      body,
       icon: '/icons/icon-192x192.png',
       badge: '/icons/badge-72x72.png',
       tag: `milestone-${milestone}`,

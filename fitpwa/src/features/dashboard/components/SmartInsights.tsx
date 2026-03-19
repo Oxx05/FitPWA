@@ -61,7 +61,7 @@ export function SmartInsights() {
           })
       })
 
-      if (!recentMuscles.has('Pernas') && !recentMuscles.has('Quadríceps')) {
+      if (!recentMuscles.has('legs') && !recentMuscles.has('quads')) {
           list.push({
               icon: <TrendingUp className="text-primary" />,
               title: t('insights.legsTitle'),

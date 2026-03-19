@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ActiveSessionRecord } from '@/db/fitpwa.db'
+import type { ActiveSessionRecord } from '@/db/titanpulse.db'
 
 export interface ActiveSessionContextType {
   activeSession: ActiveSessionRecord | null

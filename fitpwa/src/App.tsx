@@ -84,6 +84,9 @@ function App() {
                 <Route path="/workouts/new" element={
                   <ProtectedRoute><WorkoutEditor /></ProtectedRoute>
                 } />
+                <Route path="/workouts/:id/edit" element={
+                  <ProtectedRoute><WorkoutEditor /></ProtectedRoute>
+                } />
                 <Route path="/workouts/:id/start" element={
                   <ProtectedRoute><SessionScreen /></ProtectedRoute>
                 } />

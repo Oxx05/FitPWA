@@ -94,7 +94,7 @@ export function AchievementUnlockOverlay({ unlocks, onClose }: AchievementUnlock
                 transition={{ delay: 0.4 }}
               >
                 <p className={`text-xs font-black uppercase tracking-[0.2em] ${tierColor}`}>
-                  {current.level === 4 ? 'PLATINUM' : current.level === 3 ? 'GOLD' : current.level === 2 ? 'SILVER' : 'BRONZE'} {t('gamification.unlockedTitle') || 'EARNED'}
+                  {current.level === 4 ? t('gamification.platinum') : current.level === 3 ? t('gamification.gold') : current.level === 2 ? t('gamification.silver') : t('gamification.bronze')} {t('gamification.unlockedTitle')}
                 </p>
                 <h2 className="text-3xl font-black text-white leading-tight">
                   {isPt ? current.title_pt : current.title}

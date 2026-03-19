@@ -133,7 +133,7 @@ export function SessionSummary() {
         <div className="flex flex-col items-center">
           <ConquestCard 
             title={bestPr ? "Novo Recorde!" : "Treino Concluído"}
-            subtitle={bestPr ? bestPr.exerciseName : "FitPWA Session"}
+            subtitle={bestPr ? bestPr.exerciseName : "TitanPulse Session"}
             value={bestPr ? `${Math.round(bestPr.oneRepMax || 0)}` : `${stats.volume}`}
             label={bestPr ? "1RM ESTIMADO (kg)" : "VOLUME TOTAL (kg)"}
             achievementIcon={bestPr ? <Trophy className="w-10 h-10" /> : <TrendingUp className="w-10 h-10" />}

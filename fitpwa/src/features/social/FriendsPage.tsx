@@ -122,9 +122,9 @@ export function FriendsPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-4xl font-black italic uppercase tracking-tighter bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
-                Social Hub
+                {t('social.socialHub')}
               </h1>
-              <p className="text-gray-400 mt-2">Segue outros atletas e celebra as suas conquistas.</p>
+              <p className="text-gray-400 mt-2">{t('social.socialSubtitle')}</p>
             </div>
             <Button
               variant="secondary"
@@ -133,7 +133,7 @@ export function FriendsPage() {
                 const text = t('social.inviteText', { username: profile?.username })
                 const url = window.location.origin
                 if (navigator.share) {
-                  navigator.share({ title: 'FitPWA', text, url })
+                  navigator.share({ title: 'TitanPulse', text, url })
                 } else {
                   navigator.clipboard.writeText(`${text} ${url}`)
                   showToast(t('social.inviteCopied'), 'success')
@@ -150,10 +150,10 @@ export function FriendsPage() {
         {/* Modern Tabs */}
         <div className="flex flex-wrap gap-2 bg-surface-200/50 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-fit border border-white/5">
           {[
-            { id: 'mural', label: 'Feed Mural', icon: Globe },
-            { id: 'social', label: 'Amigos', icon: Users },
-            { id: 'leaderboard', label: 'Ranking', icon: Trophy },
-            { id: 'community', label: 'Comunidade', icon: Dumbbell }
+            { id: 'mural', label: t('social.mural'), icon: Globe },
+            { id: 'social', label: t('social.friends'), icon: Users },
+            { id: 'leaderboard', label: t('social.ranking'), icon: Trophy },
+            { id: 'community', label: t('social.community'), icon: Dumbbell }
           ].map(tab => (
             <button
               key={tab.id}
@@ -194,8 +194,7 @@ export function FriendsPage() {
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Procurar atletas por username..."
-                value={searchQuery}
+                placeholder={t('social.searchPlaceholder')}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-surface-200/50 border border-white/5 rounded-[1.5rem] pl-14 pr-6 py-5 text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               />
@@ -216,7 +215,7 @@ export function FriendsPage() {
                           </div>
                           <div>
                             <p className="font-black text-white italic tracking-tighter">@{user.username}</p>
-                            <p className="text-[10px] text-gray-500 uppercase font-black">Nível {user.level || 1}</p>
+                            <p className="text-[10px] text-gray-500 uppercase font-black">{t('common.level')} {user.level || 1}</p>
                           </div>
                         </div>
                         <Button 
@@ -226,7 +225,7 @@ export function FriendsPage() {
                           isLoading={followMutation.isPending}
                         >
                           {user.is_following ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                          <span className="ml-2 uppercase text-[10px] font-black">{user.is_following ? 'Deixar de seguir' : 'Seguir'}</span>
+                          <span className="ml-2 uppercase text-[10px] font-black">{user.is_following ? t('social.unfollow') : t('social.follow')}</span>
                         </Button>
                       </div>
                     ))}
@@ -240,7 +239,7 @@ export function FriendsPage() {
               <div className="space-y-6">
                 <h2 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-3">
                   <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                  Favoritos
+                  {t('social.favorites')}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {socialData.favorites.map((user: SocialProfile) => (
@@ -255,7 +254,7 @@ export function FriendsPage() {
                         </div>
                         <div>
                           <p className="font-black text-white italic tracking-tighter">@{user.username}</p>
-                          <p className="text-[10px] text-gray-500 font-black">NÍVEL {user.level || 1}</p>
+                          <p className="text-[10px] text-gray-500 font-black">{t('common.level').toUpperCase()} {user.level || 1}</p>
                         </div>
                       </div>
                       <button 
@@ -274,7 +273,7 @@ export function FriendsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               {/* Following List */}
               <div className="space-y-6">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter">A seguir ({socialData?.following?.length || 0})</h2>
+                <h2 className="text-xl font-black italic uppercase tracking-tighter">{t('social.following')} ({socialData?.following?.length || 0})</h2>
                 <div className="space-y-3">
                   {socialData?.following && socialData.following.length > 0 ? (
                     socialData.following.map((user: SocialProfile) => (
@@ -306,7 +305,7 @@ export function FriendsPage() {
                     ))
                   ) : (
                     <div className="text-center py-10 bg-surface-200/10 rounded-3xl border border-dashed border-white/5">
-                      <p className="text-sm text-gray-600">Ainda não segues ninguém.</p>
+                      <p className="text-sm text-gray-600">{t('social.noFollowing')}</p>
                     </div>
                   )}
                 </div>
@@ -314,7 +313,7 @@ export function FriendsPage() {
 
               {/* Followers List */}
               <div className="space-y-6">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter">Seguidores ({socialData?.followers?.length || 0})</h2>
+                <h2 className="text-xl font-black italic uppercase tracking-tighter">{t('social.followers')} ({socialData?.followers?.length || 0})</h2>
                 <div className="space-y-3">
                   {socialData?.followers && socialData.followers.length > 0 ? (
                     socialData.followers.map((user: SocialProfile) => (
@@ -329,18 +328,18 @@ export function FriendsPage() {
                           </div>
                         </div>
                         {!user.is_following && (
-                          <button 
-                             onClick={() => followMutation.mutate({ userId: user.id, action: 'follow' })}
-                             className="text-[10px] font-black uppercase text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary hover:text-black transition-all"
-                          >
-                            Seguir de volta
-                          </button>
+                              <button 
+                                 onClick={() => followMutation.mutate({ userId: user.id, action: 'follow' })}
+                                 className="text-[10px] font-black uppercase text-primary bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary hover:text-black transition-all"
+                              >
+                                {t('social.followBack')}
+                              </button>
                         )}
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-10 bg-surface-200/10 rounded-3xl border border-dashed border-white/5">
-                      <p className="text-sm text-gray-600">Ainda não tens seguidores.</p>
+                      <p className="text-sm text-gray-600">{t('social.noFollowers')}</p>
                     </div>
                   )}
                 </div>

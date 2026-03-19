@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FitPWA Social & Community', () => {
+test.describe('TitanPulse Social & Community', () => {
   test.beforeEach(async ({ page }) => {
     // In a real scenario, we would login here. 
     // For this demonstration/verification, we assume the app is running.

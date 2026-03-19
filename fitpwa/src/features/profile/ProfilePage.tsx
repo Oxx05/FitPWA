@@ -207,6 +207,7 @@ export function ProfilePage() {
           
           {/* Featured Medals (Highest Tier for each group) */}
           <div className="flex gap-2 mt-4 justify-center md:justify-start">
+            <h4 className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1 w-full block md:hidden">{t('profile.featuredMedals')}</h4>
             {(() => {
               const featured = unlockedIds
                 .map(id => achievements.find(a => a.id === id)!)
@@ -310,7 +311,7 @@ export function ProfilePage() {
           >
             <div className="flex items-center gap-3 text-gray-300">
               <Clock className="w-5 h-5" />
-              <span className="font-medium text-white">{t('profile.notificationsTitle') || 'Histórico de Notificações'}</span>
+              <span className="font-medium text-white">{t('profile.notificationsTitle')}</span>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-500" />
           </button>
@@ -501,7 +502,7 @@ export function ProfilePage() {
                     type="number"
                     value={defaultRest}
                     onChange={(e) => setDefaultRest(Number(e.target.value) || 0)}
-                    placeholder="ex: 90"
+                    placeholder={t('profile.placeholderEx', { value: '90' })}
                     className="bg-surface-200 border-white/5 focus:border-primary/50"
                   />
                 </div>
@@ -517,7 +518,7 @@ export function ProfilePage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Reps (Min)</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.repsMin')}</label>
                   <Input
                     type="number"
                     value={defaultMinReps}
@@ -526,7 +527,7 @@ export function ProfilePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Reps (Max)</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.repsMax')}</label>
                   <Input
                     type="number"
                     value={defaultMaxReps}
@@ -649,7 +650,7 @@ export function ProfilePage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-400 uppercase tracking-widest text-[10px]">{t('profile.orImageLink') || 'Ou link da imagem'}</label>
+            <label className="text-sm font-medium text-gray-400 uppercase tracking-widest text-[10px]">{t('profile.orImageLink')}</label>
             <div className="flex gap-2">
               <Input 
                 placeholder="https://..." 

@@ -179,7 +179,7 @@ export const useAchievementsStore = create<AchievementsState>()(
       }
     }),
     {
-      name: 'fitpwa-achievements',
+      name: 'titanpulse-achievements',
     }
   )
 )

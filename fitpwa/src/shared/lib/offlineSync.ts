@@ -110,7 +110,7 @@ class OfflineDatabase extends Dexie {
   cache_exercises!: Table<OfflineExerciseCache>
 
   constructor() {
-    super('FitPWA')
+    super('TitanPulse')
     this.version(3).stores({
       workouts: '++id, workoutId, userId, synced',
       personalRecords: '++id, prId, userId, exerciseId, synced',

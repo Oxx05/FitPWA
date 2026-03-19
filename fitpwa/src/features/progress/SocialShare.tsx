@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Share2, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/components/Button'
 
 interface ShareProps {
@@ -20,13 +21,14 @@ export function SocialShare({
   weight,
   reps,
 }: ShareProps) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
 
   // Construir mensagem de compartilhamento
   const buildShareMessage = (): string => {
     if (exerciseName && weight && reps) {
-      return `🏆 Novo PR! ${exerciseName}: ${weight}kg x ${reps} reps\n\n${text}`
+      return `${t('progress.sharePrHeader', { exercise: exerciseName, weight, reps })}\n\n${text}`
     }
     return text
   }
@@ -106,7 +108,7 @@ export function SocialShare({
         whileTap={{ scale: 0.95 }}
         onClick={() => (supportsWebShare ? handleWebShare() : setShowMenu(!showMenu))}
         className="p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-colors"
-        title="Compartilhar"
+        title={t('common.share')}
       >
         <Share2 size={20} />
       </motion.button>
@@ -128,7 +130,7 @@ export function SocialShare({
               className="justify-start px-4 py-2 rounded-none text-sm"
             >
               {copied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
-              {copied ? 'Copiado!' : 'Copiar Link'}
+              {copied ? t('common.copied') : t('common.copyLink')}
             </Button>
 
             {/* X (Twitter) */}

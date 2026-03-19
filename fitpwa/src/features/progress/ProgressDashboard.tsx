@@ -5,13 +5,15 @@ import { FeatureGate } from '../premium/FeatureGate'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { startOfWeek, subWeeks, isSameWeek, format } from 'date-fns'
-import { pt } from 'date-fns/locale'
+import { ptBR, enUS } from 'date-fns/locale'
 import { Trash2, Calendar, Clock, Weight, ChevronRight, Zap, TrendingUp, TrendingDown, Loader2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
+import { useToast } from '@/shared/contexts/ToastContext'
 
 export interface WorkoutSessionDetail {
   id: string
@@ -32,6 +34,12 @@ export function ProgressDashboard() {
   const [comparisonTarget, setComparisonTarget] = useState<WorkoutSessionDetail | null>(null)
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null)
   const [selectedSessionForDetails, setSelectedSessionForDetails] = useState<WorkoutSessionDetail | null>(null)
+  const [savingAsPlan, setSavingAsPlan] = useState(false)
+  const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
+  const { showToast } = useToast()
+
+  const currentLocale = i18n.language === 'pt' ? ptBR : enUS
 
   const { data: sessionDetails, isLoading: isLoadingDetails } = useQuery({
     queryKey: ['session-details', selectedSessionForDetails?.id],
@@ -123,12 +131,12 @@ export function ProgressDashboard() {
       // Initialize last 8 weeks with 0 volume
       for (let i = 7; i >= 0; i--) {
         const weekDate = startOfWeek(subWeeks(now, i))
-        const weekKey = format(weekDate, "dd MMM", { locale: pt })
+        const weekKey = format(weekDate, "dd MMM", { locale: currentLocale })
         chartDataMap.set(weekKey, { week: weekKey, volume: 0 })
       }
 
       history.forEach(h => {
-        const weekKey = format(startOfWeek(new Date(h.finished_at!)), "dd MMM", { locale: pt })
+        const weekKey = format(startOfWeek(new Date(h.finished_at!)), "dd MMM", { locale: currentLocale })
         if (chartDataMap.has(weekKey)) {
           const entry = chartDataMap.get(weekKey)
           entry.volume += (Number(h.total_volume_kg) || 0)
@@ -169,8 +177,10 @@ export function ProgressDashboard() {
         streak,
         chartData: Array.from(chartDataMap.values()),
         history: [...history].reverse(),
-        prs: (prsData || []).map((pr: { exercises: unknown, one_rep_max?: number, weight_kg?: number, reps?: number }) => ({
-          exercise_name: (pr.exercises as unknown as { name_pt?: string, name: string })?.name_pt || (pr.exercises as unknown as { name_pt?: string, name: string })?.name || 'Exercício',
+        prs: (prsData || []).map((pr: { exercises: any, one_rep_max?: number, weight_kg?: number, reps?: number }) => ({
+          exercise_name: i18n.language === 'pt' 
+            ? ((pr.exercises as any)?.name_pt || (pr.exercises as any)?.name) 
+            : ((pr.exercises as any)?.name || (pr.exercises as any)?.name_pt) || 'Exercise',
           one_rep_max: pr.one_rep_max || 0,
           weight_kg: pr.weight_kg || 0,
           reps: pr.reps || 0
@@ -264,7 +274,7 @@ export function ProgressDashboard() {
     return (
       <div className="flex flex-col items-center justify-center p-24 space-y-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
-        <p className="text-gray-400 font-medium">A carregar progresso...</p>
+        <p className="text-gray-400 font-medium">{t('progress.loadingProgress')}</p>
       </div>
     )
   }
@@ -272,33 +282,33 @@ export function ProgressDashboard() {
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8 pb-32">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-white">Progresso</h1>
-        <p className="text-gray-400">Analisa a tua evolução ao longo do tempo.</p>
+        <h1 className="text-3xl font-bold text-white">{t('progress.title')}</h1>
+        <p className="text-gray-400">{t('progress.analyzeEvolution')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
-          <h3 className="text-gray-400 text-sm font-medium mb-1">Treinos esta semana</h3>
+          <h3 className="text-gray-400 text-sm font-medium mb-1">{t('progress.workoutsThisWeek')}</h3>
           <p className="text-3xl font-bold text-primary">
             {safeStats.currentWeekCount}
           </p>
         </div>
         
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm md:col-span-2">
-          <h3 className="text-gray-400 text-sm font-medium mb-1">Volume Semanal</h3>
+          <h3 className="text-gray-400 text-sm font-medium mb-1">{t('progress.weeklyVolume')}</h3>
           <p className="text-3xl font-bold text-white">
-            {formatVolume(safeStats.currentWeekVolume)} <span className="text-base font-normal text-gray-500">{safeStats.currentWeekVolume >= 1000 ? 'toneladas' : 'kg'}</span>
+            {formatVolume(safeStats.currentWeekVolume)} <span className="text-base font-normal text-gray-500">{safeStats.currentWeekVolume >= 1000 ? t('progress.toneladas') : 'kg'}</span>
           </p>
           <p className={`text-sm mt-1 flex items-center gap-1 ${safeStats.volumeChange >= 0 ? 'text-primary' : 'text-red-400'}`}>
             <span className="text-xs">{safeStats.volumeChange >= 0 ? '▲' : '▼'}</span> 
-            {Math.abs(safeStats.volumeChange)}% vs semana anterior
+            {Math.abs(safeStats.volumeChange)}% {t('progress.vsPreviousWeek')}
           </p>
         </div>
 
         <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
-          <h3 className="text-gray-400 text-sm font-medium mb-1">Streak Atual</h3>
+          <h3 className="text-gray-400 text-sm font-medium mb-1">{t('progress.streakTitle')}</h3>
           <p className="text-3xl font-bold text-white">
-            {safeStats.streak} <span className="text-base font-normal text-gray-500">{safeStats.streak === 1 ? 'dia' : 'dias'}</span>
+            {safeStats.streak} <span className="text-base font-normal text-gray-500">{safeStats.streak === 1 ? t('progress.day') : t('progress.daysCount')}</span>
           </p>
         </div>
       </div>
@@ -307,10 +317,10 @@ export function ProgressDashboard() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" /> Recordes Pessoais (1RM)
+            <Zap className="w-5 h-5 text-primary" /> {t('progress.prsTitle')}
           </h3>
           <Link to="/records" className="text-primary text-sm font-medium hover:underline flex items-center gap-1">
-            Ver todos <ChevronRight className="w-4 h-4" />
+            {t('progress.viewAll')} <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
         
@@ -322,14 +332,14 @@ export function ProgressDashboard() {
                 <p className="text-2xl font-bold text-white">{Math.round(pr.one_rep_max)} <span className="text-sm font-normal text-gray-500">kg</span></p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase font-bold">Baseado em</p>
+                <p className="text-[10px] text-gray-500 uppercase font-bold">{t('progress.basedOn')}</p>
                 <p className="text-xs font-medium text-gray-300">{pr.weight_kg}kg × {pr.reps}</p>
               </div>
             </div>
           ))}
           {safeStats.prs.length === 0 && (
             <div className="col-span-full bg-surface-200/50 border border-dashed border-surface-100 p-8 rounded-xl text-center">
-              <p className="text-gray-500 italic text-sm">Ainda não tens recordes registados.</p>
+              <p className="text-gray-500 italic text-sm">{t('progress.noPrsYet')}</p>
             </div>
           )}
         </div>
@@ -338,12 +348,12 @@ export function ProgressDashboard() {
       {/* Chart Section */}
       <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-sm">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white">Volume de Treino (8 semanas)</h3>
+          <h3 className="text-lg font-bold text-white">{t('progress.volumeChartTitle')}</h3>
         </div>
         
-        <div className="h-64 w-full">
-          <FeatureGate featureName="Gráficos de Volume Detalhados">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="h-72 w-full min-h-[300px]">
+          <FeatureGate featureName={t('progress.detailedVolumeCharts')}>
+            <ResponsiveContainer width="99%" height="100%">
               <AreaChart data={safeStats.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
@@ -367,7 +377,7 @@ export function ProgressDashboard() {
                     const label = numericValue >= 1000
                       ? `${(numericValue / 1000).toFixed(2)} TON`
                       : `${numericValue} kg`
-                    return [label, 'Volume']
+                    return [label, t('progress.weeklyVolume')]
                   }}
                 />
                 <Area type="monotone" dataKey="volume" stroke="#00ff87" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
@@ -379,7 +389,7 @@ export function ProgressDashboard() {
 
       {/* History Section */}
       <div className="space-y-4">
-        <h3 className="text-xl font-bold text-white">Histórico de Treinos</h3>
+        <h3 className="text-xl font-bold text-white">{t('progress.workoutHistory')}</h3>
         {safeStats.history.length > 0 ? (
           <div className="space-y-3">
             {safeStats.history.map((session) => (
@@ -393,7 +403,7 @@ export function ProgressDashboard() {
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white">{session.plan_name || 'Treino Personalizado'}</h4>
+                    <h4 className="font-bold text-white">{session.plan_name || t('workouts.deletedPlan')}</h4>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {formatDuration(session.duration_seconds)}
@@ -401,7 +411,7 @@ export function ProgressDashboard() {
                       <span className="flex items-center gap-1">
                         <Weight className="w-3 h-3" /> {formatVolume(session.total_volume_kg)}kg
                       </span>
-                      <span>{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: pt })}</span>
+                      <span>{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: currentLocale })}</span>
                     </div>
                   </div>
                 </div>
@@ -434,7 +444,7 @@ export function ProgressDashboard() {
           </div>
         ) : (
           <div className="bg-surface-200 border border-dashed border-surface-100 p-8 rounded-2xl text-center">
-            <p className="text-gray-500">Ainda não completaste nenhum treino.</p>
+            <p className="text-gray-500 italic">{t('progress.noDataYet')}</p>
           </div>
         )}
       </div>
@@ -445,20 +455,20 @@ export function ProgressDashboard() {
           <Modal
             isOpen={!!compareSession}
             onClose={() => { setCompareSession(null); setComparisonTarget(null); }}
-            title="Comparar Treinos"
+            title={t('progress.compareWorkouts')}
             size="lg"
           >
             <div className="space-y-6">
               <div className="bg-surface-100 p-4 rounded-xl border border-white/5">
-                <p className="text-xs text-gray-500 uppercase font-black mb-2">Treino Selecionado</p>
+                <p className="text-xs text-gray-500 uppercase font-black mb-2">{t('progress.selectedWorkout')}</p>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-bold text-white text-lg">{compareSession.plan_name || 'Treino Personalizado'}</h4>
+                  <h4 className="font-bold text-white text-lg">{compareSession.plan_name || t('workouts.deletedPlan')}</h4>
                   <p className="text-sm text-gray-400">{format(new Date(compareSession.finished_at!), "dd/MM/yyyy")}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <label className="text-xs text-gray-500 uppercase font-black">Comparar com sessão anterior:</label>
+                <label className="text-xs text-gray-500 uppercase font-black">{t('progress.compareWithPrevious')}</label>
                 <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
                   {safeStats.history
                     .filter(s => s.id !== compareSession.id && s.plan_name === compareSession.plan_name)
@@ -472,12 +482,12 @@ export function ProgressDashboard() {
                             : 'bg-surface-200 border-white/5 text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        <span className="font-bold">{format(new Date(s.finished_at!), "dd MMM yyyy, HH:mm")}</span>
+                        <span className="font-bold">{format(new Date(s.finished_at!), "dd MMM yyyy, HH:mm", { locale: currentLocale })}</span>
                         <span className="text-xs">{formatVolume(s.total_volume_kg)} kg</span>
                       </button>
                     ))}
                   {safeStats.history.filter(s => s.id !== compareSession.id && s.plan_name === compareSession.plan_name).length === 0 && (
-                    <p className="text-sm text-gray-500 italic p-4 bg-surface-200 rounded-xl">Não foram encontradas outras sessões deste plano para comparar.</p>
+                    <p className="text-sm text-gray-500 italic p-4 bg-surface-200 rounded-xl">{t('progress.noComparisonSessions')}</p>
                   )}
                 </div>
               </div>
@@ -493,7 +503,7 @@ export function ProgressDashboard() {
                   </div>
                   
                   <div className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Diferença de Volume</p>
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('progress.volumeDifference')}</p>
                     <div className="flex items-center gap-2">
                        <p className="text-2xl font-black italic">
                         {Math.round(compareSession.total_volume_kg - comparisonTarget.total_volume_kg)}kg
@@ -507,7 +517,7 @@ export function ProgressDashboard() {
                   </div>
 
                    <div className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Tempo de Treino</p>
+                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('progress.trainingTime')}</p>
                     <div className="flex items-center gap-2">
                        <p className="text-2xl font-black italic">
                         {Math.round((compareSession.duration_seconds - comparisonTarget.duration_seconds) / 60)} min
@@ -527,7 +537,7 @@ export function ProgressDashboard() {
                 className="w-full"
                 onClick={() => { setCompareSession(null); setComparisonTarget(null); }}
               >
-                Fechar
+                {t('common.close')}
               </Button>
             </div>
           </Modal>
@@ -537,7 +547,7 @@ export function ProgressDashboard() {
       <Modal
         isOpen={!!selectedSessionForDetails}
         onClose={() => setSelectedSessionForDetails(null)}
-        title={selectedSessionForDetails?.plan_name || 'Detalhes do Treino'}
+        title={selectedSessionForDetails?.plan_name || t('workouts.deletedPlan')}
         size="lg"
       >
         {isLoadingDetails ? (
@@ -550,7 +560,7 @@ export function ProgressDashboard() {
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-primary" />
                 <span className="text-white font-bold">
-                  {selectedSessionForDetails && format(new Date(selectedSessionForDetails.finished_at!), "dd MMM yyyy, HH:mm", { locale: pt })}
+                  {selectedSessionForDetails && format(new Date(selectedSessionForDetails.finished_at!), "dd MMM yyyy, HH:mm", { locale: currentLocale })}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-400">
@@ -584,11 +594,68 @@ export function ProgressDashboard() {
               ))}
             </div>
 
-            <Button className="w-full" onClick={() => setSelectedSessionForDetails(null)}>Fechar</Button>
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                variant="secondary"
+                disabled={savingAsPlan || !sessionDetails || sessionDetails.length === 0}
+                onClick={async () => {
+                  if (!sessionDetails || !profile?.id) return
+                  setSavingAsPlan(true)
+                  try {
+                    const planName = selectedSessionForDetails?.plan_name || t('workouts.deletedPlan')
+                    const exercises = sessionDetails.map((group: any) => {
+                      const sets = group.sets
+                      const validWeights = sets.map((s: any) => s.weight_kg).filter((w: number | null) => w != null && w > 0)
+                      const avgWeight = validWeights.length > 0 ? Math.round(validWeights.reduce((a: number, b: number) => a + Number(b), 0) / validWeights.length) : null
+                      
+                      const validReps = sets.map((s: any) => s.reps).filter((r: number | null) => r != null && r > 0)
+                      const avgReps = validReps.length > 0 ? Math.round(validReps.reduce((a: number, b: number) => a + Number(b), 0) / validReps.length) : 10
+                      
+                      return {
+                        name: group.name,
+                        exercise_id: sets[0]?.exercise_id || '',
+                        sets: sets.length,
+                        reps_min: Math.max(1, avgReps - 2),
+                        reps_max: avgReps + 2,
+                        rest_seconds: 90,
+                        weight_kg: avgWeight,
+                      }
+                    })
+                    navigate('/workouts/new', {
+                      state: {
+                        initialData: {
+                          name: planName + ' (copy)',
+                          description: '',
+                          exercises: exercises.map((ex: any) => ({
+                            name: ex.name,
+                            exercise_id: ex.exercise_id,
+                            sets: ex.sets,
+                            reps_min: ex.reps_min,
+                            reps_max: ex.reps_max,
+                            rest_seconds: ex.rest_seconds,
+                            weight_kg: ex.weight_kg,
+                          }))
+                        }
+                      }
+                    })
+                    showToast(t('workouts.saveAsPlanSuccess'), 'success')
+                    setSelectedSessionForDetails(null)
+                  } catch {
+                    showToast(t('workouts.saveAsPlanError'), 'error')
+                  } finally {
+                    setSavingAsPlan(false)
+                  }
+                }}
+              >
+                {savingAsPlan ? t('common.loading') : t('workouts.saveAsPlan')}
+              </Button>
+              <Button className="flex-1" onClick={() => setSelectedSessionForDetails(null)}>{t('common.close')}</Button>
+            </div>
           </div>
         ) : (
           <div className="text-center p-12 text-gray-500">
-            Não foram encontrados detalhes para esta sessão.
+            {t('progress.noSessionDetails')}
           </div>
         )}
       </Modal>
@@ -597,9 +664,9 @@ export function ProgressDashboard() {
         isOpen={!!sessionToDelete}
         onClose={() => setSessionToDelete(null)}
         onConfirm={() => sessionToDelete && deleteSession.mutate(sessionToDelete)}
-        title="Apagar Treino"
-        message="Tens a certeza que queres apagar este treino? Esta acção não pode ser revertida."
-        confirmText="Apagar"
+        title={t('progress.deleteWorkout')}
+        message={t('progress.deleteWorkoutConfirm')}
+        confirmText={t('common.delete')}
         variant="danger"
         isLoading={deleteSession.isPending}
       />

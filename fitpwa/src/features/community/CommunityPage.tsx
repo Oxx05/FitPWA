@@ -2,28 +2,16 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Heart, Save, Dumbbell, Loader2, Zap, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
-import { useAchievementsStore } from '@/features/gamification/useAchievementsStore'
+import { useToast } from '@/shared/contexts/ToastContext'
 
-interface PublicWorkout {
-  id: string
-  name: string
-  description: string
-  author_name: string
-  author_id: string
-  difficulty: string
-  days_per_week: number
-  likes: number
-  saves: number
-  comments: number
-  created_at: string
-  is_liked?: boolean
-  is_saved?: boolean
-}
 
 export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { profile } = useAuthStore()
+  const { t } = useTranslation()
+  const { showToast } = useToast()
   const [selectedSort, setSelectedSort] = useState<'trending' | 'recent' | 'saves'>('trending')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -42,7 +30,8 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
           likes, 
           saves, 
           created_at,
-          profiles:user_id (username)
+          profiles:user_id (username),
+          exercise_count:plan_exercises(count)
         `)
         .eq('is_public', true)
 
@@ -65,65 +54,86 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
         id: w.id,
         name: w.name,
         description: w.description || '',
-        author_name: (w.profiles as unknown as { username: string })?.username || 'Atleta',
+        author_name: (w.profiles as any)?.username || t('community.athlete'),
         author_id: w.user_id,
         difficulty: w.difficulty || 'intermediate',
         days_per_week: w.days_per_week || 0,
         likes: w.likes || 0,
         saves: w.saves || 0,
+        exercise_count: (w.exercise_count as any)?.[0]?.count || 0,
         comments: 0,
         created_at: w.created_at
-      })) as PublicWorkout[]
+      })) as any[]
     }
   })
 
   const handleLike = async (workoutId: string) => {
+    if (!profile?.id) return
     try {
-      await supabase
+      // Check if already liked
+      const { data: existing } = await supabase
         .from('workout_likes')
-        .insert({
-          workout_id: workoutId,
-          user_id: profile?.id
-        })
-      
-      // Increment like count
-      await supabase
-        .from('workout_plans')
-        .update({ likes: (workouts?.find(w => w.id === workoutId)?.likes || 0) + 1 })
-        .eq('id', workoutId)
-      // Increment achievement counter
-      const auth = useAuthStore.getState()
-      auth.incrementSocialLikes()
-      const achStore = useAchievementsStore.getState()
-      achStore.checkAchievements(auth.user!.id, {
-        workoutsCount: 0,
-        streakDays: auth.profile?.login_streak || 0,
-        sessionVolume: 0,
-        totalVolume: auth.profile?.total_volume_kg || 0,
-        socialLikes: (auth.profile?.social_likes_given || 0) + 1,
-        level: auth.profile?.level || 0
-      })
+        .select('id')
+        .eq('workout_id', workoutId)
+        .eq('user_id', profile.id)
+        .single()
+
+      if (existing) {
+        // Unlike
+        await supabase
+          .from('workout_likes')
+          .delete()
+          .eq('id', existing.id)
+        
+        await supabase.rpc('decrement_workout_likes', { workout_id: workoutId })
+      } else {
+        // Like
+        await supabase
+          .from('workout_likes')
+          .insert({
+            workout_id: workoutId,
+            user_id: profile.id
+          })
+        
+        await supabase.rpc('increment_workout_likes', { workout_id: workoutId })
+        
+        const auth = useAuthStore.getState()
+        auth.incrementSocialLikes()
+      }
     } catch (error) {
-      console.error('Error liking workout:', error)
+      console.error('Error toggling like:', error)
     }
   }
 
   const handleSave = async (workoutId: string) => {
+    if (!profile?.id) return
     try {
-      await supabase
+      const { data: existing } = await supabase
         .from('saved_workouts')
-        .insert({
-          workout_id: workoutId,
-          user_id: profile?.id
-        })
-      
-      // Increment saves count
-      await supabase
-        .from('workout_plans')
-        .update({ saves: (workouts?.find(w => w.id === workoutId)?.saves || 0) + 1 })
-        .eq('id', workoutId)
+        .select('id')
+        .eq('workout_id', workoutId)
+        .eq('user_id', profile.id)
+        .single()
+
+      if (existing) {
+        await supabase
+          .from('saved_workouts')
+          .delete()
+          .eq('id', existing.id)
+        
+        await supabase.rpc('decrement_workout_saves', { workout_id: workoutId })
+      } else {
+        await supabase
+          .from('saved_workouts')
+          .insert({
+            workout_id: workoutId,
+            user_id: profile.id
+          })
+        
+        await supabase.rpc('increment_workout_saves', { workout_id: workoutId })
+      }
     } catch (error) {
-      console.error('Error saving workout:', error)
+      console.error('Error toggling save:', error)
     }
   }
 
@@ -131,8 +141,8 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
     <div className={`max-w-4xl mx-auto p-4 md:p-8 space-y-6 pb-24 ${hideHeader ? '!pt-0 !px-0' : ''}`}>
       {!hideHeader && (
         <div>
-          <h1 className="text-3xl font-bold italic uppercase tracking-tighter">Comunidade</h1>
-          <p className="text-gray-400">Descobre planos criados por outros utilizadores.</p>
+          <h1 className="text-3xl font-bold italic uppercase tracking-tighter">{t('community.title')}</h1>
+          <p className="text-gray-400">{t('community.subtitle')}</p>
         </div>
       )}
 
@@ -140,7 +150,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
       <div className="relative">
         <input
           type="text"
-          placeholder="Procurar treinos ou autores..."
+          placeholder={t('community.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-surface-200 border border-surface-100 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 focus:outline-none focus:border-primary transition-colors"
@@ -160,7 +170,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
             }`}
           >
             {sort === 'trending' ? <Zap className="w-4 h-4" /> : sort === 'recent' ? <Clock className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {sort === 'trending' ? 'Trending' : sort === 'recent' ? 'Recente' : 'Guardados'}
+            {sort === 'trending' ? t('community.trending') : sort === 'recent' ? t('community.recent') : t('community.saved')}
           </button>
         ))}
       </div>
@@ -187,7 +197,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                   <p className="text-sm text-gray-400 mt-1">{workout.description}</p>
                 </div>
                 <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full whitespace-nowrap">
-                  {workout.days_per_week}x/semana
+                  {workout.days_per_week}x/{t('common.week')}
                 </span>
               </div>
 
@@ -198,10 +208,10 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-300">
-                    por <span className="text-white font-bold">{workout.author_name}</span>
+                    {t('common.by')} <span className="text-white font-bold">{workout.author_name}</span>
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(workout.created_at).toLocaleDateString('pt-PT')}
+                    {new Date(workout.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -209,20 +219,20 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
               {/* Stats */}
               <div className="grid grid-cols-4 gap-2 mb-4">
                 <div className="bg-surface-100 p-3 rounded-lg text-center">
-                  <p className="text-lg font-bold text-white">-</p>
-                  <p className="text-xs text-gray-400">Exercícios</p>
+                  <p className="text-lg font-bold text-white">{workout.exercise_count || '-'}</p>
+                  <p className="text-xs text-gray-400">{t('common.exercises')}</p>
                 </div>
                 <div className="bg-surface-100 p-3 rounded-lg text-center">
                   <p className="text-lg font-bold text-red-400">{workout.likes}</p>
-                  <p className="text-xs text-gray-400">Likes</p>
+                  <p className="text-xs text-gray-400">{t('common.likes')}</p>
                 </div>
                 <div className="bg-surface-100 p-3 rounded-lg text-center">
                   <p className="text-lg font-bold text-blue-400">{workout.saves}</p>
-                  <p className="text-xs text-gray-400">Guardados</p>
+                  <p className="text-xs text-gray-400">{t('community.saved')}</p>
                 </div>
                 <div className="bg-surface-100 p-3 rounded-lg text-center">
                   <p className="text-lg font-bold text-green-400">{workout.comments}</p>
-                  <p className="text-xs text-gray-400">Comentários</p>
+                  <p className="text-xs text-gray-400">{t('common.comments')}</p>
                 </div>
               </div>
 
@@ -239,7 +249,7 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                 <button 
                   onClick={() => handleSave(workout.id)}
                   className="flex-1 flex items-center gap-2 justify-center py-2 rounded-lg bg-surface-100 hover:bg-primary/20 text-gray-400 hover:text-blue-400 transition-colors"
-                  title="Guardar nos favoritos"
+                  title={t('community.saved')}
                 >
                   <Save className="w-4 h-4" />
                   <span className="text-sm">{workout.saves}</span>
@@ -289,16 +299,16 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
                           })))
                       }
                       
-                      alert('Plano clonado com sucesso! Já o podes encontrar nos teus treinos.')
+                      showToast(t('community.clonedSuccess'), 'success')
                     } catch (err) {
                       console.error('Erro ao clonar plano:', err)
-                      alert('Erro ao clonar plano.')
+                      showToast(t('community.clonedError'), 'error')
                     }
                   }}
                   className="flex-[2] flex items-center gap-2 justify-center py-2 rounded-lg bg-primary text-black font-bold hover:bg-primary/90 transition-colors"
                 >
                   <Dumbbell className="w-4 h-4" />
-                  <span className="text-sm">Usar Plano</span>
+                  <span className="text-sm">{t('workouts.usePlan')}</span>
                 </button>
               </div>
             </motion.div>
@@ -311,12 +321,12 @@ export function CommunityPage({ hideHeader = false }: { hideHeader?: boolean }) 
           className="flex flex-col items-center justify-center p-12 bg-surface-200 border border-dashed border-surface-100 rounded-2xl text-center"
         >
           <Dumbbell className="w-16 h-16 text-gray-600 mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Comunidade Vazia</h3>
+          <h3 className="text-xl font-bold text-white mb-2">{t('community.emptyTitle')}</h3>
           <p className="text-gray-400 max-w-md mb-6">
-            Nenhum plano foi partilhado na comunidade ainda. Sê o primeiro a publicar o teu plano de treino!
+            {t('community.emptyDesc')}
           </p>
           <a href="/workouts/new" className="px-6 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors">
-            Criar e Publicar Plano
+            {t('community.createAndPublish')}
           </a>
         </motion.div>
       )}

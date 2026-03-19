@@ -32,9 +32,6 @@ interface PlanExercise {
   exercise_id: string
   name: string
   sets: number
-  reps_min: number
-  reps_max: number
-  rest_seconds: number
   weight_kg: number | null
   is_superset: boolean
 }
@@ -49,14 +46,6 @@ interface Exercise {
   instructions?: string
 }
 
-function formatRestTime(seconds: number): string {
-  if (seconds >= 60) {
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return s > 0 ? `${m}m ${s}s` : `${m}m`
-  }
-  return `${seconds}s`
-}
 
 interface SortableExerciseItemProps {
   ex: PlanExercise
@@ -91,62 +80,27 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('editor.sets')}</label>
+          <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.sets')}</label>
           <DebouncedNumericInput
             min={1}
             max={20}
             value={ex.sets}
             onChange={val => onUpdate(ex.id, 'sets', val || 1)}
-            className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+            className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('editor.repsMinMax')}</label>
-          <div className="flex items-center gap-1">
-            <DebouncedNumericInput
-              min={1}
-              max={100}
-              value={ex.reps_min}
-              onChange={val => onUpdate(ex.id, 'reps_min', val || 1)}
-              className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-            />
-            <span className="text-gray-500 text-xs">-</span>
-            <DebouncedNumericInput
-              min={1}
-              max={100}
-              value={ex.reps_max}
-              onChange={val => onUpdate(ex.id, 'reps_max', val || 1)}
-              className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('editor.weight')}</label>
+          <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.weight')}</label>
           <DebouncedNumericInput
             min={0}
             step={0.5}
             placeholder="—"
             value={ex.weight_kg}
             onChange={val => onUpdate(ex.id, 'weight_kg', val)}
-            className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+            className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
           />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('editor.rest')}</label>
-          <div className="relative">
-            <DebouncedNumericInput
-              min={0}
-              step={15}
-              value={ex.rest_seconds}
-              onChange={val => onUpdate(ex.id, 'rest_seconds', val || 0)}
-              className="w-full h-10 bg-background border border-surface-200 rounded-lg text-center text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-            />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">
-              {formatRestTime(ex.rest_seconds)}
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -163,7 +117,7 @@ export function WorkoutEditor() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [difficulty, setDifficulty] = useState('intermediate')
+
   const [exercises, setExercises] = useState<PlanExercise[]>([])
   const [isPublic, setIsPublic] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -217,7 +171,7 @@ export function WorkoutEditor() {
     try {
       setLoading(true)
 
-      const rawSession = localStorage.getItem('fitpwa_active_session')
+      const rawSession = localStorage.getItem('titanpulse_active_session')
       if (rawSession) {
         try {
           const sessionData = JSON.parse(rawSession)
@@ -258,9 +212,6 @@ export function WorkoutEditor() {
               exercise_id: (ex?.id as string) || (pe.exercise_id as string),
               name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
               sets: (pe.sets as number) || 3,
-              reps_min: (pe.reps_min as number) || 8,
-              reps_max: (pe.reps_max as number) || 12,
-              rest_seconds: (pe.rest_seconds as number) || 90,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
             }
@@ -309,9 +260,6 @@ export function WorkoutEditor() {
               exercise_id: (ex?.id as string) || (pe.exercise_id as string),
               name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
               sets: (pe.sets as number) || 3,
-              reps_min: (pe.reps_min as number) || 8,
-              reps_max: (pe.reps_max as number) || 12,
-              rest_seconds: (pe.rest_seconds as number) || 90,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
             }
@@ -342,9 +290,6 @@ export function WorkoutEditor() {
             exercise_id: ex.exerciseId || ex.exercise_id,
             name: ex.name,
             sets: ex.sets?.length || ex.sets || 3,
-            reps_min: ex.repsMin || ex.reps_min || 8,
-            reps_max: ex.repsMax || ex.reps_max || 12,
-            rest_seconds: ex.restSeconds || ex.rest_seconds || 90,
             weight_kg: ex.weight || ex.weight_kg || null,
             is_superset: false
           }))
@@ -361,9 +306,6 @@ export function WorkoutEditor() {
       exercise_id: exercise.id,
       name: i18n.language.startsWith('pt') ? (exercise.name_pt || exercise.name) : exercise.name,
       sets: 3,
-      reps_min: 8,
-      reps_max: 12,
-      rest_seconds: 60,
       weight_kg: null,
       is_superset: false
     }
@@ -460,9 +402,11 @@ export function WorkoutEditor() {
       }
 
       if (id) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { user_id: _unused, ...updateData } = planData
         const { error: err } = await supabase
           .from('workout_plans')
-          .update(planData)
+          .update(updateData)
           .eq('id', id)
         if (err) throw err
         
@@ -485,9 +429,6 @@ export function WorkoutEditor() {
           exercise_id: ex.exercise_id,
           order_index: idx,
           sets: ex.sets,
-          reps_min: ex.reps_min,
-          reps_max: ex.reps_max,
-          rest_seconds: ex.rest_seconds,
           weight_kg: ex.weight_kg,
           is_superset: ex.is_superset,
         }))
@@ -560,18 +501,7 @@ export function WorkoutEditor() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">{t('editor.difficulty')}</label>
-          <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            className="w-full bg-surface-200 border border-surface-100 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary"
-          >
-            <option value="beginner">{t('editor.beginner')}</option>
-            <option value="intermediate">{t('editor.intermediate')}</option>
-            <option value="advanced">{t('editor.advanced')}</option>
-          </select>
-        </div>
+
 
         <div className="flex items-center justify-between p-4 bg-surface-200 border border-surface-100 rounded-lg">
           <div>
@@ -695,12 +625,7 @@ export function WorkoutEditor() {
                     {ex.muscle_groups && ex.muscle_groups.length > 0 && (
                       <span>{ex.muscle_groups.join(', ')}</span>
                     )}
-                    {ex.difficulty && (
-                      <>
-                        <span>•</span>
-                        <span>{t('common.level')} {ex.difficulty}</span>
-                      </>
-                    )}
+
                   </div>
                 </button>
               ))

@@ -139,22 +139,22 @@ function analyzeMuscleTargets(prompt: string): string[] {
   const targets = new Set<string>();
 
   // Direct hits
-  if (lower.match(/peito|chest|supino|empurrar/)) targets.add('Peito');
-  if (lower.match(/costa|back|puxar/)) targets.add('Costas');
-  if (lower.match(/ombro|shoulder|deltoide/)) targets.add('Ombro');
-  if (lower.match(/bicep/)) targets.add('Bíceps');
-  if (lower.match(/tricep/)) targets.add('Tríceps');
-  if (lower.match(/braco|arm/)) { targets.add('Bíceps'); targets.add('Tríceps'); }
-  if (lower.match(/perna|leg|quad/)) { targets.add('Pernas'); targets.add('Quadríceps'); targets.add('Femorais'); targets.add('Panturrilha'); }
-  if (lower.match(/gluteo|bunda|posterior/)) { targets.add('Glúteos'); targets.add('Femorais'); }
-  if (lower.match(/abs|abdominal|core/)) { targets.add('Abdominais'); targets.add('Core'); targets.add('Oblíquos'); }
+  if (lower.match(/peito|chest|supino|empurrar/)) targets.add('chest');
+  if (lower.match(/costa|back|puxar/)) targets.add('back');
+  if (lower.match(/ombro|shoulder|deltoide/)) targets.add('shoulders');
+  if (lower.match(/bicep/)) targets.add('biceps');
+  if (lower.match(/tricep/)) targets.add('triceps');
+  if (lower.match(/braco|arm/)) { targets.add('biceps'); targets.add('triceps'); }
+  if (lower.match(/perna|leg|quad/)) { targets.add('legs'); targets.add('quads'); targets.add('hamstrings'); targets.add('calves'); }
+  if (lower.match(/gluteo|bunda|posterior/)) { targets.add('glutes'); targets.add('hamstrings'); }
+  if (lower.match(/abs|abdominal|core/)) { targets.add('abs'); targets.add('core'); targets.add('obliques'); }
   
   // Macros
-  if (lower.match(/superior|upper/)) { targets.add('Peito'); targets.add('Costas'); targets.add('Ombro'); targets.add('Bíceps'); targets.add('Tríceps'); }
-  if (lower.match(/inferior|lower/)) { targets.add('Pernas'); targets.add('Glúteos'); targets.add('Femorais'); targets.add('Panturrilha'); }
-  if (lower.match(/push/)) { targets.add('Peito'); targets.add('Ombro'); targets.add('Tríceps'); }
-  if (lower.match(/pull/)) { targets.add('Costas'); targets.add('Bíceps'); }
-  if (lower.match(/corpo inteiro|full body/)) { targets.add('Peito'); targets.add('Costas'); targets.add('Pernas'); targets.add('Ombro'); targets.add('Abdominais'); }
+  if (lower.match(/superior|upper/)) { targets.add('chest'); targets.add('back'); targets.add('shoulders'); targets.add('biceps'); targets.add('triceps'); }
+  if (lower.match(/inferior|lower/)) { targets.add('legs'); targets.add('glutes'); targets.add('hamstrings'); targets.add('calves'); }
+  if (lower.match(/push/)) { targets.add('chest'); targets.add('shoulders'); targets.add('triceps'); }
+  if (lower.match(/pull/)) { targets.add('back'); targets.add('biceps'); }
+  if (lower.match(/corpo inteiro|full body/)) { targets.add('chest'); targets.add('back'); targets.add('legs'); targets.add('shoulders'); targets.add('abs'); }
 
   return Array.from(targets);
 }
@@ -275,7 +275,7 @@ function pickSmartExercises(
 
 // ─── Main generator ───
 
-export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
+export function generateWorkoutPlan(userPrompt: string, lang: string = 'pt'): AiGeneratedPlan {
   // 1. Context Parsing
   const difficulty = detectDifficulty(userPrompt);
   const goal = detectGoal(userPrompt);
@@ -288,7 +288,7 @@ export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
 
   // Fallback if no specific muscle was mentioned (Full Body)
   if (targetMuscles.length === 0 && !isCardio) {
-    targetMuscles = ['Peito', 'Costas', 'Pernas', 'Ombro', 'Abdominais'];
+    targetMuscles = ['chest', 'back', 'legs', 'shoulders', 'abs'];
   }
 
   const preset = DIFFICULTY_PRESETS[difficulty];
@@ -314,7 +314,7 @@ export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
   );
 
   if (selectedExercises.length === 0) {
-    throw new Error("Não encontrei exercícios que correspondam às tuas limitações/equipamento. Tenta ser menos restritivo!");
+    throw new Error(lang === 'pt' ? "Não encontrei exercícios que correspondam às tuas limitações/equipamento. Tenta ser menos restritivo!" : "Could not find exercises matching your limitations/equipment. Try to be less restrictive!");
   }
 
   // 4. Volume Mapping
@@ -324,7 +324,7 @@ export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
 
   const exercises: AiGeneratedExercise[] = selectedExercises.map(ex => ({
     exercise_id: ex.id,
-    name: ex.name,
+    name: lang === 'pt' ? ex.name_pt || ex.name : ex.name,
     sets: ex.movementType === 'compound' ? preset.setsCompound
       : ex.movementType === 'cardio' ? 1
       : preset.setsIsolation,
@@ -337,19 +337,27 @@ export function generateWorkoutPlan(userPrompt: string): AiGeneratedPlan {
   }));
 
   // 5. Intelligent Naming & Description
-  const muscleString = targetMuscles.length > 3 ? 'Corpo Inteiro' : targetMuscles.join(', ');
-  const modeString = isCardio && targetMuscles.length > 0 ? '+ Cardio' : '';
+  const muscleString = targetMuscles.length > 3 ? (lang === 'pt' ? 'Corpo Inteiro' : 'Full Body') : targetMuscles.join(', ');
+  const modeString = isCardio && targetMuscles.length > 0 ? (lang === 'pt' ? '+ Cardio' : '+ Cardio') : '';
   const planName = timeLimit 
-    ? `Treino Dinâmico de ${timeLimit} min` 
-    : `Plano Gerado: ${muscleString} ${modeString}`;
+    ? (lang === 'pt' ? `Treino Dinâmico de ${timeLimit} min` : `Dynamic Workout of ${timeLimit} min`)
+    : (lang === 'pt' ? `Plano Gerado: ${muscleString} ${modeString}` : `Generated Plan: ${muscleString} ${modeString}`);
 
-  let description = `Treino gerado à medida. Foco em ${goal === 'strength' ? 'força' : goal === 'endurance' ? 'resistência' : 'hipertrofia'}.`;
+  let description = lang === 'pt' 
+    ? `Treino gerado à medida. Foco em ${goal === 'strength' ? 'força' : goal === 'endurance' ? 'resistência' : 'hipertrofia'}.`
+    : `Custom generated workout. Focus on ${goal === 'strength' ? 'strength' : goal === 'endurance' ? 'endurance' : 'hypertrophy'}.`;
+  
   if (equipment !== null) {
-    if (equipment.length === 0) description += ' Sem recurso a equipamento (apenas peso corporal).';
-    else description += ` Equipamento filtrado.`;
+    if (equipment.length === 0) {
+      description += lang === 'pt' ? ' Sem recurso a equipamento (apenas peso corporal).' : ' No equipment needed (bodyweight only).';
+    } else {
+      description += lang === 'pt' ? ' Equipamento filtrado.' : ' Equipment filtered.';
+    }
   }
   if (limitations.length > 0) {
-    description += ' Adaptado para evitar sobrecarga nas tuas limitações articulatórias.';
+    description += lang === 'pt' 
+      ? ' Adaptado para evitar sobrecarga nas tuas limitações articulatórias.'
+      : ' Adapted to avoid overloading your joint limitations.';
   }
 
   return {

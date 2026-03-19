@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Trophy, TrendingUp, Calendar, Zap, Bell, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
 import { EXERCISES } from '@/shared/data/exercises'
@@ -59,6 +60,8 @@ interface DBSession {
 
 export function RecordsPage() {
   const { profile } = useAuthStore()
+  const { t, i18n } = useTranslation()
+  const isPt = i18n.language === 'pt'
 
   // Initialize notifications on mount
   useEffect(() => {
@@ -221,8 +224,8 @@ export function RecordsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Registos & PRs</h1>
-          <p className="text-gray-400">Acompanhe seu progresso e recordes pessoais</p>
+          <h1 className="text-3xl font-bold">{t('progress.recordsTitle')}</h1>
+          <p className="text-gray-400">{t('progress.recordsSubtitle')}</p>
         </div>
         <Button
           size="sm"
@@ -231,7 +234,7 @@ export function RecordsPage() {
           className="flex items-center gap-2"
         >
           <Bell size={16} />
-          {pushNotifications.isPermissionGranted() ? 'Notificações ON' : 'Ativar Notificações'}
+          {pushNotifications.isPermissionGranted() ? t('common.notificationsOn') : t('common.enableNotifications')}
         </Button>
       </div>
 
@@ -244,7 +247,7 @@ export function RecordsPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Total de Treinos</p>
+              <p className="text-sm text-gray-400">{t('progress.totalWorkouts')}</p>
               <p className="text-3xl font-bold text-white mt-2">{totalWorkouts}</p>
             </div>
             <Zap className="w-12 h-12 text-primary/20" />
@@ -259,7 +262,7 @@ export function RecordsPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Volume Total (kg)</p>
+              <p className="text-sm text-gray-400">{t('progress.totalVolume')}</p>
               <p className="text-3xl font-bold text-red-400 mt-2">{totalVolume.toFixed(0)}</p>
             </div>
             <TrendingUp className="w-12 h-12 text-red-400/20" />
@@ -274,7 +277,7 @@ export function RecordsPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400">Seu Best Lift</p>
+              <p className="text-sm text-gray-400">{t('progress.bestLift')}</p>
               <p className="text-xl font-bold text-primary mt-2">{bestExercise}</p>
             </div>
             <Trophy className="w-12 h-12 text-yellow-400/20" />
@@ -295,7 +298,7 @@ export function RecordsPage() {
 
       {/* PRs Section */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Personal Records 🏆</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('progress.personalRecords')} 🏆</h2>
         {prsLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -313,7 +316,7 @@ export function RecordsPage() {
                 <div>
                   <p className="font-bold text-white">{pr.exercise_name}</p>
                   <p className="text-sm text-gray-400 mt-1">
-                    {new Date(pr.date_set).toLocaleDateString('pt-PT')}
+                    {new Date(pr.date_set).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -322,8 +325,8 @@ export function RecordsPage() {
                     <p className="text-sm text-gray-400">x{pr.reps}</p>
                   </div>
                   <SocialShare
-                    title={`Novo PR - ${pr.exercise_name}`}
-                    text={`Acabo de estabelecer um novo PR! 🏆`}
+                    title={`${t('progress.personalRecords')} - ${pr.exercise_name}`}
+                    text={t('progress.sharePrText')}
                     exerciseName={pr.exercise_name}
                     weight={pr.weight_kg}
                     reps={pr.reps}
@@ -335,14 +338,14 @@ export function RecordsPage() {
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Nenhum PR registado ainda. Comece a treinar!</p>
+            <p>{t('progress.noPrsYet')}</p>
           </div>
         )}
       </div>
 
       {/* PR History */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Histórico de PRs</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('progress.prHistory')}</h2>
         {prHistoryLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -360,7 +363,7 @@ export function RecordsPage() {
                 <div>
                   <p className="font-bold text-white">{pr.exercise_name}</p>
                   <p className="text-sm text-gray-400 mt-1">
-                    {new Date(pr.achieved_at).toLocaleDateString('pt-PT')}
+                    {new Date(pr.achieved_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
                   </p>
                 </div>
                 <div className="text-right">
@@ -376,14 +379,14 @@ export function RecordsPage() {
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Ainda não tens histórico de PRs.</p>
+            <p>{t('progress.noPrHistory')}</p>
           </div>
         )}
       </div>
 
       {/* Sessões Completas */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Sessões Recentes</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('progress.recentSessions')}</h2>
         {sessionsLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -419,24 +422,24 @@ export function RecordsPage() {
                   <div>
                     <p className="font-medium text-white flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
-                      {new Date(session.created_at).toLocaleDateString('pt-PT')}
+                      {new Date(session.created_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
-                      {exercisesList.length} exercícios • {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s • {session.total_volume_kg}kg volume
+                      {exercisesList.length} {t('common.exercise', { count: exercisesList.length })} • {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s • {session.total_volume_kg}kg volume
                     </p>
                   </div>
                   <Link
                     to="/workouts/new"
                     state={{
                       initialData: {
-                        name: `Treino de ${new Date(session.created_at).toLocaleDateString('pt-PT')}`,
-                        description: 'Recuperado do histórico',
+                        name: t('progress.workoutFromDate', { date: new Date(session.created_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US') }),
+                        description: t('progress.recoveredFromHistory'),
                         exercises: exercisesList
                       }
                     }}
                   >
                     <Button size="sm" variant="ghost" className="text-primary hover:bg-primary/10 border border-primary/20">
-                      Guardar como Plano
+                      {t('progress.saveAsPlan')}
                     </Button>
                   </Link>
                 </motion.div>
@@ -446,14 +449,14 @@ export function RecordsPage() {
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Nenhuma sessão completa encontrada</p>
+            <p>{t('progress.noRecentSessions')}</p>
           </div>
         )}
       </div>
 
       {/* History Section (Exercícios Analíticos) */}
       <div>
-        <h2 className="text-2xl font-bold mb-4">Histórico de Treinos</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('progress.workoutHistory')}</h2>
         {historyLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -472,7 +475,7 @@ export function RecordsPage() {
                   <p className="font-medium text-white">{h.exercise_name}</p>
                   <p className="text-sm text-gray-400 flex items-center gap-2 mt-1">
                     <Calendar className="w-4 h-4" />
-                    {new Date(h.created_at).toLocaleDateString('pt-PT')}
+                    {new Date(h.created_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
                   </p>
                 </div>
                 <div className="text-right">
@@ -487,7 +490,7 @@ export function RecordsPage() {
         ) : (
           <div className="text-center py-12 text-gray-400 bg-surface-100 rounded-2xl border border-surface-200">
             <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>Nenhum treino registado ainda</p>
+            <p>{t('progress.noHistory')}</p>
           </div>
         )}
       </div>
