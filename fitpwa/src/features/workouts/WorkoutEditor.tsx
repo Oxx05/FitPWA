@@ -194,6 +194,7 @@ export function WorkoutEditor() {
       if (plan) {
         setTitle(plan.name)
         setDescription(plan.description || '')
+        setIsPublic(plan.is_public ?? false)
         
         const { data: planExercises, error: exErr } = await supabase
           .from('plan_exercises')
@@ -402,29 +403,32 @@ export function WorkoutEditor() {
       setError(null)
 
       let planId = id
-      const planData = {
-        user_id: user?.id,
-        name: title,
-        description: description || null,
-        type: 'custom' as const,
-        days_per_week: 3,
-        is_public: isPublic,
-      }
 
       if (id) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { user_id: _unused, ...updateData } = planData
         const { error: err } = await supabase
           .from('workout_plans')
-          .update(updateData)
+          .update({
+            name: title,
+            description: description || null,
+            is_public: isPublic,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', id)
+          .eq('user_id', user?.id)
         if (err) throw err
         
         await supabase.from('plan_exercises').delete().eq('plan_id', id)
       } else {
         const { data: newPlan, error: err } = await supabase
           .from('workout_plans')
-          .insert([planData])
+          .insert([{
+            user_id: user?.id,
+            name: title,
+            description: description || null,
+            type: 'custom',
+            days_per_week: 3,
+            is_public: isPublic,
+          }])
           .select()
         if (err) throw err
         if (!newPlan?.[0]) throw new Error(t('editor.failedToCreatePlan'))

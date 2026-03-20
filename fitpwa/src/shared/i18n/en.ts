@@ -236,7 +236,12 @@ const en = {
       cardioAbs: 'Intense cardio and abs to sweat fast',
       fullBodyAdv: 'Full body advanced, 60 min, strength focused',
       armsGlutes: 'Arms and glutes, beginner, I have back pain',
-    }
+    },
+    filterMuscles: 'Muscle Groups',
+    filterEquip: 'Equipment',
+    filterGoal: 'Goal',
+    filterDiff: 'Difficulty',
+    filterDuration: 'Duration',
   },
 
   // ─── Profile ───
@@ -258,6 +263,7 @@ const en = {
     createFirstPlan: 'Create First Plan',
     publish: 'Publish',
     private: 'Private',
+    makePrivate: 'Make Private',
     public: 'Public',
     publishTitle: 'Publish Plan to Community',
     publishDescription: 'Make your plan public so other users can find it, like it, and save it.',
@@ -266,6 +272,10 @@ const en = {
     name: 'Name',
     namePlaceholder: 'Your name',
     emailCannotChange: 'Email cannot be changed here.',
+    profileVisibility: 'Profile Visibility',
+    visibility_public: 'Public',
+    visibility_friends: 'Friends',
+    visibility_private: 'Private',
     defaultRestTime: 'Default Rest Time (seconds)',
     defaultSets: 'Default Sets',
     saveChanges: 'Save Changes',
@@ -424,6 +434,8 @@ const en = {
     repsPlaceholder: 'reps',
     weightPlaceholder: 'kg',
     nextExercise: 'Next Exercise',
+    prevExercise: 'Prev Exercise',
+    prevSet: 'Prev Set',
     quickWorkout: 'Quick Workout',
     restFinished: 'Rest Finished',
     resting: 'Resting',
@@ -439,6 +451,10 @@ const en = {
     finish: 'Finish',
     shareAchievement: 'Share Achievement',
     shareTip: 'Tip: Save the image to share on Instagram Stories!',
+    exerciseTipsTitle: 'Exercise Tips',
+    exerciseNoTips: 'No tips available for this exercise.',
+    exerciseNoGif: 'No demonstration available.',
+    howToPerform: 'How to perform',
   },
 
   // ─── Social ───
@@ -503,6 +519,8 @@ const en = {
     clonedError: 'Error cloning plan.',
     cloneAndUse: 'Clone & Use',
     noExercises: 'This plan has no exercises.',
+    noCommentsYet: 'No comments yet. Be the first!',
+    addComment: 'Add a comment...',
   },
 
   // ─── Evolution ───
@@ -528,6 +546,7 @@ const en = {
   // ─── Insights ───
   insights: {
     coachInsights: 'Coach Insights',
+    suggestion: 'Suggestion',
     doneTitle: 'Workout Completed!',
     doneDesc: "You're on the right track. Rest well today.",
     comebackTitle: 'Time to Come Back?',

@@ -145,8 +145,20 @@ function analyzeMuscleTargets(prompt: string): string[] {
   if (lower.match(/bicep/)) targets.add('biceps');
   if (lower.match(/tricep/)) targets.add('triceps');
   if (lower.match(/braco|arm/)) { targets.add('biceps'); targets.add('triceps'); }
-  if (lower.match(/perna|leg|quad/)) { targets.add('legs'); targets.add('quads'); targets.add('hamstrings'); targets.add('calves'); }
-  if (lower.match(/gluteo|bunda|posterior/)) { targets.add('glutes'); targets.add('hamstrings'); }
+  if (lower.match(/perna|leg|quad/)) { 
+    targets.add('legs'); 
+    targets.add('quads'); 
+    if (!lower.match(/gluteo|glute/)) { // If they only said legs, don't necessarily add glutes unless mentioned
+       targets.add('hamstrings'); targets.add('calves'); 
+    }
+  }
+  if (lower.match(/gluteo|glute|bunda|posterior/)) { 
+    targets.add('glutes'); 
+    // Only add hamstrings if specifically mentioned or if it's "posterior"
+    if (lower.match(/posterior|hamstring/)) {
+      targets.add('hamstrings');
+    }
+  }
   if (lower.match(/abs|abdominal|core/)) { targets.add('abs'); targets.add('core'); targets.add('obliques'); }
   
   // Macros
@@ -213,6 +225,16 @@ function pickSmartExercises(
 
   // 1. Filter by allowed equipment and physical limitations
   pool = pool.filter(ex => isExerciseAllowed(ex, equipmentConstraints, limitations));
+
+  // 1.1 STRICTOR FILTERING: If specific muscles are requested, narrow the pool immediately
+  if (targetMuscles.length > 0) {
+    const strictPool = pool.filter(ex => ex.muscleGroups.some(mg => targetMuscles.includes(mg)));
+    // But if strictPool is too small (e.g. < 3 exercises), we might want to keep some general ones.
+    // However, the user explicitly asked for "ONLY X", so let's stick to it unless empty.
+    if (strictPool.length >= 2) {
+      pool = strictPool;
+    }
+  }
 
   // 2. Filter by difficulty (beginners shouldn't do advanced moves)
   if (difficulty === 'beginner') {

@@ -33,6 +33,7 @@ export function ProfilePage() {
   const [defaultMinReps, setDefaultMinReps] = useState(profile?.default_reps_min || 8)
   const [defaultMaxReps, setDefaultMaxReps] = useState(profile?.default_reps_max || 12)
   const [defaultSets, setDefaultSets] = useState(profile?.default_sets || 3)
+  const [profileVisibility, setProfileVisibility] = useState<'public' | 'friends' | 'private'>(profile?.profile_visibility || 'public')
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState<string | null>(null)
 
@@ -154,12 +155,13 @@ export function ProfilePage() {
       setProfileMsg(null)
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           full_name: editName.trim(),
           default_rest_seconds: defaultRest,
           default_reps_min: defaultMinReps,
           default_reps_max: defaultMaxReps,
-          default_sets: defaultSets
+          default_sets: defaultSets,
+          profile_visibility: profileVisibility,
         })
         .eq('id', user.id)
       if (error) throw error
@@ -281,13 +283,14 @@ export function ProfilePage() {
         <div className="bg-surface-200 p-6 rounded-2xl border border-surface-100 space-y-4">
           <h3 className="text-lg font-bold text-white mb-4">{t('profile.account')}</h3>
           <button
-            onClick={() => { 
-              setEditName(profile?.full_name || ''); 
+            onClick={() => {
+              setEditName(profile?.full_name || '');
               setDefaultRest(profile?.default_rest_seconds || 90);
               setDefaultMinReps(profile?.default_reps_min || 8);
               setDefaultMaxReps(profile?.default_reps_max || 12);
               setDefaultSets(profile?.default_sets || 3);
-              setShowSettingsModal(true); 
+              setProfileVisibility(profile?.profile_visibility || 'public');
+              setShowSettingsModal(true);
               setProfileMsg(null);
             }}
             className="w-full flex items-center justify-between p-4 bg-surface-100 rounded-xl hover:bg-surface-300 transition-colors border border-transparent hover:border-surface-200"
@@ -363,41 +366,47 @@ export function ProfilePage() {
                 transition={{ delay: idx * 0.05 }}
                 className="bg-surface-200 border border-surface-100 p-4 rounded-xl hover:border-primary/30 transition-colors"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-white">{workout.name}</h3>
-                      {workout.isPublic ? (
-                        <Globe className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Lock className="w-4 h-4 text-gray-500" />
-                      )}
-                    </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-white truncate">{workout.name}</h3>
                     <p className="text-sm text-gray-400 mt-1">{t('workouts.perWeek', { count: workout.daysPerWeek })} • {workout.exercisesCount} {t('workouts.exercises')}</p>
                     <p className="text-xs text-gray-500 mt-2">
-                      {new Date(workout.createdAt).toLocaleDateString(currentLang === 'pt' ? 'pt-PT' : 'en-GB')} • {workout.likes} {t('common.likes')} • {workout.saves} {t('common.saved')}
+                      {new Date(workout.createdAt).toLocaleDateString(currentLang === 'pt' ? 'pt-PT' : 'en-GB')}
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    {!workout.isPublic && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPlan(workout)
-                          setShowPublishModal(true)
-                        }}
-                        className="bg-primary/20 hover:bg-primary/30 text-primary"
-                      >
-                        {t('profile.publish')}
-                      </Button>
-                    )}
-                    <button
-                      onClick={() => togglePrivacy(workout.id, workout.isPublic)}
-                      className="p-2 hover:bg-surface-100 rounded-lg transition-colors text-xs text-gray-400"
-                    >
-                      {workout.isPublic ? t('profile.private') : t('profile.public')}
-                    </button>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    {/* Current visibility badge — shows what it IS right now */}
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                      workout.isPublic
+                        ? 'bg-primary/10 text-primary border-primary/25'
+                        : 'bg-surface-100 text-gray-400 border-surface-100'
+                    }`}>
+                      {workout.isPublic
+                        ? <><Globe className="w-3 h-3" />{t('profile.public')}</>
+                        : <><Lock className="w-3 h-3" />{t('profile.private')}</>
+                      }
+                    </div>
+                    {/* Actions */}
+                    <div className="flex gap-1.5">
+                      {!workout.isPublic && (
+                        <Button
+                          size="sm"
+                          onClick={() => { setSelectedPlan(workout); setShowPublishModal(true) }}
+                          className="bg-primary/20 hover:bg-primary/30 text-primary text-xs h-8 px-3"
+                        >
+                          {t('profile.publish')}
+                        </Button>
+                      )}
+                      {workout.isPublic && (
+                        <button
+                          onClick={() => togglePrivacy(workout.id, workout.isPublic)}
+                          className="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 hover:bg-surface-100 rounded-lg transition-colors"
+                        >
+                          {t('profile.makePrivate')}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -489,6 +498,28 @@ export function ProfilePage() {
                   {user?.email}
                 </div>
                 <p className="text-[10px] text-gray-600 mt-2 font-bold uppercase">{t('profile.emailCannotChange')}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('profile.profileVisibility')}</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['public', 'friends', 'private'] as const).map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setProfileVisibility(v)}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border text-xs font-black uppercase transition-all ${
+                        profileVisibility === v
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'bg-surface-200 border-white/5 text-gray-500 hover:border-white/15'
+                      }`}
+                    >
+                      {v === 'public' && <Globe className="w-4 h-4"/>}
+                      {v === 'friends' && <Shield className="w-4 h-4"/>}
+                      {v === 'private' && <Lock className="w-4 h-4"/>}
+                      <span>{t(`profile.visibility_${v}`)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </section>

@@ -35,7 +35,7 @@ export const PET_CATALOG: Record<PetModel, PetInfo> = {
   swift_hawk:     { name: 'Swift Hawk',     unlockLevel: 16, color: '#06b6d4', accentColor: '#0891b2' },
   blaze_dragon:   { name: 'Blaze Dragon',   unlockLevel: 20, color: '#ef4444', accentColor: '#dc2626' },
   rocky_bear:     { name: 'Rocky Bear',     unlockLevel: 25, color: '#a78bfa', accentColor: '#8b5cf6' },
-  titan_wolf:     { name: 'Titan Wolf',     unlockLevel: 1,  color: '#fbbf24', accentColor: '#f59e0b', premium: true },
+  titan_wolf:     { name: 'Titan Wolf',     unlockLevel: 1,  color: '#94a3b8', accentColor: '#475569', premium: true },
 }
 
 export const ALL_PETS: PetModel[] = Object.keys(PET_CATALOG) as PetModel[]
@@ -1050,6 +1050,98 @@ export function getInteractionMessage(model: PetModel, type: PetInteraction, isP
 
   const msg = pool[Math.floor(Math.random() * pool.length)]
   return injectName(msg, petName)
+}
+
+// ─── AI Plan Personality Comments ─────────────────────────────────────────────
+const PET_AI_COMMENTS: Partial<Record<PetModel, { pt: string[]; en: string[] }>> = {
+  buff_slime: {
+    pt: ['MÁXIMO VOLUME, ZERO DESCULPAS! 💪🔥', 'Plano aprovado pelo mais musculoso dos slimes!', 'Isto vai deixar-te gigante! Bora LAVAR! 🏋️'],
+    en: ['MAXIMUM VOLUME, ZERO EXCUSES! 💪🔥', "Approved by the buffest slime alive!", "This'll make you MASSIVE! Let's GET IT! 🏋️"],
+  },
+  power_bunny: {
+    pt: ['Ui, que treino bonitinho! Vais conseguir! 🌸', 'Confio em ti, campeão! Um passinho de cada vez 🐰', 'Vai com calma mas não pares! 💕'],
+    en: ["Oh, what a cute workout plan! You've got this! 🌸", 'I believe in you, champ! One step at a time 🐰', 'Take it easy but never stop! 💕'],
+  },
+  gym_cat: {
+    pt: ['Hmm... aceitável. Podias ter pedido mais séries. 😏', 'Eu faria em metade do tempo, mas serve.', 'Devo dizer… está razoavelmente competente. 🐱'],
+    en: ["Hmm… acceptable. Could've asked for more sets. 😏", "I'd do it in half the time, but it'll work.", "I must say… this is reasonably competent. 🐱"],
+  },
+  iron_pup: {
+    pt: ['TREINO TREINO TREINO!!! 🐶🎉', 'Melhor dia da minha vida! Vamos começar JÁ!!', 'WOW WOW WOW adorei este plano!!! 🏅'],
+    en: ['WORKOUT WORKOUT WORKOUT!!! 🐶🎉', 'Best day of my life! Let\'s start NOW!!', 'WOW WOW WOW I love this plan!!! 🏅'],
+  },
+  flex_fox: {
+    pt: ['Hmm, deixa-me analisar a estratégia... parece sólido 🦊', 'Cada exercício tem um propósito. Bom plano.', 'A ciência por detrás disto é impecável. Execute com precisão.'],
+    en: ["Hmm, let me analyse the strategy… looks solid 🦊", 'Every exercise has a purpose. Good plan.', 'The science behind this is impeccable. Execute with precision.'],
+  },
+  mighty_panda: {
+    pt: ['Boa escolha! Agora vai com tudo! 🐼', 'Focado. Calmo. Imparável. Isso és tu.', 'Respeito o plano. Respeito o esforço. Bora! 🍃'],
+    en: ['Good choice! Now give it everything! 🐼', 'Focused. Calm. Unstoppable. That is you.', 'I respect the plan. I respect the effort. Let\'s go! 🍃'],
+  },
+  turbo_tortoise: {
+    pt: ['Devagar e sempre! Este plano tem consistência 🐢', 'Não se trata de velocidade, trata-se de constância.', 'Anos de paciência ensinaram-me: este plano funciona!'],
+    en: ["Slow and steady! This plan has consistency 🐢", "It's not about speed, it's about consistency.", 'Years of patience taught me: this plan works!'],
+  },
+  swift_hawk: {
+    pt: ['Eficiência máxima! Sem tempo a perder 🦅', 'Vi treinos piores. Este serve o objetivo.', 'Foca. Executa. Voa para o próximo nível. ⚡'],
+    en: ['Maximum efficiency! No time to waste 🦅', "I've seen worse workouts. This serves the purpose.", 'Focus. Execute. Fly to the next level. ⚡'],
+  },
+  blaze_dragon: {
+    pt: ['OS DRAGÕES NÃO FAZEM DIAS DE DESCANSO! 🐉🔥', 'Fogo no peito! Este treino vai queimar tudo!', 'PODER ABSOLUTO! Executa com fúria! ⚡🔥'],
+    en: ['DRAGONS DO NOT REST! 🐉🔥', 'Fire in the chest! This workout will BURN everything!', 'ABSOLUTE POWER! Execute with fury! ⚡🔥'],
+  },
+  rocky_bear: {
+    pt: ['Sólido. Resistente. Eficaz. Como eu. 🐻', 'Um bom urso reconhece um bom plano.', 'Força bruta com cabeça. Perfeito.'],
+    en: ['Solid. Durable. Effective. Like me. 🐻', 'A good bear recognises a good plan.', 'Brute strength with brains. Perfect.'],
+  },
+  titan_wolf: {
+    pt: ['A matilha não aceita fraqueza. Executa este plano com HONRA. 🐺', 'Forjado em treino, temperado em dor. Isto é o caminho.', 'O lobo solitário treina sozinho. O lobo titan treina assim. ⚔️'],
+    en: ["The pack accepts no weakness. Execute this plan with HONOUR. 🐺", 'Forged in training, tempered in pain. This is the way.', 'The lone wolf trains alone. The titan wolf trains like this. ⚔️'],
+  },
+}
+
+export function getPetAiComment(model: PetModel, isPt: boolean): string {
+  const entry = PET_AI_COMMENTS[model]
+  const pool = entry ? (isPt ? entry.pt : entry.en) : (isPt ? ['Parece um bom plano!'] : ['Looks like a great plan!'])
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+const PET_DAILY_SUGGESTIONS: Partial<Record<PetModel, { pt: string[]; en: string[] }>> = {
+  buff_slime: {
+    pt: ['Dia de peito HOJE! Vai lá rebentar! 💪', 'Pernas não se desenvolvem sozinhas. VAI TREINAR!', 'Costas largas = respeito. Bora! 🏋️'],
+    en: ['CHEST DAY TODAY! Go destroy it! 💪', "Legs don't grow themselves. GO TRAIN!", 'Wide back = respect. Let\'s GO! 🏋️'],
+  },
+  power_bunny: {
+    pt: ['Que tal um treino suavinho hoje? O teu corpo merece! 🌸', 'Exercício faz bem à alma, não só ao corpo 🐰', 'Um treino pequenino é melhor que nenhum! 💕'],
+    en: ['How about a gentle workout today? Your body deserves it! 🌸', 'Exercise is good for the soul, not just the body 🐰', 'A small workout is better than none! 💕'],
+  },
+  gym_cat: {
+    pt: ['Pernas. É sempre dia de pernas. 😏', 'A consistência separa os mediocres dos... menos mediocres.', 'Treina costas. Postura de realeza ou de indigente - a tua escolha. 🐱'],
+    en: ['Legs. It\'s always leg day. 😏', 'Consistency separates the mediocre from the... less mediocre.', 'Train back. Royal posture or slouch — your choice. 🐱'],
+  },
+  iron_pup: {
+    pt: ['HOJE TREINAMOS TUDO!!! 🐶🎉', 'Bora bora bora!!! Não há tempo a perder!!', 'OMBROS HOJE!!! Vai ficar ENORME!!! 🏅'],
+    en: ['TODAY WE TRAIN EVERYTHING!!! 🐶🎉', 'Let\'s go let\'s go let\'s go!!! No time to waste!!', 'SHOULDERS TODAY!!! You\'re gonna be HUGE!!! 🏅'],
+  },
+  flex_fox: {
+    pt: ['Análise de semana: falta volume em braços. Corrige hoje. 🦊', 'Rotina push/pull/legs — qual segues?', 'Dados indicam que tu pulas dias de pernas. Hoje não.'],
+    en: ['Weekly analysis: arm volume is low. Fix it today. 🦊', 'Push/pull/legs routine — which are you following?', 'Data shows you skip leg days. Not today.'],
+  },
+  titan_wolf: {
+    pt: ['A matilha não descansa. O que vais treinar hoje? 🐺', 'Forja-te no ferro. Hoje: costas ou pernas.', 'O lobo fraco morre cedo. Treina. ⚔️'],
+    en: ["The pack doesn't rest. What will you train today? 🐺", 'Forge yourself in iron. Today: back or legs.', 'The weak wolf dies early. Train. ⚔️'],
+  },
+}
+
+const DEFAULT_DAILY: { pt: string[]; en: string[] } = {
+  pt: ['Pronto para treinar hoje? 💪', 'O teu corpo está à espera!', 'Mais um dia, mais um treino!'],
+  en: ['Ready to train today? 💪', 'Your body is waiting!', 'One more day, one more workout!'],
+}
+
+export function getPetDailySuggestion(model: PetModel, isPt: boolean): string {
+  const entry = PET_DAILY_SUGGESTIONS[model]
+  const pool = entry ? (isPt ? entry.pt : entry.en) : (isPt ? DEFAULT_DAILY.pt : DEFAULT_DAILY.en)
+  return pool[new Date().getDay() % pool.length]
 }
 
 const MILESTONES_THRESHOLDS = [1, 5, 10, 25, 50, 100, 200, 365]

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -12,8 +13,8 @@ import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
 import { useToast } from '@/shared/contexts/ToastContext'
+import { MuscleHeatmap } from './components/MuscleHeatmap'
 
 export interface WorkoutSessionDetail {
   id: string
@@ -91,20 +92,38 @@ export function ProgressDashboard() {
         .order('finished_at', { ascending: true })
 
       // Fetch Personal Records
-      const { data: prsData } = await supabase
+      const { data: rawPrData, error: prError } = await supabase
         .from('personal_records')
         .select(`
           exercise_id,
           weight_kg,
           reps,
-          one_rep_max,
-          exercises (
-            name,
-            name_pt
-          )
+          one_rep_max
         `)
         .eq('user_id', profile.id)
         .order('one_rep_max', { ascending: false })
+
+      if (prError) console.error('Error fetching PRs:', prError)
+      
+      const prsRecords = rawPrData || []
+      const exerciseIds = [...new Set(prsRecords.map(p => p.exercise_id).filter(Boolean))]
+      let dbExercises: any[] = []
+      
+      if (exerciseIds.length > 0) {
+        const { data: exData } = await supabase
+          .from('exercises')
+          .select('id, name, name_pt')
+          .in('id', exerciseIds)
+        dbExercises = exData || []
+      }
+
+      const prs = prsRecords.map(p => {
+        const dbEx = dbExercises.find(e => e.id === p.exercise_id)
+        return {
+          ...p,
+          exercise_name: (currentLocale === ptBR ? dbEx?.name_pt : dbEx?.name) || dbEx?.name || p.exercise_id
+        }
+      })
 
       if (!history) return null
 
@@ -177,14 +196,7 @@ export function ProgressDashboard() {
         streak,
         chartData: Array.from(chartDataMap.values()),
         history: [...history].reverse(),
-        prs: (prsData || []).map((pr: { exercises: any, one_rep_max?: number, weight_kg?: number, reps?: number }) => ({
-          exercise_name: i18n.language === 'pt' 
-            ? ((pr.exercises as any)?.name_pt || (pr.exercises as any)?.name) 
-            : ((pr.exercises as any)?.name || (pr.exercises as any)?.name_pt) || 'Exercise',
-          one_rep_max: pr.one_rep_max || 0,
-          weight_kg: pr.weight_kg || 0,
-          reps: pr.reps || 0
-        }))
+        prs
       }
     }
   })
@@ -221,7 +233,7 @@ export function ProgressDashboard() {
             .neq('session_id', sessionId) // If session_id was tracked in history (not in schema yet, but let's assume it should be)
             .order('one_rep_max', { ascending: false })
             .limit(1)
-            .single()
+            .maybeSingle()
 
           if (nextBest) {
             await supabase.from('personal_records').upsert({
@@ -313,6 +325,64 @@ export function ProgressDashboard() {
         </div>
       </div>
 
+      {/* History Section — moved above heatmap for quick access */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-white">{t('progress.workoutHistory')}</h3>
+        {safeStats.history.length > 0 ? (
+          <div className="space-y-3">
+            {safeStats.history.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => setSelectedSessionForDetails(session)}
+                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all cursor-pointer"
+                >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">{session.plan_name || t('workouts.deletedPlan')}</h4>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-gray-500 flex-wrap">
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-3 h-3 shrink-0" /> {formatDuration(session.duration_seconds)}
+                      </span>
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Weight className="w-3 h-3 shrink-0" /> {formatVolume(session.total_volume_kg)} {session.total_volume_kg >= 1000 ? 'ton' : 'kg'}
+                      </span>
+                      <span className="whitespace-nowrap">{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: currentLocale })}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setCompareSession(session) }}
+                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
+                    title="Comparar treino"
+                  >
+                    <TrendingUp className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSessionToDelete(session.id) }}
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
+                    title="Apagar treino"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-surface-200 border border-dashed border-surface-100 p-8 rounded-2xl text-center">
+            <p className="text-gray-500 italic">{t('progress.noDataYet')}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Muscle Heatmap */}
+      <MuscleHeatmap />
+
       {/* 1RM Records Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
@@ -325,7 +395,7 @@ export function ProgressDashboard() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {safeStats.prs.slice(0, 3).map((pr, idx) => (
+          {safeStats.prs.slice(0, 3).map((pr: any, idx: number) => (
             <div key={idx} className="bg-surface-200 border border-surface-100 p-5 rounded-xl hover:border-primary/30 transition-all flex justify-between items-center group gap-4 overflow-hidden">
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1 truncate">{pr.exercise_name}</p>
@@ -351,9 +421,9 @@ export function ProgressDashboard() {
           <h3 className="text-lg font-bold text-white">{t('progress.volumeChartTitle')}</h3>
         </div>
         
-        <div className="h-72 w-full min-h-[300px]">
+        <div className="w-full h-[300px]">
           <FeatureGate featureName={t('progress.detailedVolumeCharts')}>
-            <ResponsiveContainer width="99%" height="100%">
+            <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={safeStats.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
@@ -385,68 +455,6 @@ export function ProgressDashboard() {
             </ResponsiveContainer>
           </FeatureGate>
         </div>
-      </div>
-
-      {/* History Section */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-white">{t('progress.workoutHistory')}</h3>
-        {safeStats.history.length > 0 ? (
-          <div className="space-y-3">
-            {safeStats.history.map((session) => (
-                <div 
-                  key={session.id}
-                  onClick={() => setSelectedSessionForDetails(session)}
-                  className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex items-center justify-between group hover:border-primary/30 transition-all cursor-pointer"
-                >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface-100 flex items-center justify-center text-primary">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white">{session.plan_name || t('workouts.deletedPlan')}</h4>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-gray-500 flex-wrap">
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <Clock className="w-3 h-3 shrink-0" /> {formatDuration(session.duration_seconds)}
-                      </span>
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <Weight className="w-3 h-3 shrink-0" /> {formatVolume(session.total_volume_kg)} {session.total_volume_kg >= 1000 ? 'ton' : 'kg'}
-                      </span>
-                      <span className="whitespace-nowrap">{format(new Date(session.finished_at!), "dd MMM, HH:mm", { locale: currentLocale })}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setCompareSession(session)
-                    }}
-                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
-                    title="Comparar treino"
-                  >
-                    <TrendingUp className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSessionToDelete(session.id)
-                    }}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
-                    title="Apagar treino"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-surface-200 border border-dashed border-surface-100 p-8 rounded-2xl text-center">
-            <p className="text-gray-500 italic">{t('progress.noDataYet')}</p>
-          </div>
-        )}
       </div>
 
       {/* Comparison Modal */}

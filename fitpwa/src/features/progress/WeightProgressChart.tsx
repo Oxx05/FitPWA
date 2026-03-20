@@ -17,20 +17,22 @@ interface WeightProgressChartProps {
 }
 
 export function WeightProgressChart({ records }: WeightProgressChartProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'pt' ? 'pt-PT' : 'en-US'
+
   // Group by exercise and get weight progression over time
   const exerciseProgress = records.reduce(
     (acc, record) => {
       if (!acc[record.exercise_id]) {
         acc[record.exercise_id] = []
       }
-      
+
       const recordDate = record.date_set || record.created_at
       const dateObj = recordDate ? new Date(recordDate) : new Date()
       const finalDate = isNaN(dateObj.getTime()) ? new Date() : dateObj
 
       acc[record.exercise_id].push({
-        date: finalDate.toLocaleDateString('pt-PT', {
+        date: finalDate.toLocaleDateString(locale, {
           day: '2-digit',
           month: 'short',
         }),
@@ -66,9 +68,9 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-6 bg-slate-900/50 border border-slate-800 rounded-lg"
+        className="p-6 bg-surface-200 border border-surface-100 rounded-2xl"
       >
-        <p className="text-slate-400 text-center">
+        <p className="text-gray-400 text-center">
           {t('progress.noProgressData')}
         </p>
       </motion.div>
@@ -105,34 +107,35 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
       combinedData.push(data as typeof combinedData[0])
     })
 
-  const colors = ['#3b82f6', '#fbbf24', '#10b981'] // Blue, Yellow, Green
+  const colors = ['#BEF264', '#a78bfa', '#fb923c'] // primary, purple, orange
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 bg-slate-900/50 border border-slate-800 rounded-lg"
+      className="p-6 bg-surface-200 border border-surface-100 rounded-2xl"
     >
-      <h3 className="text-lg font-semibold text-white mb-4">📈 {t('session.evolution')}</h3>
+      <h3 className="text-lg font-bold text-white italic uppercase tracking-tighter mb-4">📈 {t('session.evolution')}</h3>
 
       <div className="w-full h-80">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={320} minWidth={0} minHeight={0}>
           <LineChart
             data={combinedData}
             margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="date" stroke="#94a3b8" />
-            <YAxis stroke="#94a3b8" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+            <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 11 }} />
+            <YAxis stroke="#6b7280" tick={{ fontSize: 11 }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid #475569',
-                borderRadius: '8px',
+                backgroundColor: '#1F1F23',
+                border: '1px solid #2a2a2e',
+                borderRadius: '12px',
+                fontSize: '11px',
               }}
-              labelStyle={{ color: '#e2e8f0' }}
+              labelStyle={{ color: '#e5e7eb', fontWeight: 'bold' }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: '11px' }} />
 
             {topExercises.map((exercise, idx) => (
               <Line
@@ -141,8 +144,8 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
                 dataKey={exercise.exercise}
                 stroke={colors[idx]}
                 strokeWidth={2}
-                dot={{ fill: colors[idx], r: 5 }}
-                activeDot={{ r: 7 }}
+                dot={{ fill: colors[idx], r: 4 }}
+                activeDot={{ r: 6 }}
                 name={exercise.exercise.charAt(0).toUpperCase() + exercise.exercise.slice(1)}
               />
             ))}
@@ -152,12 +155,12 @@ export function WeightProgressChart({ records }: WeightProgressChartProps) {
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {topExercises.map((exercise, idx) => (
-          <div key={exercise.exercise} className="text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[idx] }} />
-              <span className="text-slate-300">{exercise.exercise}</span>
+          <div key={exercise.exercise} className="text-sm bg-surface-100 p-3 rounded-xl">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors[idx] }} />
+              <span className="text-gray-400 text-xs truncate">{exercise.exercise}</span>
             </div>
-            <div className="text-white font-semibold">{exercise.maxWeight} kg</div>
+            <div className="text-white font-bold">{exercise.maxWeight} kg</div>
           </div>
         ))}
       </div>

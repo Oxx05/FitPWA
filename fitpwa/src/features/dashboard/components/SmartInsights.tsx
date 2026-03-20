@@ -4,10 +4,17 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '@/features/auth/authStore'
+import { usePetStore } from '@/features/pet/usePetStore'
+import { PetSvg } from '@/features/pet/PetSvg'
 
-export function SmartInsights() {
-  const { t } = useTranslation()
+interface SmartInsightsProps {
+  hideIcon?: boolean
+}
+
+export function SmartInsights({ hideIcon }: SmartInsightsProps) {
+  const { t, i18n } = useTranslation()
   const { profile } = useAuthStore()
+  const { selectedPet, getMood, petName } = usePetStore()
 
   const { data: insights, isLoading } = useQuery({
     queryKey: ['smart-insights', profile?.id],
@@ -83,6 +90,11 @@ export function SmartInsights() {
     enabled: !!profile?.id
   })
 
+  // Helper to remove redundant "Suggestion:" prefix
+  const cleanTitle = (title: string) => {
+    return title.replace(/^(Suggestion|Sugestão):\s*/i, '')
+  }
+
   if (isLoading || !insights?.length) return null
 
   return (
@@ -92,21 +104,45 @@ export function SmartInsights() {
         <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('insights.coachInsights')}</h3>
       </div>
       
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {insights.map((insight, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-surface-200/50 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:border-primary/20 transition-all group"
+            className="flex items-end gap-3"
           >
-            <div className="bg-surface-100 p-2.5 rounded-xl group-hover:scale-110 transition-transform shrink-0 mt-0.5">
-              {insight.icon}
-            </div>
-            <div className="flex-1">
-              <h4 className="font-bold text-white text-sm">{insight.title}</h4>
-              <p className="text-xs text-gray-500 leading-relaxed font-medium">{insight.desc}</p>
+            {!hideIcon && (
+              <div className="shrink-0 bg-surface-200/50 p-2 rounded-2xl border border-white/5 shadow-xl group hidden sm:block">
+                <PetSvg 
+                  model={selectedPet} 
+                  mood={getMood()} 
+                  size={56} 
+                  className="group-hover:scale-110 transition-transform"
+                />
+              </div>
+            )}
+            
+            <div className={`relative bg-surface-200/50 border border-white/5 p-4 rounded-3xl ${hideIcon ? 'rounded-bl-3xl' : 'rounded-bl-none'} flex-1 shadow-xl backdrop-blur-sm`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[13px] font-black text-primary uppercase tracking-tighter">
+                  {i18n.language === 'pt' 
+                    ? (petName ? `Sugestão do ${petName}` : t('insights.suggestion'))
+                    : (petName ? `${petName}'s ${t('insights.suggestion')}` : t('insights.suggestion'))
+                  }
+                </span>
+                <h4 className="font-bold text-white text-sm">{cleanTitle(insight.title)}</h4>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed font-medium">{insight.desc}</p>
+              
+              {/* Speech bubble tail */}
+              {!hideIcon && (
+                <div 
+                  className="absolute -bottom-2 -left-2 w-4 h-4 bg-surface-200/50 border-l border-b border-white/5"
+                  style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%)', transform: 'rotate(45deg)' }}
+                />
+              )}
             </div>
           </motion.div>
         ))}

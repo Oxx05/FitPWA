@@ -7,6 +7,8 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
 import { useTranslation } from 'react-i18next'
+import { usePetStore, getPetAiComment } from '@/features/pet/usePetStore'
+import { PetSvg } from '@/features/pet/PetSvg'
 
 const SUGGESTION_CHIPS = [
   'ai.chips.backTriceps',
@@ -21,7 +23,9 @@ const SUGGESTION_CHIPS = [
 export function AiWorkoutGenerator() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const isPt = i18n.language === 'pt'
+  const { selectedPet, getMood } = usePetStore()
 
   const chips = SUGGESTION_CHIPS.map(key => t(key))
 
@@ -30,25 +34,43 @@ export function AiWorkoutGenerator() {
   const [error, setError] = useState<string | null>(null)
   const [generatedPlan, setGeneratedPlan] = useState<AiGeneratedPlan | null>(null)
   const [saving, setSaving] = useState(false)
+  const [petComment, setPetComment] = useState<string | null>(null)
+  const [filterMuscles, setFilterMuscles] = useState<string[]>([])
+  const [filterEquipment, setFilterEquipment] = useState<string>('') // '' | 'gym' | 'dumbbells' | 'bodyweight'
+  const [filterGoal, setFilterGoal] = useState<string>('') // '' | 'strength' | 'hypertrophy' | 'endurance'
+  const [filterDifficulty, setFilterDifficulty] = useState<string>('') // '' | 'beginner' | 'intermediate' | 'advanced'
+  const [filterDuration, setFilterDuration] = useState<number | null>(null)
+
+  const buildPrompt = () => {
+    let parts: string[] = []
+    if (prompt.trim()) parts.push(prompt.trim())
+    if (filterMuscles.length > 0) parts.push(filterMuscles.join(', '))
+    if (filterEquipment === 'bodyweight') parts.push('apenas peso corporal')
+    else if (filterEquipment === 'dumbbells') parts.push('apenas halteres')
+    else if (filterEquipment === 'gym') parts.push('ginásio completo')
+    if (filterGoal) parts.push(filterGoal)
+    if (filterDifficulty) parts.push(filterDifficulty)
+    if (filterDuration) parts.push(`${filterDuration} min`)
+    return parts.join('. ') || 'treino completo'
+  }
 
   const handleGenerate = () => {
-    if (!prompt.trim()) return
-
     try {
       setError(null)
-      const plan = generateWorkoutPlan(prompt)
+      const plan = generateWorkoutPlan(buildPrompt())
       setGeneratedPlan(plan)
+      setPetComment(getPetAiComment(selectedPet, isPt))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
   }
 
   const handleRegenerate = () => {
-    if (!prompt.trim()) return
     try {
       setError(null)
-      const plan = generateWorkoutPlan(prompt)
+      const plan = generateWorkoutPlan(buildPrompt())
       setGeneratedPlan(plan)
+      setPetComment(getPetAiComment(selectedPet, isPt))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
@@ -153,7 +175,7 @@ export function AiWorkoutGenerator() {
 
       <Modal
         isOpen={isOpen}
-        onClose={() => { setIsOpen(false); setGeneratedPlan(null); setError(null) }}
+        onClose={() => { setIsOpen(false); setGeneratedPlan(null); setError(null); setPetComment(null); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
         title={`⚡ ${t('ai.title')}`}
         size="lg"
         closeButton
@@ -162,6 +184,104 @@ export function AiWorkoutGenerator() {
           {/* Prompt Input */}
           {!generatedPlan && (
             <>
+              {/* Filter chips */}
+              <div className="space-y-3">
+                {/* Muscle groups */}
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t('ai.filterMuscles')}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'chest', pt: 'Peito', en: 'Chest' },
+                      { id: 'back', pt: 'Costas', en: 'Back' },
+                      { id: 'legs', pt: 'Pernas', en: 'Legs' },
+                      { id: 'shoulders', pt: 'Ombros', en: 'Shoulders' },
+                      { id: 'biceps', pt: 'Braços', en: 'Arms' },
+                      { id: 'abs', pt: 'Abdominais', en: 'Core' },
+                      { id: 'glutes', pt: 'Glúteos', en: 'Glutes' },
+                    ].map(m => {
+                      const active = filterMuscles.includes(m.id)
+                      return (
+                        <button key={m.id} type="button"
+                          onClick={() => setFilterMuscles(prev => active ? prev.filter(x => x !== m.id) : [...prev, m.id])}
+                          className={`px-3 py-1.5 rounded-full text-xs font-black uppercase transition-all border ${active ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-primary/30'}`}
+                        >
+                          {isPt ? m.pt : m.en}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Equipment */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t('ai.filterEquip')}</p>
+                    <div className="flex flex-col gap-1">
+                      {[
+                        { id: '', label: isPt ? 'Qualquer' : 'Any' },
+                        { id: 'gym', label: isPt ? 'Ginásio' : 'Gym' },
+                        { id: 'dumbbells', label: isPt ? 'Halteres' : 'Dumbbells' },
+                        { id: 'bodyweight', label: isPt ? 'Corporal' : 'Bodyweight' },
+                      ].map(e => (
+                        <button key={e.id} type="button"
+                          onClick={() => setFilterEquipment(e.id)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase text-left transition-all border ${filterEquipment === e.id ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-surface-100 border-surface-200 text-gray-400'}`}
+                        >{e.label}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Goal */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t('ai.filterGoal')}</p>
+                    <div className="flex flex-col gap-1">
+                      {[
+                        { id: '', label: isPt ? 'Qualquer' : 'Any' },
+                        { id: 'hypertrofia', label: isPt ? 'Hipertrofia' : 'Hypertrophy' },
+                        { id: 'forca', label: isPt ? 'Força' : 'Strength' },
+                        { id: 'resistencia', label: isPt ? 'Resistência' : 'Endurance' },
+                      ].map(g => (
+                        <button key={g.id} type="button"
+                          onClick={() => setFilterGoal(g.id)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase text-left transition-all border ${filterGoal === g.id ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-surface-100 border-surface-200 text-gray-400'}`}
+                        >{g.label}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Difficulty */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t('ai.filterDiff')}</p>
+                    <div className="flex flex-col gap-1">
+                      {[
+                        { id: '', label: isPt ? 'Qualquer' : 'Any' },
+                        { id: 'iniciante', label: isPt ? 'Iniciante' : 'Beginner' },
+                        { id: 'intermediate', label: isPt ? 'Intermédio' : 'Intermediate' },
+                        { id: 'avancado', label: isPt ? 'Avançado' : 'Advanced' },
+                      ].map(d => (
+                        <button key={d.id} type="button"
+                          onClick={() => setFilterDifficulty(d.id)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase text-left transition-all border ${filterDifficulty === d.id ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-surface-100 border-surface-200 text-gray-400'}`}
+                        >{d.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">{t('ai.filterDuration')}</p>
+                  <div className="flex gap-1.5">
+                    {[null, 30, 45, 60].map(d => (
+                      <button key={String(d)} type="button"
+                        onClick={() => setFilterDuration(d)}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${filterDuration === d ? 'bg-primary/15 border-primary/40 text-primary' : 'bg-surface-100 border-surface-200 text-gray-400'}`}
+                      >{d ? `${d}m` : (isPt ? 'Livre' : 'Free')}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   {t('ai.whatToTrain')}
@@ -190,7 +310,7 @@ export function AiWorkoutGenerator() {
 
               <Button
                 onClick={handleGenerate}
-                disabled={!prompt.trim()}
+                disabled={!prompt.trim() && filterMuscles.length === 0 && !filterEquipment && !filterGoal && !filterDifficulty && !filterDuration}
                 className="w-full gap-2"
               >
                 <Sparkles className="w-5 h-5" />
@@ -222,6 +342,20 @@ export function AiWorkoutGenerator() {
                 </div>
               </div>
 
+              {/* Pet trainer reaction */}
+              {petComment && (
+                <div className="flex items-end gap-3">
+                  <div className="shrink-0">
+                    <PetSvg model={selectedPet} mood={getMood()} size={64}/>
+                  </div>
+                  <div className="relative bg-surface-200 border border-surface-100 rounded-2xl rounded-bl-none px-4 py-3 flex-1">
+                    <p className="text-sm text-white font-medium leading-snug">{petComment}</p>
+                    <div className="absolute -bottom-2 left-0 w-3 h-3 bg-surface-200 border-l border-b border-surface-100"
+                      style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}/>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                 {generatedPlan.exercises.map((ex, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-surface-100 p-3 rounded-lg">
@@ -250,7 +384,7 @@ export function AiWorkoutGenerator() {
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => { setGeneratedPlan(null); setPrompt('') }}
+                  onClick={() => { setGeneratedPlan(null); setPrompt(''); setPetComment(null); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
                   className="flex-1 gap-2"
                 >
                   <X className="w-4 h-4" />

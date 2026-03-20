@@ -233,7 +233,12 @@ const pt = {
       cardioAbs: 'Cardio e abdominais intensos para suar rápido',
       fullBodyAdv: 'Corpo inteiro avançado, 60 min, focado em força',
       armsGlutes: 'Braços e glúteos, iniciante, tenho dores nas costas',
-    }
+    },
+    filterMuscles: 'Grupos Musculares',
+    filterEquip: 'Equipamento',
+    filterGoal: 'Objetivo',
+    filterDiff: 'Dificuldade',
+    filterDuration: 'Duração',
   },
 
   // ─── Profile ───
@@ -255,6 +260,7 @@ const pt = {
     createFirstPlan: 'Criar Primeiro Plano',
     publish: 'Publicar',
     private: 'Privado',
+    makePrivate: 'Tornar Privado',
     public: 'Público',
     publishTitle: 'Publicar Plano na Comunidade',
     publishDescription: 'Torna o teu plano público para que outros utilizadores possam encontrá-lo, dar likes e guardá-lo.',
@@ -263,6 +269,10 @@ const pt = {
     name: 'Nome',
     namePlaceholder: 'O teu nome',
     emailCannotChange: 'O email não pode ser alterado aqui.',
+    profileVisibility: 'Visibilidade do Perfil',
+    visibility_public: 'Público',
+    visibility_friends: 'Amigos',
+    visibility_private: 'Privado',
     defaultRestTime: 'Tempo de Descanso Default (segundos)',
     defaultSets: 'Nº de Sets Default',
     saveChanges: 'Guardar Alterações',
@@ -305,6 +315,9 @@ const pt = {
     setRestTime: 'Definir Descanso',
     skip: 'Saltar',
     nextExercise: 'Próximo Exercício',
+    prevExercise: 'Exercício Ant.',
+    nextSet: 'Próx. Série',
+    prevSet: 'Série Ant.',
     summary: 'Resumo do Treino',
     duration: 'Duração',
     volume: 'Volume Total',
@@ -328,7 +341,6 @@ const pt = {
     restInProgress: 'Descanso em curso',
     ignore: 'Ignorar',
     focusMode: 'Modo Foco',
-    nextSet: 'Próxima Série',
     remainingTime: 'Tempo Restante',
     skipRest: 'Pular Descanso',
     loading: 'A carregar...',
@@ -441,6 +453,10 @@ const pt = {
     finish: 'Finalizar',
     shareAchievement: 'Partilhar Conquista',
     shareTip: 'Dica: Guarda a imagem para partilhar no Instagram Stories!',
+    exerciseTipsTitle: 'Dicas do Exercício',
+    exerciseNoTips: 'Sem dicas disponíveis para este exercício.',
+    exerciseNoGif: 'Sem demonstração disponível.',
+    howToPerform: 'Como executar',
   },
 
   // ─── Social ───
@@ -505,6 +521,8 @@ const pt = {
     clonedError: 'Erro ao clonar plano.',
     cloneAndUse: 'Clonar e Usar',
     noExercises: 'Este plano não tem exercícios.',
+    noCommentsYet: 'Ainda não há comentários. Sê o primeiro!',
+    addComment: 'Adicionar um comentário...',
   },
 
   // ─── Evolution ───
@@ -530,6 +548,7 @@ const pt = {
   // ─── Insights ───
   insights: {
     coachInsights: 'Insights do Coach',
+    suggestion: 'Sugestão',
     doneTitle: 'Treino Concluído!',
     doneDesc: 'Estás no caminho certo. Descansa bem hoje.',
     comebackTitle: 'Hora de Voltar?',

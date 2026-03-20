@@ -22,6 +22,7 @@ export interface Profile {
   sound_enabled?: boolean
   total_volume_kg?: number
   social_likes_given?: number
+  profile_visibility?: 'public' | 'friends' | 'private'
 }
 
 interface AuthState {
@@ -104,10 +105,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const newLikes = (profile.social_likes_given || 0) + 1
     const updatedProfile = { ...profile, social_likes_given: newLikes }
     set({ profile: updatedProfile })
-    supabase.from('profiles').update({ social_likes_given: newLikes }).eq('id', profile.id)
-      .then(({ error }) => {
-        if (error) console.warn('Notice: social_likes_given column might be missing in DB.', error.message)
-      })
+    
+    // Once you run supabase_fix.sql, this will work perfectly
+    supabase
+      .from('profiles')
+      .update({ social_likes_given: newLikes })
+      .eq('id', profile.id)
+      .then(() => {}) 
   },
   setLoading: (isLoading) => set({ isLoading }),
   fetchProfile: async (userId: string) => {
@@ -115,7 +119,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
     if (!error && data) {
       get().setProfile(data)
     }

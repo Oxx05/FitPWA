@@ -56,14 +56,14 @@ export function OnboardingFlow() {
       goal,
       experience_level: experience,
       preferred_equipment: equipment,
-      updated_at: new Date(),
+      updated_at: new Date().toISOString(),
     }
 
     const { error } = await supabase.from('profiles').upsert(updates)
     
     if (!error) {
       // Refetch profile via auth store or manually update
-      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
       if (data) setProfile(data)
       navigate('/dashboard')
     } else {

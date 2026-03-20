@@ -1,45 +1,56 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { usePetStore, PET_CATALOG, ALL_PETS, type PetModel, type PetInteraction } from './usePetStore'
+import { usePetStore, PET_CATALOG, ALL_PETS, getPetDailySuggestion, type PetModel, type PetInteraction } from './usePetStore'
 import { PetSvg } from './PetSvg'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useTranslation } from 'react-i18next'
-import { Lock, Hand, Dumbbell, Feather, Droplets, Pencil } from 'lucide-react'
+import { Lock, Hand, Dumbbell, Feather, Droplets, Pencil, Zap } from 'lucide-react'
 import { PromptModal } from '../../shared/components/PromptModal'
+
+const MOOD_META: Record<string, { label: string; labelPt: string; color: string; bg: string }> = {
+  ecstatic: { label: 'Ecstatic',  labelPt: 'Extasiado',  color: 'text-primary',    bg: 'bg-primary/20' },
+  happy:    { label: 'Happy',     labelPt: 'Feliz',      color: 'text-green-400',  bg: 'bg-green-500/20' },
+  neutral:  { label: 'Neutral',   labelPt: 'Normal',     color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+  hungry:   { label: 'Hungry',    labelPt: 'Com Fome',   color: 'text-orange-400', bg: 'bg-orange-500/20' },
+  sleeping: { label: 'Sleeping',  labelPt: 'A dormir',   color: 'text-blue-400',   bg: 'bg-blue-500/20' },
+  dirty:    { label: 'Dirty',     labelPt: 'Sujo',       color: 'text-amber-600',  bg: 'bg-amber-800/20' },
+  atrophied:{ label: 'Atrophied', labelPt: 'Atrofiado',  color: 'text-gray-500',   bg: 'bg-gray-800/50' },
+  starving: { label: 'Starving',  labelPt: 'Esfomeado',  color: 'text-red-500',    bg: 'bg-red-500/20' },
+}
+
+const INTERACTION_EMOJIS: Record<PetInteraction, string[]> = {
+  pet:    ['❤️','💕','🥰','💗'],
+  bath:   ['💧','🫧','✨','💦'],
+  flex:   ['💪','🔥','⚡','🏋️'],
+  tickle: ['⭐','😄','✨','🎉'],
+}
 
 export function PetWidget() {
   const { t, i18n } = useTranslation()
   const { profile } = useAuthStore()
   const {
-    selectedPet,
-    petName,
-    unlockedPets,
-    hunger,
-    cleanliness,
-    currentStreak,
-    milestones,
-    setPet,
-    renamePet,
-    unlockPet,
-    tickStats,
-    getMood,
-    canInteract,
-    interact,
+    selectedPet, petName, unlockedPets, hunger, cleanliness, currentStreak, milestones,
+    setPet, renamePet, unlockPet, tickStats, getMood, canInteract, interact,
   } = usePetStore()
 
-  const [newName, setNewName] = useState('')
-
+  const [newName, setNewName]           = useState('')
   const [showSelector, setShowSelector] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage]           = useState('')
   const [isPromptOpen, setIsPromptOpen] = useState(false)
   const [isInteracting, setIsInteracting] = useState<PetInteraction | null>(null)
-
-  const isPt = i18n.language === 'pt'
-  const userLevel = profile?.level || 1
-  const mood = getMood()
+  const [particles, setParticles]       = useState<{ id: number; x: number; y: number; emoji: string }[]>([])
   const [showMilestoneToast, setShowMilestoneToast] = useState(false)
   const [lastMilestoneCount, setLastMilestoneCount] = useState(milestones.length)
+  const [cooldownRemaining, setCooldownRemaining]   = useState(false)
 
+  const isPt      = i18n.language === 'pt'
+  const userLevel = profile?.level || 1
+  const mood      = getMood()
+  const dailySuggestion = getPetDailySuggestion(selectedPet as PetModel, isPt)
+  const petInfo   = PET_CATALOG[selectedPet as PetModel]
+  const moodMeta  = MOOD_META[mood] || MOOD_META.neutral
+
+  // Milestone toast
   useEffect(() => {
     if (milestones.length > lastMilestoneCount) {
       setShowMilestoneToast(true)
@@ -49,146 +60,178 @@ export function PetWidget() {
     }
   }, [milestones.length, lastMilestoneCount])
 
-  // Initial message load
+  // Initial message
   useEffect(() => {
     import('./usePetStore').then(({ getPetMessage }) => {
       setMessage(getPetMessage(selectedPet, mood, isPt, petName))
     })
   }, [selectedPet, mood, isPt, petName])
 
-  // Tick stats (hunger & cleanliness)
+  // Tick stats
   useEffect(() => {
     tickStats()
-    const interval = setInterval(tickStats, 60_000)
-    return () => clearInterval(interval)
+    const iv = setInterval(tickStats, 60_000)
+    return () => clearInterval(iv)
   }, [tickStats])
 
-  // Auto-unlock free pets based on level
+  // Auto-unlock free pets
   useEffect(() => {
     ALL_PETS.forEach(pet => {
-      const info = PET_CATALOG[pet]
+      const info = PET_CATALOG[pet as PetModel]
       if (!info.premium && userLevel >= info.unlockLevel && !unlockedPets.includes(pet)) {
         unlockPet(pet)
       }
     })
-    // Premium pets are unlocked via the premium feature/purchase flow
-    // For now, if user is premium, unlock the titan_wolf
     if (profile?.is_premium && !unlockedPets.includes('titan_wolf')) {
       unlockPet('titan_wolf')
     }
   }, [userLevel, profile?.is_premium, unlockedPets, unlockPet])
 
-  // Rotate passive messages every 15 seconds if not on interaction cooldown
+  // Rotate passive messages
   useEffect(() => {
-    const interval = setInterval(() => {
+    const iv = setInterval(() => {
       if (canInteract()) {
         import('./usePetStore').then(({ getPetMessage }) => {
           setMessage(getPetMessage(selectedPet, mood, isPt, petName))
         })
       }
     }, 15_000)
-    return () => clearInterval(interval)
+    return () => clearInterval(iv)
   }, [selectedPet, mood, isPt, canInteract, petName])
 
-  const hungerPercent = Math.round(hunger)
-  const hungerColor = hungerPercent >= 60 ? 'bg-primary' : hungerPercent >= 30 ? 'bg-yellow-500' : 'bg-red-500'
+  // Cooldown indicator
+  useEffect(() => {
+    setCooldownRemaining(!canInteract())
+    const iv = setInterval(() => setCooldownRemaining(!canInteract()), 5_000)
+    return () => clearInterval(iv)
+  }, [canInteract])
 
+  const hungerPercent      = Math.round(hunger)
   const cleanlinessPercent = Math.round(cleanliness)
-  const cleanlinessColor = cleanlinessPercent >= 70 ? 'bg-blue-400' : cleanlinessPercent >= 30 ? 'bg-blue-600' : 'bg-red-500'
+
+  const hungerColor = hungerPercent >= 60 ? 'bg-primary'
+    : hungerPercent >= 30 ? 'bg-yellow-500' : 'bg-red-500'
+  const cleanlinessColor = cleanlinessPercent >= 70 ? 'bg-blue-400'
+    : cleanlinessPercent >= 30 ? 'bg-blue-600' : 'bg-red-500'
+
+  const spawnParticles = (type: PetInteraction) => {
+    const emojis = INTERACTION_EMOJIS[type]
+    const newP = Array.from({ length: 6 }, (_, i) => ({
+      id: Date.now() + i,
+      x: 20 + Math.random() * 60,
+      y: 20 + Math.random() * 40,
+      emoji: emojis[i % emojis.length],
+    }))
+    setParticles(newP)
+    setTimeout(() => setParticles([]), 900)
+  }
 
   const handleInteract = (type: PetInteraction) => {
-    const { success, message: responseMsg } = interact(type)
+    const { success, message: msg } = interact(type)
     if (success) {
       setIsInteracting(type)
-      setMessage(responseMsg)
-      setTimeout(() => setIsInteracting(null), 1000)
-    } else if (responseMsg) {
-      // If it failed but has a message (e.g. sleeping), show it
-      setMessage(responseMsg)
+      setMessage(msg)
+      spawnParticles(type)
+      setTimeout(() => setIsInteracting(null), 1100)
+    } else if (msg) {
+      setMessage(msg)
     }
   }
 
-  // Animation variants
   const petAnim: Record<PetInteraction, any> = {
-    pet: {
-      scale: [1, 1.05, 0.95, 1],
-      rotate: [0, -3, 3, 0],
-      transition: { type: "spring", stiffness: 300, damping: 15 }
-    },
-    flex: {
-      scale: [1, 1.2, 1],
-      y: [0, -5, 0],
-      transition: { type: "spring", stiffness: 400, damping: 10 }
-    },
-    tickle: {
-      x: [0, -3, 3, -3, 3, 0],
-      scale: [1, 1.05, 1],
-      transition: { duration: 0.4 }
-    },
-    bath: {
-      rotate: [0, 5, -5, 5, 0],
-      scale: [1, 0.9, 1],
-      transition: { type: "spring", stiffness: 200, damping: 20 }
-    }
+    pet:    { scale:[1,1.06,0.95,1], rotate:[0,-4,4,0], transition:{type:'spring',stiffness:300,damping:12} },
+    flex:   { scale:[1,1.22,1],      y:[0,-8,0],         transition:{type:'spring',stiffness:400,damping:10} },
+    tickle: { x:[0,-4,4,-4,4,0],    scale:[1,1.06,1],    transition:{duration:0.4} },
+    bath:   { rotate:[0,6,-6,6,0],   scale:[1,0.88,1],   transition:{type:'spring',stiffness:200,damping:18} },
   }
+
+  const interactionButtons: { type: PetInteraction; icon: React.ReactNode; labelPt: string; labelEn: string; hoverColor: string }[] = [
+    { type:'bath',   icon:<Droplets className="w-4 h-4"/>, labelPt:'Banho',    labelEn:'Bath',    hoverColor:'hover:bg-blue-500/25 hover:text-blue-400' },
+    { type:'pet',    icon:<Hand      className="w-4 h-4"/>, labelPt:'Festinha', labelEn:'Pet',     hoverColor:'hover:bg-pink-500/25 hover:text-pink-400' },
+    { type:'flex',   icon:<Dumbbell  className="w-4 h-4"/>, labelPt:'Treinar',  labelEn:'Flex',    hoverColor:'hover:bg-primary/25 hover:text-primary' },
+    { type:'tickle', icon:<Feather   className="w-4 h-4"/>, labelPt:'Cócegas', labelEn:'Tickle',  hoverColor:'hover:bg-yellow-500/25 hover:text-yellow-400' },
+  ]
+
+  const isSleeping      = mood === 'sleeping'
+  const interactDisabled = cooldownRemaining || isSleeping
 
   return (
     <div className="bg-surface-200 border border-surface-100 rounded-3xl p-5 relative overflow-hidden">
+      {/* Milestone toast */}
       <AnimatePresence>
         {showMilestoneToast && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="absolute top-4 left-4 right-4 z-50 bg-gradient-to-r from-yellow-400 to-orange-500 p-3 rounded-xl shadow-lg border border-yellow-300 flex items-center gap-3 overflow-hidden"
+            initial={{ opacity:0, y:-20, scale:0.9 }}
+            animate={{ opacity:1, y:0,   scale:1 }}
+            exit={{   opacity:0, y:-20, scale:0.9 }}
+            className="absolute top-4 left-4 right-4 z-50 bg-gradient-to-r from-yellow-400 to-orange-500 p-3 rounded-xl shadow-xl border border-yellow-300 flex items-center gap-3 overflow-hidden"
           >
-            <div className="absolute inset-0 bg-white/20 animate-pulse" />
-            <div className="bg-white/20 p-2 rounded-lg relative z-10">
-              <Lock className="w-5 h-5 text-white" />
-            </div>
-            <div className="relative z-10 text-left">
-              <h4 className="text-white font-black text-[10px] uppercase tracking-wider leading-none">
-                {isPt ? 'Novo Milestone Alcançado!' : 'New Milestone Reached!'}
-              </h4>
-              <p className="text-white/90 text-[9px] font-bold mt-1">
+            <div className="absolute inset-0 bg-white/10 animate-pulse"/>
+            <div className="bg-white/25 p-2 rounded-lg relative z-10 text-xl">🏆</div>
+            <div className="relative z-10">
+              <p className="text-white font-black text-[10px] uppercase tracking-wider leading-none">
+                {isPt ? 'Novo Marco Alcançado!' : 'New Milestone Reached!'}
+              </p>
+              <p className="text-white/85 text-[9px] font-bold mt-0.5">
                 {isPt ? 'O teu pet evoluiu com um novo acessório!' : 'Your pet evolved with a new accessory!'}
               </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Background glow based on mood */}
-      <div className={`absolute -top-10 -left-10 w-40 h-40 rounded-full blur-3xl transition-colors duration-1000 ${mood === 'ecstatic' ? 'bg-primary/20' :
-          mood === 'happy' ? 'bg-primary/10' :
-            mood === 'starving' ? 'bg-red-500/10' : 'bg-surface-100/30'
-        }`} style={{ backgroundColor: `${PET_CATALOG[selectedPet as PetModel].color}20` }} />
+
+      {/* Mood background glow */}
+      <div
+        className="absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl transition-colors duration-1000 opacity-60"
+        style={{ backgroundColor: `${petInfo.color}18` }}
+      />
 
       <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-4">
-        {/* Pet SVG with interaction animation */}
+
+        {/* Pet display */}
         <motion.div
           className="shrink-0 cursor-pointer relative"
-          onClick={() => setShowSelector(!showSelector)}
+          onClick={() => setShowSelector(s => !s)}
           animate={isInteracting ? petAnim[isInteracting] : {}}
           title={t('gamification.changeMascot')}
         >
-          {PET_CATALOG[selectedPet as PetModel].premium && (
-            <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase z-10 shadow-lg border border-yellow-300">
+          {/* Floating particles */}
+          <AnimatePresence>
+            {particles.map(p => (
+              <motion.span
+                key={p.id}
+                initial={{ opacity:1, y:0,    x:0,              scale:0.5 }}
+                animate={{ opacity:0, y:-52,  x:(p.x-50)*0.6,  scale:1.2 }}
+                exit={{    opacity:0 }}
+                transition={{ duration:0.82, ease:'easeOut' }}
+                className="absolute pointer-events-none text-lg select-none"
+                style={{ left:`${p.x}%`, top:`${p.y}%`, zIndex:30 }}
+              >
+                {p.emoji}
+              </motion.span>
+            ))}
+          </AnimatePresence>
+
+          {petInfo.premium && (
+            <div className="absolute -top-2 -right-2 bg-gradient-to-br from-yellow-400 to-amber-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase z-10 shadow-lg border border-yellow-300">
               PRO
             </div>
           )}
+
           <PetSvg
             model={selectedPet as PetModel}
             mood={isInteracting ? (isInteracting === 'tickle' ? 'ecstatic' : 'happy') : mood}
-            size={100}
+            size={110}
             isInteracting={!!isInteracting}
             interactionType={isInteracting}
             milestones={milestones}
           />
-          <div className="absolute inset-0 rounded-full ring-2 ring-primary/0 hover:ring-primary/50 transition-all" />
         </motion.div>
 
-        {/* Info & Interactions */}
+        {/* Info panel */}
         <div className="flex-1 w-full min-w-0">
+
+          {/* Name prompt (first time) */}
           {!petName && (
             <div className="mb-3 bg-primary/10 border border-primary/20 rounded-xl p-3">
               <p className="text-[10px] text-primary font-black uppercase tracking-wider mb-2">
@@ -198,68 +241,58 @@ export function PetWidget() {
                 <input
                   type="text"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={e => setNewName(e.target.value)}
                   placeholder="Rex, Luna..."
                   className="flex-1 bg-background/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
                 />
                 <button
                   onClick={() => newName && renamePet(newName)}
                   className="bg-primary text-black font-black px-3 py-1.5 rounded-lg text-xs uppercase"
-                >
-                  OK
-                </button>
+                >OK</button>
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-1">
+          {/* Name + mood row */}
+          <div className="flex items-center justify-between mb-2">
             <div className="flex flex-col">
-              <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
-                {petName || PET_CATALOG[selectedPet as PetModel].name}
+              <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-1.5">
+                {petName || petInfo.name}
                 <button
                   onClick={() => setIsPromptOpen(true)}
-                  className="p-1 hover:bg-white/10 rounded transition-colors group"
+                  className="p-0.5 hover:bg-white/10 rounded transition-colors group"
                 >
-                  <Pencil className="w-3 h-3 text-gray-500 group-hover:text-primary" />
+                  <Pencil className="w-3 h-3 text-gray-500 group-hover:text-primary"/>
                 </button>
                 {currentStreak > 0 && (
-                  <span className="text-orange-500 flex items-center gap-0.5 text-xs">
-                    🔥 <span className="font-black">{currentStreak}</span>
+                  <span className="text-orange-500 flex items-center gap-0.5 text-xs font-black">
+                    🔥{currentStreak}
                   </span>
                 )}
               </h3>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest -mt-1">
-                {PET_CATALOG[selectedPet as PetModel].name}
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest -mt-0.5">
+                {petInfo.name}
               </span>
             </div>
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${mood === 'ecstatic' ? 'bg-primary/20 text-primary' :
-                mood === 'happy' ? 'bg-green-500/20 text-green-400' :
-                  mood === 'neutral' ? 'bg-yellow-500/20 text-yellow-400' :
-                    mood === 'hungry' ? 'bg-orange-500/20 text-orange-400' :
-                      mood === 'sleeping' ? 'bg-blue-500/20 text-blue-400' :
-                        mood === 'dirty' ? 'bg-amber-800/20 text-amber-600' :
-                          mood === 'atrophied' ? 'bg-gray-800/50 text-gray-500' :
-                            'bg-red-500/20 text-red-500'
-              }`}>
-              {t(`gamification.moods.${mood}`)}
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${moodMeta.bg} ${moodMeta.color}`}>
+              {isPt ? moodMeta.labelPt : moodMeta.label}
             </span>
           </div>
 
-          {/* Speech Bubble - Compact & Characterful */}
-          <div className="mb-6 min-h-[48px] flex items-center">
+          {/* Speech bubble */}
+          <div className="mb-4 min-h-[46px] flex items-start">
             <AnimatePresence mode="wait">
               {message && (
                 <motion.div
                   key={message}
-                  initial={{ scale: 0.8, opacity: 0, y: 10 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ scale: 0.8, opacity: 0, y: -10 }}
-                  className="bg-white rounded-2xl p-2.5 sm:p-3 shadow-lg relative border-2 border-primary/30 w-full sm:w-fit sm:max-w-[90%] mx-auto sm:mx-0"
+                  initial={{ scale:0.85, opacity:0, y:8 }}
+                  animate={{ scale:1,    opacity:1, y:0 }}
+                  exit={{   scale:0.85, opacity:0, y:-8 }}
+                  className="relative bg-white rounded-2xl px-3 py-2 shadow-md border-2 border-primary/25 w-full"
                 >
-                  {/* Speech Bubble Tail */}
-                  <div className="hidden sm:block absolute bottom-[-8px] left-6 w-4 h-4 bg-white border-r-2 border-b-2 border-primary/30 rotate-45 transform" />
-
-                  <p className="text-xs sm:text-sm text-black font-black leading-tight tracking-tight break-words">
+                  {/* Bubble tail */}
+                  <div className="absolute -top-2 left-6 w-3.5 h-3.5 bg-white border-l-2 border-t-2 border-primary/25 rotate-45"/>
+                  <p className="text-xs text-black font-black leading-snug tracking-tight break-words">
                     {message}
                   </p>
                 </motion.div>
@@ -267,99 +300,104 @@ export function PetWidget() {
             </AnimatePresence>
           </div>
 
-          {/* Bars */}
-          <div className="flex flex-col gap-2">
-            <div className="flex-1 flex items-center gap-2 bg-surface-100 p-2 rounded-lg">
-              <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest shrink-0 w-12 text-left">
-                {t('gamification.food')}
-              </span>
-              <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-white/5">
+          {/* Daily workout suggestion */}
+          {mood !== 'sleeping' && mood !== 'starving' && mood !== 'atrophied' && (
+            <div className="mt-2 mx-1 text-[10px] text-gray-500 font-medium italic text-center leading-relaxed">
+              {dailySuggestion}
+            </div>
+          )}
+
+          {/* Stat bars */}
+          <div className="flex flex-col gap-1.5 mb-3">
+            {/* Hunger */}
+            <div className="flex items-center gap-2 bg-surface-100/60 px-2.5 py-1.5 rounded-xl">
+              <span className="text-base leading-none">🍗</span>
+              <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${hungerPercent}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  initial={{ width:0 }}
+                  animate={{ width:`${hungerPercent}%` }}
+                  transition={{ duration:0.8, ease:'easeOut' }}
                   className={`h-full rounded-full ${hungerColor}`}
                 />
               </div>
+              <span className="text-[9px] text-gray-500 font-bold w-6 text-right">{hungerPercent}%</span>
             </div>
-
-            <div className="flex-1 flex items-center gap-2 bg-surface-100 p-2 rounded-lg">
-              <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest shrink-0 w-12 text-left">
-                {t('gamification.hygiene')}
-              </span>
-              <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-white/5">
+            {/* Cleanliness */}
+            <div className="flex items-center gap-2 bg-surface-100/60 px-2.5 py-1.5 rounded-xl">
+              <span className="text-base leading-none">🛁</span>
+              <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${cleanlinessPercent}%` }}
-                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+                  initial={{ width:0 }}
+                  animate={{ width:`${cleanlinessPercent}%` }}
+                  transition={{ duration:0.8, ease:'easeOut', delay:0.1 }}
                   className={`h-full rounded-full ${cleanlinessColor}`}
                 />
               </div>
+              <span className="text-[9px] text-gray-500 font-bold w-6 text-right">{cleanlinessPercent}%</span>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center mt-3 justify-between">
-            <div className={`flex gap-1.5 ${(!canInteract() || mood === 'sleeping') ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* Interaction buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
+            <div className={`flex gap-1.5 ${interactDisabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              {interactionButtons.map(btn => (
+                <motion.button
+                  key={btn.type}
+                  onClick={() => handleInteract(btn.type)}
+                  whileTap={{ scale:0.88 }}
+                  className={`flex flex-col items-center gap-0.5 p-2 bg-surface-100 rounded-xl text-gray-400 transition-colors ${btn.hoverColor}`}
+                  title={isPt ? btn.labelPt : btn.labelEn}
+                >
+                  {btn.icon}
+                  <span className="text-[7px] font-bold uppercase tracking-wider leading-none">
+                    {isPt ? btn.labelPt : btn.labelEn}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+
+            {/* Workout motivator or cooldown */}
+            <div className="flex items-center gap-2">
+              {isSleeping ? (
+                <span className="text-[9px] text-blue-400 font-bold px-2 py-1 bg-blue-500/10 rounded-lg">
+                  💤 {isPt ? 'A dormir...' : 'Sleeping...'}
+                </span>
+              ) : interactDisabled ? (
+                <span className="text-[9px] text-gray-500 font-bold px-2 py-1 bg-surface-100 rounded-lg">
+                  ⏳ {isPt ? 'Cooldown...' : 'Cooldown...'}
+                </span>
+              ) : hunger < 50 ? (
+                <motion.div
+                  animate={{ scale:[1,1.03,1] }}
+                  transition={{ repeat:Infinity, duration:2 }}
+                  className="flex items-center gap-1 px-2 py-1 bg-primary/15 rounded-lg border border-primary/20"
+                >
+                  <Zap className="w-3 h-3 text-primary"/>
+                  <span className="text-[9px] text-primary font-black uppercase tracking-wider">
+                    {isPt ? 'Treina!' : 'Go train!'}
+                  </span>
+                </motion.div>
+              ) : null}
+
               <button
-                onClick={() => handleInteract('bath')}
-                className="p-2 bg-surface-100 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 text-gray-400 transition-colors"
-                title={t('gamification.interactions.bath')}
+                onClick={() => setShowSelector(s => !s)}
+                className="text-[9px] uppercase font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded-xl border border-surface-100 bg-surface-100/50 hover:bg-surface-100 transition-colors"
               >
-                <Droplets className="w-4 h-4 relative -top-0.5" />
-              </button>
-              <button
-                onClick={() => handleInteract('pet')}
-                className="p-2 bg-surface-100 rounded-lg hover:bg-primary/20 hover:text-primary text-gray-400 transition-colors"
-                title={t('gamification.interactions.pet')}
-              >
-                <Hand className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleInteract('flex')}
-                className="p-2 bg-surface-100 rounded-lg hover:bg-primary/20 hover:text-primary text-gray-400 transition-colors"
-                title={t('gamification.interactions.flex')}
-              >
-                <Dumbbell className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleInteract('tickle')}
-                className="p-2 bg-surface-100 rounded-lg hover:bg-primary/20 hover:text-primary text-gray-400 transition-colors"
-                title={t('gamification.interactions.tickle')}
-              >
-                <Feather className="w-4 h-4" />
+                {t('gamification.changeMascot')}
               </button>
             </div>
-            
-            <button
-              onClick={() => setShowSelector(!showSelector)}
-              className="text-[10px] uppercase font-bold text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-surface-100 bg-surface-100/50 hover:bg-surface-100 transition-colors w-full sm:w-auto mt-2 sm:mt-0"
-            >
-              {t('gamification.changeMascot')}
-            </button>
           </div>
         </div>
-
-        {/* Milestone Badge Overlay */}
-        {milestones.length > 0 && (
-          <div className="absolute -bottom-1 -right-1 flex gap-1 z-20">
-            {milestones.map(m => (
-              <div key={m} className={`w-6 h-6 rounded-full flex items-center justify-center border-2 border-background shadow-lg ${m === 'legend' ? 'bg-yellow-500' : m === 'elite' ? 'bg-purple-500' : m === 'pro' ? 'bg-blue-500' : 'bg-green-500'
-                }`}>
-                <span className="text-[10px]">🏆</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Pet Selector */}
       <AnimatePresence>
         {showSelector && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            initial={{ height:0, opacity:0 }}
+            animate={{ height:'auto', opacity:1 }}
+            exit={{   height:0, opacity:0 }}
+            transition={{ duration:0.28 }}
             className="overflow-hidden"
           >
             <div className="mt-5 pt-5 border-t border-surface-100">
@@ -372,59 +410,61 @@ export function PetWidget() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                 {ALL_PETS.map(pet => {
-                  const info = PET_CATALOG[pet as PetModel]
+                  const info      = PET_CATALOG[pet as PetModel]
                   const isUnlocked = unlockedPets.includes(pet)
                   const isSelected = selectedPet === pet
 
                   return (
-                    <button
+                    <motion.button
                       key={pet}
-                      onClick={() => {
-                        if (isUnlocked) {
-                          setPet(pet)
-                          setShowSelector(false)
-                        }
-                      }}
+                      onClick={() => { if (isUnlocked) { setPet(pet); setShowSelector(false) } }}
                       disabled={!isUnlocked}
-                      className={`relative flex flex-col items-center p-3 rounded-2xl border transition-all ${isSelected
-                          ? 'border-primary bg-primary/10 overflow-hidden'
+                      whileTap={isUnlocked ? { scale:0.93 } : {}}
+                      className={`relative flex flex-col items-center p-2.5 rounded-2xl border transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/10'
                           : isUnlocked
                             ? 'border-surface-100 hover:border-primary/50 bg-surface-100/50 hover:bg-surface-100'
-                            : 'border-surface-100 bg-surface-100/20 opacity-60 cursor-not-allowed'
-                        }`}
+                            : 'border-surface-100 bg-surface-100/20 opacity-55 cursor-not-allowed'
+                      }`}
                     >
-                      {isSelected && <div className="absolute inset-0 bg-primary/5 z-0" />}
+                      {isSelected && <div className="absolute inset-0 rounded-2xl bg-primary/5"/>}
+
                       {info.premium && (
-                        <div className="absolute top-1.5 right-1.5 z-10">
-                          <div className="bg-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase">PRO</div>
+                        <div className="absolute top-1.5 right-1.5 bg-gradient-to-br from-yellow-400 to-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase z-10">
+                          PRO
                         </div>
                       )}
 
-                      <div className="relative z-10 w-[60px] h-[60px] flex items-center justify-center">
+                      <div className="relative z-10 w-[64px] h-[64px] flex items-center justify-center">
                         {isUnlocked ? (
                           <PetSvg
                             model={pet as PetModel}
-                            mood={isSelected ? mood : "happy"}
-                            size={60}
+                            mood={isSelected ? mood : 'happy'}
+                            size={64}
                             milestones={isSelected ? milestones : []}
                           />
                         ) : (
-                          <Lock className="w-8 h-8 text-gray-600" />
+                          <div className="flex flex-col items-center gap-1">
+                            <Lock className="w-7 h-7 text-gray-600"/>
+                          </div>
                         )}
                       </div>
 
-                      <span className={`text-[11px] font-bold mt-2 relative z-10 ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                      <span className={`text-[10px] font-bold mt-1 relative z-10 leading-tight text-center ${
+                        isSelected ? 'text-white' : 'text-gray-400'
+                      }`}>
                         {info.name}
                       </span>
 
                       {!isUnlocked && (
-                        <span className="text-[9px] text-primary/70 font-bold mt-0.5 relative z-10 uppercase tracking-widest">
-                          {info.premium ? 'Premium' : `Lv. ${info.unlockLevel}`}
+                        <span className="text-[8px] text-primary/60 font-bold mt-0.5 relative z-10 uppercase tracking-widest">
+                          {info.premium ? '★ Premium' : `Lv.${info.unlockLevel}`}
                         </span>
                       )}
-                    </button>
+                    </motion.button>
                   )
                 })}
               </div>
@@ -432,11 +472,12 @@ export function PetWidget() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Modals */}
+
+      {/* Rename modal */}
       <PromptModal
         isOpen={isPromptOpen}
         onClose={() => setIsPromptOpen(false)}
-        onConfirm={(name) => renamePet(name)}
+        onConfirm={name => renamePet(name)}
         title={t('gamification.petNamingTitle')}
         label={t('gamification.petNameLabel')}
         defaultValue={petName}

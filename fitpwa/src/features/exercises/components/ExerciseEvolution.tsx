@@ -121,7 +121,7 @@ export function ExerciseEvolution({ exerciseId, exerciseName }: ExerciseEvolutio
       </div>
 
       <div className="bg-surface-200/50 border border-white/5 p-4 rounded-[2rem] h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={0}>
           <AreaChart data={evolutionData}>
             <defs>
               <linearGradient id="colorMax" x1="0" y1="0" x2="0" y2="1">

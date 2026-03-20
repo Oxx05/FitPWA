@@ -9,7 +9,6 @@ import { Link } from 'react-router-dom'
 import { FeatureGate } from '../premium/FeatureGate'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { MuscleHeatmap } from '../progress/components/MuscleHeatmap'
 import { SmartInsights } from './components/SmartInsights'
 import { CommunityChallenge } from '../social/components/CommunityChallenge'
 import { PetWidget } from '../pet/PetWidget'
@@ -77,7 +76,7 @@ export function Dashboard() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <SmartInsights />
+        <SmartInsights hideIcon={true} />
       </motion.div>
 
       {/* Virtual Pet */}
@@ -149,12 +148,6 @@ export function Dashboard() {
       </div>
 
 
-
-      <motion.div variants={itemVariants}>
-        <FeatureGate featureName={t('dashboard.advancedMuscleAnalysis')}>
-          <MuscleHeatmap />
-        </FeatureGate>
-      </motion.div>
 
       <motion.div variants={itemVariants}>
         <GamificationManager />

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, ExternalLink, Dumbbell, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Music, SkipBack, SkipForward, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, ExternalLink, Dumbbell, X, Info } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -52,6 +52,8 @@ interface ExerciseInSession {
   restSeconds: number
   planExerciseId?: string
   notes?: string
+  gifUrl?: string | null
+  tips?: string | null
 }
 
 export function SessionScreen() {
@@ -97,6 +99,9 @@ export function SessionScreen() {
   const [isTimerMinimized, setIsTimerMinimized] = useState(false)
   const [recentRestTimes, setRecentRestTimes] = useState<number[]>([60, 90, 120])
   const [showSuspiciousModal, setShowSuspiciousModal] = useState(false)
+  const [showTipsModal, setShowTipsModal] = useState(false)
+  const [tipsExercise, setTipsExercise] = useState<ExerciseInSession | null>(null)
+  const [focusSetIndex, setFocusSetIndex] = useState<number | null>(null)
   
   const { speak } = useVoiceGuide()
 
@@ -248,7 +253,7 @@ export function SessionScreen() {
     localStorage.setItem('titanpulse_last_rest_time', time.toString())
     setTargetRestTimer(time)
     setRecentRestTimes(prev => {
-      const filtered = prev.filter(t => t !== time)
+      const filtered = prev.filter(v => v !== time)
       const next = [time, ...filtered].slice(0, 3)
       localStorage.setItem('titanpulse_recent_timers', JSON.stringify(next))
       return next
@@ -340,7 +345,7 @@ export function SessionScreen() {
           .from('workout_plans')
           .select('id, name')
           .eq('id', planId)
-          .single()
+          .maybeSingle()
 
         if (planError) throw planError
         setPlanName(planData?.name ?? null)
@@ -357,7 +362,7 @@ export function SessionScreen() {
           .from('plan_exercises')
           .select(`
             id, order_index, sets, reps_min, reps_max, rest_seconds, weight_kg, notes,
-            exercises ( id, name, name_pt, muscle_groups )
+            exercises ( id, name, name_pt, muscle_groups, gif_url, tips )
           `)
           .eq('plan_id', planId)
           .order('order_index', { ascending: true })
@@ -386,7 +391,9 @@ export function SessionScreen() {
             repsMax: (pe.reps_max as number) || profile?.default_reps_max || 12,
             restSeconds: (pe.rest_seconds as number) || profile?.default_rest_seconds || 90,
             planExerciseId: pe.id as string,
-            notes: (pe.notes as string) || ''
+            notes: (pe.notes as string) || '',
+            gifUrl: (ex?.gif_url as string) || null,
+            tips: (ex?.tips as string) || null,
           }
         })
 
@@ -450,6 +457,7 @@ export function SessionScreen() {
     }
 
     fetchPreviousData()
+    setFocusSetIndex(null) // reset set cursor when exercise changes
   }, [currentExerciseIndex, exercises, user])
 
   useEffect(() => {
@@ -760,11 +768,11 @@ export function SessionScreen() {
                 xp_earned: xpGained
               })
               .select('id')
-              .single()
+              .maybeSingle()
 
             if (sessionError) throw sessionError
 
-            if (completedSets.length > 0) {
+            if (completedSets.length > 0 && sessionRow) {
               await supabase.from('session_sets').insert(
                 completedSets.map(s => ({
                   session_id: sessionRow.id,
@@ -1197,15 +1205,26 @@ export function SessionScreen() {
             {/* Exercise Card */}
             <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
               <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">
-                    {i18n.language.startsWith('pt') && currentExercise.name_pt ? currentExercise.name_pt : currentExercise.name}
-                  </h2>
+                <div className="flex-1 min-w-0 mr-2">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-white truncate">
+                      {i18n.language.startsWith('pt') && currentExercise.name_pt ? currentExercise.name_pt : currentExercise.name}
+                    </h2>
+                    {(currentExercise.gifUrl || currentExercise.tips) && (
+                      <button
+                        onClick={() => { setTipsExercise(currentExercise); setShowTipsModal(true) }}
+                        className="p-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors shrink-0"
+                        title={t('session.exerciseTipsTitle')}
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-400 capitalize mt-1">
                     {currentExercise.muscleGroups.map(mg => t(`common.muscles.${mg.toLowerCase()}`)).join(', ')}
                   </p>
                 </div>
-                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">
                   {currentExercise.repsMin}–{currentExercise.repsMax} {t('session.reps')}
                 </span>
               </div>
@@ -1692,7 +1711,11 @@ export function SessionScreen() {
               {/* Huge Active Set Display */}
               <div className="bg-surface-200/40 backdrop-blur-md border border-white/10 p-6 rounded-[32px] shadow-2xl flex flex-col gap-6">
                  {(() => {
-                    const activeSet = currentExercise.sets.find(s => !s.completed) || currentExercise.sets[currentExercise.sets.length - 1]
+                    const firstUncompletedIdx = currentExercise.sets.findIndex(s => !s.completed)
+                    const activeSetIdx = focusSetIndex !== null
+                      ? Math.max(0, Math.min(focusSetIndex, currentExercise.sets.length - 1))
+                      : (firstUncompletedIdx >= 0 ? firstUncompletedIdx : currentExercise.sets.length - 1)
+                    const activeSet = currentExercise.sets[activeSetIdx]
                     return (
                       <>
                         <div className="flex justify-between items-center px-2">
@@ -1789,30 +1812,65 @@ export function SessionScreen() {
               )}
             </div>
 
-            <div className="mt-auto flex justify-between gap-4">
-              <Button 
-                variant="ghost" 
-                className="flex-1 h-14 rounded-2xl text-gray-500 font-black uppercase text-xs"
-                disabled={currentExerciseIndex === 0}
-                onClick={() => setCurrentExerciseIndex(i => i - 1)}
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                {t('common.back')}
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="flex-[1.5] h-14 rounded-2xl text-primary font-black uppercase text-xs border border-primary/20 bg-primary/5 active:scale-95 transition-all"
-                onClick={() => {
-                  if (currentExerciseIndex === exercises.length - 1) {
-                    setShowFinishModal(true)
-                  } else {
-                    setCurrentExerciseIndex(i => i + 1)
-                  }
-                }}
-              >
-                {currentExerciseIndex === exercises.length - 1 ? t('session.finishWorkout') : t('session.nextExercise')}
-                {currentExerciseIndex !== exercises.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
-              </Button>
+            <div className="mt-auto flex flex-col gap-2">
+              {/* Set navigation row */}
+              {(() => {
+                const firstUncompletedIdx = currentExercise.sets.findIndex(s => !s.completed)
+                const activeSetIdx = focusSetIndex !== null
+                  ? Math.max(0, Math.min(focusSetIndex, currentExercise.sets.length - 1))
+                  : (firstUncompletedIdx >= 0 ? firstUncompletedIdx : currentExercise.sets.length - 1)
+                return (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 h-11 rounded-2xl text-gray-400 font-black uppercase text-[10px] border border-surface-100"
+                      disabled={activeSetIdx === 0}
+                      onClick={() => setFocusSetIndex(activeSetIdx - 1)}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5 mr-0.5" />
+                      {t('session.prevSet')}
+                    </Button>
+                    <div className="flex items-center px-3 text-[10px] font-black text-gray-500 uppercase whitespace-nowrap">
+                      {activeSetIdx + 1}/{currentExercise.sets.length}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      className="flex-1 h-11 rounded-2xl text-gray-400 font-black uppercase text-[10px] border border-surface-100"
+                      disabled={activeSetIdx === currentExercise.sets.length - 1}
+                      onClick={() => setFocusSetIndex(activeSetIdx + 1)}
+                    >
+                      {t('session.nextSet')}
+                      <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                    </Button>
+                  </div>
+                )
+              })()}
+              {/* Exercise navigation row */}
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex-1 h-14 rounded-2xl text-gray-500 font-black uppercase text-xs"
+                  disabled={currentExerciseIndex === 0}
+                  onClick={() => setCurrentExerciseIndex(i => i - 1)}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  {t('session.prevExercise')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="flex-[1.5] h-14 rounded-2xl text-primary font-black uppercase text-xs border border-primary/20 bg-primary/5 active:scale-95 transition-all"
+                  onClick={() => {
+                    if (currentExerciseIndex === exercises.length - 1) {
+                      setShowFinishModal(true)
+                    } else {
+                      setCurrentExerciseIndex(i => i + 1)
+                    }
+                  }}
+                >
+                  {currentExerciseIndex === exercises.length - 1 ? t('session.finishWorkout') : t('session.nextExercise')}
+                  {currentExerciseIndex !== exercises.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -2193,6 +2251,56 @@ export function SessionScreen() {
                   <Plus className="w-5 h-5 text-gray-600 group-hover:text-primary" />
                 </button>
               ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Exercise Tips Modal */}
+      <Modal
+        isOpen={showTipsModal}
+        onClose={() => { setShowTipsModal(false); setTipsExercise(null) }}
+        title={tipsExercise ? (isPt && tipsExercise.name_pt ? tipsExercise.name_pt : tipsExercise.name) : ''}
+        size="md"
+        closeButton
+      >
+        <div className="space-y-4">
+          {tipsExercise?.gifUrl ? (
+            <div className="rounded-2xl overflow-hidden bg-surface-100 flex items-center justify-center" style={{ minHeight: 200 }}>
+              <img
+                src={tipsExercise.gifUrl}
+                alt={tipsExercise.name}
+                className="w-full max-h-64 object-contain"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-surface-100 border border-white/5 flex items-center justify-center h-28 text-gray-600">
+              <div className="flex flex-col items-center gap-2">
+                <Dumbbell className="w-8 h-8 opacity-30" />
+                <span className="text-xs">{t('session.exerciseNoGif')}</span>
+              </div>
+            </div>
+          )}
+
+          {tipsExercise?.tips ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">{t('session.howToPerform')}</p>
+              <div className="bg-surface-100 rounded-2xl p-4 border border-white/5">
+                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
+                  {tipsExercise.tips}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-2">{t('session.exerciseNoTips')}</p>
+          )}
+
+          <div className="pt-2 flex items-center gap-2 text-xs text-gray-500 bg-surface-100/50 rounded-xl p-3 border border-white/5">
+            <span className="font-black text-primary uppercase tracking-tighter">
+              {tipsExercise?.muscleGroups.map(mg => t(`common.muscles.${mg.toLowerCase()}`)).join(', ')}
+            </span>
+            <span>•</span>
+            <span>{tipsExercise?.repsMin}–{tipsExercise?.repsMax} {t('session.reps')}</span>
           </div>
         </div>
       </Modal>

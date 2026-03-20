@@ -52,9 +52,10 @@ interface DBSet {
 
 interface DBSession {
   id: string
-  created_at: string
+  finished_at: string
   duration_seconds: number
   total_volume_kg: number
+  plan_name?: string
   session_sets: DBSet[]
 }
 
@@ -77,7 +78,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('personal_records')
-        .select('*, exercises:exercise_id(name, name_pt)')
+        .select('*')
         .eq('user_id', profile.id)
         .order('weight_kg', { ascending: false })
         .limit(50)
@@ -87,11 +88,23 @@ export function RecordsPage() {
         return []
       }
 
-      return (data || []).map(pr => {
+      const rawPrs = data || []
+      const exerciseIds = [...new Set(rawPrs.map(pr => pr.exercise_id).filter(Boolean))]
+      let dbExercises: any[] = []
+      
+      if (exerciseIds.length > 0) {
+        const { data: exData } = await supabase
+          .from('exercises')
+          .select('id, name, name_pt')
+          .in('id', exerciseIds)
+        dbExercises = exData || []
+      }
+
+      return rawPrs.map(pr => {
         // Try to get name from hardcoded list first (slugs), then fallback to DB join name, then ID
         const exerciseData = EXERCISES.find(e => e.id === pr.exercise_id)
-        const dbExercise = pr.exercises as unknown as { name: string; name_pt: string }
-        const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || pr.exercise_id
+        const dbExercise = dbExercises.find(e => e.id === pr.exercise_id)
+        const exerciseName = exerciseData?.name || (isPt ? dbExercise?.name_pt : dbExercise?.name) || dbExercise?.name || pr.exercise_id
 
         return {
           id: pr.id,
@@ -112,7 +125,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('workout_history')
-        .select('*')
+        .select('id, exercise_id, sets_completed, duration_seconds, created_at')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(100)
@@ -121,10 +134,24 @@ export function RecordsPage() {
         console.error('Error fetching history:', error)
         return []
       }
+      
+      const historyData = data || []
+      
+      // Fetch exercise names manually to avoid foreign key errors on view/table
+      const exerciseIds = [...new Set(historyData.map(h => h.exercise_id).filter(Boolean))]
+      let dbExercises: any[] = []
+      
+      if (exerciseIds.length > 0) {
+        const { data: exData } = await supabase
+          .from('exercises')
+          .select('id, name, name_pt')
+          .in('id', exerciseIds)
+        dbExercises = exData || []
+      }
 
-      return (data || []).map(h => {
+      return historyData.map(h => {
         const exerciseData = EXERCISES.find(e => e.id === h.exercise_id)
-        const dbExercise = h.exercises as unknown as { name: string; name_pt: string }
+        const dbExercise = dbExercises.find(e => e.id === h.exercise_id)
         const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || h.exercise_id
 
         return {
@@ -148,9 +175,10 @@ export function RecordsPage() {
         .from('workout_sessions')
         .select(`
           id,
-          created_at,
+          finished_at,
           duration_seconds,
           total_volume_kg,
+          plan_name,
           session_sets (
             exercise_id,
             exercise_name,
@@ -161,7 +189,7 @@ export function RecordsPage() {
           )
         `)
         .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
+        .order('finished_at', { ascending: false })
         .limit(10)
 
       if (error) {
@@ -178,7 +206,7 @@ export function RecordsPage() {
       if (!profile?.id) return []
       const { data, error } = await supabase
         .from('personal_record_history')
-        .select('*, exercises:exercise_id(name, name_pt)')
+        .select('*')
         .eq('user_id', profile.id)
         .order('achieved_at', { ascending: false })
         .limit(50)
@@ -188,10 +216,22 @@ export function RecordsPage() {
         return []
       }
 
-      return (data || []).map(pr => {
+      const rawPrHistory = data || []
+      const exerciseIds = [...new Set(rawPrHistory.map(pr => pr.exercise_id).filter(Boolean))]
+      let dbExercises: any[] = []
+      
+      if (exerciseIds.length > 0) {
+        const { data: exData } = await supabase
+          .from('exercises')
+          .select('id, name, name_pt')
+          .in('id', exerciseIds)
+        dbExercises = exData || []
+      }
+
+      return rawPrHistory.map(pr => {
         const exerciseData = EXERCISES.find(e => e.id === pr.exercise_id)
-        const dbExercise = pr.exercises as unknown as { name: string; name_pt: string }
-        const exerciseName = exerciseData?.name || dbExercise?.name_pt || dbExercise?.name || pr.exercise_id
+        const dbExercise = dbExercises.find(e => e.id === pr.exercise_id)
+        const exerciseName = exerciseData?.name || (isPt ? dbExercise?.name_pt : dbExercise?.name) || dbExercise?.name || pr.exercise_id
 
         return {
           id: pr.id,
@@ -212,7 +252,7 @@ export function RecordsPage() {
   const chartRecords: PersonalRecord[] = (prs || []).map(pr => ({
     id: pr.id,
     user_id: pr.user_id,
-    exercise_id: pr.exercise_id,
+    exercise_id: pr.exercise_name, // Passed name instead of ID for the chart legend
     weight_kg: pr.weight_kg,
     reps: pr.reps,
     date_set: pr.date_set,
@@ -420,9 +460,10 @@ export function RecordsPage() {
                   className="bg-surface-200 border border-surface-100 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div>
+                    <h4 className="font-bold text-white mb-1">{(session as any).plan_name || t('progress.quickSession')}</h4>
                     <p className="font-medium text-white flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-primary" />
-                      {new Date(session.created_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
+                      {new Date(session.finished_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US')}
                     </p>
                     <p className="text-sm text-gray-400 mt-1">
                       {exercisesList.length} {t('common.exercise', { count: exercisesList.length })} • {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s • {session.total_volume_kg}kg volume
@@ -432,7 +473,7 @@ export function RecordsPage() {
                     to="/workouts/new"
                     state={{
                       initialData: {
-                        name: t('progress.workoutFromDate', { date: new Date(session.created_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US') }),
+                        name: t('progress.workoutFromDate', { date: new Date(session.finished_at).toLocaleDateString(isPt ? 'pt-PT' : 'en-US') }),
                         description: t('progress.recoveredFromHistory'),
                         exercises: exercisesList
                       }
