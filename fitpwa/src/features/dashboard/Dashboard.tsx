@@ -6,7 +6,6 @@ import { GamificationManager } from '@/features/gamification/GamificationManager
 
 import { Crown, TrendingUp, Flame, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { FeatureGate } from '../premium/FeatureGate'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { SmartInsights } from './components/SmartInsights'
@@ -35,7 +34,7 @@ export function Dashboard() {
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
 
   return (
-    <motion.div 
+    <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -57,11 +56,11 @@ export function Dashboard() {
               <span className="text-gray-400 text-xs">{profile?.xp_total || 0} XP</span>
             </div>
             <div className="w-32 h-2 bg-surface-100 rounded-full overflow-hidden border border-surface-200">
-              <motion.div 
+              <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${levelProgress}%` }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full" 
+                className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full"
               />
             </div>
           </div>
@@ -86,7 +85,7 @@ export function Dashboard() {
 
       {/* Premium CTA */}
       {!profile?.is_premium && (
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           whileHover={{ scale: 1.01 }}
           className="bg-gradient-to-r from-primary/20 via-primary/10 to-purple-500/20 border border-primary/30 p-5 rounded-3xl flex items-center justify-between shadow-xl shadow-primary/5 relative overflow-hidden group"
@@ -111,7 +110,7 @@ export function Dashboard() {
 
       {/* Stats Cards + Today's Workout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           whileHover={{ y: -5 }}
           className="bg-surface-200 p-6 rounded-3xl border border-surface-100 shadow-md transition-shadow hover:shadow-primary/5"
@@ -125,8 +124,8 @@ export function Dashboard() {
             <span className="text-primary font-black mb-1 uppercase text-xs tracking-widest">{t('common.days')} 🔥</span>
           </div>
         </motion.div>
-        
-        <motion.div 
+
+        <motion.div
           variants={itemVariants}
           whileHover={{ y: -5 }}
           className="bg-surface-200 p-6 rounded-3xl border border-surface-100 shadow-md md:col-span-2"
