@@ -22,7 +22,7 @@ export function ConquestCard({ title, subtitle, value, label, achievementIcon, s
     try {
       const dataUrl = await toPng(cardRef.current, { cacheBust: true })
       const link = document.createElement('a')
-      link.download = `TitanPulse-Conquest-${Date.now()}.png`
+      link.download = `RepTrack-Conquest-${Date.now()}.png`
       link.href = dataUrl
       link.click()
     } catch (err) {
@@ -64,7 +64,7 @@ export function ConquestCard({ title, subtitle, value, label, achievementIcon, s
         <div className={`relative z-10 flex justify-between items-center w-full border-t border-white/10 ${isCompact ? 'pt-4' : 'pt-6'}`}>
           <div className="flex items-center gap-2">
             <div className={`rounded-lg bg-primary flex items-center justify-center text-black font-black text-[10px] ${isCompact ? 'w-5 h-5' : 'w-6 h-6'}`}>FP</div>
-            <span className="text-[10px] font-black text-white uppercase tracking-tighter italic">TitanPulse</span>
+            <span className="text-[10px] font-black text-white uppercase tracking-tighter italic">RepTrack</span>
           </div>
           <Crown className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} text-primary opacity-50`} />
         </div>

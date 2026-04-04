@@ -50,7 +50,7 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
               </button>
               <SocialShare 
                 title="Novo Nível Alcançado!"
-                text={`Cheguei ao nível ${level} no TitanPulse! 🚀💪`}
+                text={`Cheguei ao nível ${level} no RepTrack! 🚀💪`}
               />
             </div>
           </div>
@@ -86,7 +86,7 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
       <div onClick={(e) => e.stopPropagation()}>
         <SocialShare 
           title="Nova Conquista Desbloqueada!"
-          text={`Desbloqueei a conquista "${achievement.title}" no TitanPulse! 🏆\n${achievement.description}`}
+          text={`Desbloqueei a conquista "${achievement.title}" no RepTrack! 🏆\n${achievement.description}`}
         />
       </div>
     </motion.div>

@@ -257,14 +257,7 @@ export function WorkoutsList() {
                 {plan.description || t('common.noDescription')}
               </p>
               
-              <div className="flex justify-between items-center mt-6 pt-6 border-t border-white/5 relative z-10">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('workouts.frequency')}</span>
-                  <span className="text-sm text-white font-bold">
-                    {plan.days_per_week ? t('workouts.perWeek', { count: plan.days_per_week }) : t('common.free')}
-                  </span>
-                </div>
-                
+              <div className="flex justify-end items-center mt-6 pt-6 border-t border-white/5 relative z-10">
                 <div className="flex gap-2">
                   <Link to={`/workouts/${plan.id}/edit`}>
                     <Button size="sm" variant="secondary" className="rounded-xl px-3 h-10 bg-surface-100 hover:bg-surface-200 border border-white/5" title={t('common.edit')}>

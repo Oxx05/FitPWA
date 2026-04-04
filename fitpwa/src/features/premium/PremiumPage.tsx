@@ -39,7 +39,7 @@ export function PremiumPage() {
           animate={{ scale: 1, opacity: 1 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold uppercase tracking-widest"
         >
-          <Crown className="w-4 h-4" /> TitanPulse PRO
+          <Crown className="w-4 h-4" /> RepTrack PRO
         </motion.div>
         <h1 className="text-4xl md:text-6xl font-black text-white">Leva o teu treino para o nível seguinte.</h1>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto italic">
@@ -161,7 +161,7 @@ export function PremiumPage() {
     <Modal
       isOpen={true}
       onClose={() => navigate(-1)}
-      title="TitanPulse PRO"
+      title="RepTrack PRO"
       size="lg"
       closeButton
     >

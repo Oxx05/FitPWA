@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/shared/contexts/ToastContext'
 import { useAuthStore } from '@/features/auth/authStore'
 import { useTranslation } from 'react-i18next'
+import { humanizeMuscle } from '@/shared/utils/muscleUtils'
 
 interface Exercise {
   id: string
@@ -59,18 +60,26 @@ export function ExerciseLibrary() {
 
   const filteredExercises = useMemo(() => exercises?.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase())
-    const matchesMuscle = muscleFilter === 'all' || ex.muscle_groups.includes(muscleFilter)
+    const matchesMuscle = muscleFilter === 'all' ||
+      ex.muscle_groups.some(g => g.toLowerCase() === muscleFilter.toLowerCase())
     return matchesSearch && matchesMuscle
   }), [exercises, search, muscleFilter])
 
-  // get unique muscles for filter
+  // Deduplicate case-insensitively — keep first occurrence (lowercase) as canonical value
   const muscleOptions = useMemo(() => {
-    const uniqueMuscles = Array.from(new Set(exercises?.flatMap(e => e.muscle_groups) || []))
+    const seen = new Map<string, string>() // lowercase key → first raw value
+    for (const ex of exercises ?? []) {
+      for (const g of ex.muscle_groups as string[]) {
+        const key = g.toLowerCase()
+        if (!seen.has(key)) seen.set(key, g)
+      }
+    }
+    const unique = Array.from(seen.values()).sort()
     return [
       { value: 'all', label: t('common.all') },
-      ...uniqueMuscles.map(m => ({ value: m, label: m }))
+      ...unique.map(m => ({ value: m, label: humanizeMuscle(m, t) }))
     ]
-  }, [exercises])
+  }, [exercises, t])
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 pb-24">
@@ -81,7 +90,7 @@ export function ExerciseLibrary() {
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-grow">
-          <Input 
+          <Input
             placeholder={t('session.searchExercisePlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -89,7 +98,7 @@ export function ExerciseLibrary() {
           />
           <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
         </div>
-        
+
         <div className="shrink-0 w-full md:w-64">
           <CustomSelect
             value={muscleFilter}
@@ -115,8 +124,8 @@ export function ExerciseLibrary() {
                 transition={{ delay: idx * 0.05 }}
                 className="relative group/card"
               >
-                <ExerciseCard 
-                  exercise={exercise} 
+                <ExerciseCard
+                  exercise={exercise}
                   onClick={() => setSelectedExercise(exercise)}
                 />
                 {exercise.is_custom && exercise.created_by === user?.id && (
@@ -133,10 +142,10 @@ export function ExerciseLibrary() {
           </AnimatePresence>
           {filteredExercises?.length === 0 && (
             <div className="col-span-full">
-              <EmptyState 
+              <EmptyState
                 icon={<SearchIcon className="w-8 h-8" />}
-                title="Sem Resultados"
-                description={`Não encontrámos nenhum exercício para "${search}". Tenta procurar por outro nome.`}
+                title={t('exercisesExtra.noResultsTitle')}
+                description={t('exercisesExtra.noResultsDesc', { search })}
               />
             </div>
           )}
@@ -145,14 +154,14 @@ export function ExerciseLibrary() {
       <Modal
         isOpen={!!selectedExercise}
         onClose={() => setSelectedExercise(null)}
-        title="Evolução"
+        title={t('exercisesExtra.evolutionTitle')}
         size="md"
         closeButton
       >
         {selectedExercise && (
-          <ExerciseEvolution 
-            exerciseId={selectedExercise.id} 
-            exerciseName={selectedExercise.name} 
+          <ExerciseEvolution
+            exerciseId={selectedExercise.id}
+            exerciseName={selectedExercise.name}
           />
         )}
       </Modal>

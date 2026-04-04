@@ -102,12 +102,12 @@ export function SessionSummary() {
         </Button>
 
         {stats.exercisesCount > 0 && (
-          <Link 
-            to="/workouts/new" 
-            state={{ 
+          <Link
+            to="/workouts/new"
+            state={{
               initialData: {
-                name: `Plano de ${new Date().toLocaleDateString('pt-PT')}`,
-                description: 'Criado a partir de um treino rápido',
+                name: t('session.convertToPlanName', { date: new Date().toLocaleDateString() }),
+                description: t('session.convertToPlanDesc'),
                 exercises: location.state?.exercises || []
               }
             }}
@@ -135,7 +135,7 @@ export function SessionSummary() {
         <div className="flex flex-col items-center">
           <ConquestCard 
             title={bestPr ? t('progress.newRecord') : t('session.workoutCompleted')}
-            subtitle={bestPr ? bestPr.exerciseName : "TitanPulse Session"}
+            subtitle={bestPr ? bestPr.exerciseName : "RepTrack Session"}
             value={bestPr ? `${Math.round(bestPr.oneRepMax || 0)}` : `${stats.volume}`}
             label={bestPr ? t('progress.estimated1rm') : t('social.feed.valueVolume')}
             achievementIcon={bestPr ? <Trophy className="w-10 h-10" /> : <TrendingUp className="w-10 h-10" />}

@@ -68,7 +68,7 @@ export function RegisterPage() {
           <Input 
             label={t('auth.email')}
             type="email" 
-            placeholder="exemplo@titanpulse.com"
+            placeholder="exemplo@reptrack.com"
             {...register('email')}
             error={errors.email?.message}
           />

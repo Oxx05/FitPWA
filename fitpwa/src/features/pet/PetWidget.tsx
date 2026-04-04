@@ -113,6 +113,10 @@ export function PetWidget() {
     : hungerPercent >= 30 ? 'bg-yellow-500' : 'bg-red-500'
   const cleanlinessColor = cleanlinessPercent >= 70 ? 'bg-blue-400'
     : cleanlinessPercent >= 30 ? 'bg-blue-600' : 'bg-red-500'
+  const hungerRingColor = hungerPercent >= 60 ? '#00ff87'
+    : hungerPercent >= 30 ? '#f59e0b' : '#ef4444'
+  const cleanlinessRingColor = cleanlinessPercent >= 70 ? '#60a5fa'
+    : cleanlinessPercent >= 30 ? '#2563eb' : '#ef4444'
 
   const spawnParticles = (type: PetInteraction) => {
     const emojis = INTERACTION_EMOJIS[type]
@@ -246,7 +250,10 @@ export function PetWidget() {
                   className="flex-1 bg-background/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
                 />
                 <button
-                  onClick={() => newName && renamePet(newName)}
+                  onClick={() => {
+                    const trimmed = newName.trim()
+                    if (trimmed) renamePet(trimmed)
+                  }}
                   className="bg-primary text-black font-black px-3 py-1.5 rounded-lg text-xs uppercase"
                 >OK</button>
               </div>
@@ -307,33 +314,53 @@ export function PetWidget() {
             </div>
           )}
 
-          {/* Stat bars */}
-          <div className="flex flex-col gap-1.5 mb-3">
-            {/* Hunger */}
-            <div className="flex items-center gap-2 bg-surface-100/60 px-2.5 py-1.5 rounded-xl">
-              <span className="text-base leading-none">🍗</span>
-              <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width:0 }}
-                  animate={{ width:`${hungerPercent}%` }}
-                  transition={{ duration:0.8, ease:'easeOut' }}
-                  className={`h-full rounded-full ${hungerColor}`}
-                />
+          {/* Stat graph */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-surface-100/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-full p-[3px]"
+                style={{ background: `conic-gradient(${hungerRingColor} ${hungerPercent * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }}
+              >
+                <div className="w-full h-full rounded-full bg-surface-200 flex items-center justify-center text-[10px] font-black text-white">
+                  {hungerPercent}%
+                </div>
               </div>
-              <span className="text-[9px] text-gray-500 font-bold w-6 text-right">{hungerPercent}%</span>
+              <div className="min-w-0">
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">🍗 {isPt ? 'Fome' : 'Hunger'}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1.5 bg-black/20 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width:0 }}
+                      animate={{ width:`${hungerPercent}%` }}
+                      transition={{ duration:0.8, ease:'easeOut' }}
+                      className={`h-full rounded-full ${hungerColor}`}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            {/* Cleanliness */}
-            <div className="flex items-center gap-2 bg-surface-100/60 px-2.5 py-1.5 rounded-xl">
-              <span className="text-base leading-none">🛁</span>
-              <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width:0 }}
-                  animate={{ width:`${cleanlinessPercent}%` }}
-                  transition={{ duration:0.8, ease:'easeOut', delay:0.1 }}
-                  className={`h-full rounded-full ${cleanlinessColor}`}
-                />
+            <div className="bg-surface-100/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-full p-[3px]"
+                style={{ background: `conic-gradient(${cleanlinessRingColor} ${cleanlinessPercent * 3.6}deg, rgba(255,255,255,0.08) 0deg)` }}
+              >
+                <div className="w-full h-full rounded-full bg-surface-200 flex items-center justify-center text-[10px] font-black text-white">
+                  {cleanlinessPercent}%
+                </div>
               </div>
-              <span className="text-[9px] text-gray-500 font-bold w-6 text-right">{cleanlinessPercent}%</span>
+              <div className="min-w-0">
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">🛁 {isPt ? 'Higiene' : 'Cleanliness'}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1.5 bg-black/20 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width:0 }}
+                      animate={{ width:`${cleanlinessPercent}%` }}
+                      transition={{ duration:0.8, ease:'easeOut', delay:0.1 }}
+                      className={`h-full rounded-full ${cleanlinessColor}`}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -477,7 +504,10 @@ export function PetWidget() {
       <PromptModal
         isOpen={isPromptOpen}
         onClose={() => setIsPromptOpen(false)}
-        onConfirm={name => renamePet(name)}
+        onConfirm={name => {
+          const trimmed = name.trim()
+          if (trimmed) renamePet(trimmed)
+        }}
         title={t('gamification.petNamingTitle')}
         label={t('gamification.petNameLabel')}
         defaultValue={petName}

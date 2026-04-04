@@ -4,10 +4,11 @@ import { Button } from '@/shared/components/Button'
 import { getLevelProgress } from '@/shared/utils/gamification'
 import { GamificationManager } from '@/features/gamification/GamificationManager'
 
-import { Crown, TrendingUp, Flame, Zap } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Crown, TrendingUp, Flame, Zap, Play } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { SmartInsights } from './components/SmartInsights'
 import { CommunityChallenge } from '../social/components/CommunityChallenge'
 import { PetWidget } from '../pet/PetWidget'
@@ -30,6 +31,13 @@ const itemVariants = {
 export function Dashboard() {
   const { profile, signOut } = useAuthStore()
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [hasActiveSession, setHasActiveSession] = useState(false)
+
+  useEffect(() => {
+    const raw = localStorage.getItem('titanpulse_active_session')
+    setHasActiveSession(!!raw)
+  }, [])
 
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
 
@@ -69,6 +77,25 @@ export function Dashboard() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Active Session Banner */}
+      {hasActiveSession && (
+        <motion.div
+          variants={itemVariants}
+          onClick={() => navigate('/session')}
+          className="bg-primary/15 border border-primary/40 p-4 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform shadow-lg shadow-primary/10 animate-pulse"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
+              <Play className="w-5 h-5 fill-current" />
+            </div>
+            <div>
+              <p className="text-white font-black text-sm uppercase italic tracking-tight">{t('dashboard.activeSessionBanner')}</p>
+              <p className="text-primary/80 text-xs font-bold">{t('dashboard.continueWorkout')} →</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <motion.div variants={itemVariants}>
         <CommunityChallenge />

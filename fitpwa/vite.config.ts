@@ -25,8 +25,8 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: 'TitanPulse',
-        short_name: 'TitanPulse',
+        name: 'RepTrack',
+        short_name: 'RepTrack',
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
         display: 'standalone',
@@ -34,7 +34,7 @@ export default defineConfig({
         categories: ['fitness', 'health'],
         icons: [
           {
-            src: 'logo_tp.png',
+            src: 'logo.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

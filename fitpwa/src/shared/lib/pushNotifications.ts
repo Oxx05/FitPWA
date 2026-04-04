@@ -51,8 +51,8 @@ class PushNotificationService {
     const {
       title,
       body,
-      icon = '/icons/icon-192x192.png',
-      badge = '/icons/badge-72x72.png',
+      icon = '/logo.png',
+      badge = '/logo.png',
       tag,
       requireInteraction = false,
     } = options
@@ -98,8 +98,8 @@ class PushNotificationService {
     this.sendNotification({
       title: `🎉 ${icon} ${achievementName}`,
       body: description,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/badge-72x72.png',
+      icon: '/logo.png',
+      badge: '/logo.png',
       tag: `achievement-${achievementName}`,
       requireInteraction: false,
     })
@@ -112,8 +112,8 @@ class PushNotificationService {
     this.sendNotification({
       title,
       body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/badge-72x72.png',
+      icon: '/logo.png',
+      badge: '/logo.png',
       tag: `pr-${exerciseName}`,
       requireInteraction: true,
     })
@@ -126,8 +126,8 @@ class PushNotificationService {
     this.sendNotification({
       title,
       body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/badge-72x72.png',
+      icon: '/logo.png',
+      badge: '/logo.png',
       tag: `milestone-${milestone}`,
       requireInteraction: false,
     })

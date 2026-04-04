@@ -133,7 +133,7 @@ export function FriendsPage() {
                 const text = t('social.inviteText', { username: profile?.username })
                 const url = window.location.origin
                 if (navigator.share) {
-                  navigator.share({ title: 'TitanPulse', text, url })
+                  navigator.share({ title: 'RepTrack', text, url })
                 } else {
                   navigator.clipboard.writeText(`${text} ${url}`)
                   showToast(t('social.inviteCopied'), 'success')

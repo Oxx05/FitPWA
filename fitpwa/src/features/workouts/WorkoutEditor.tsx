@@ -19,6 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Plus, GripVertical, Trash2, AlertCircle, Dumbbell, Sparkles } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
+import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import { Input } from '@/shared/components/Input'
 import { Modal } from '@/shared/components/Modal'
 import { DebouncedNumericInput } from '@/shared/components/DebouncedNumericInput'
@@ -26,6 +27,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { useTranslation } from 'react-i18next'
 import Fuse from 'fuse.js'
+import { humanizeMuscle } from '@/shared/utils/muscleUtils'
 
 interface PlanExercise {
   id: string
@@ -34,6 +36,7 @@ interface PlanExercise {
   sets: number
   weight_kg: number | null
   is_superset: boolean
+  muscle_groups?: string[]
 }
 
 interface Exercise {
@@ -74,6 +77,9 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
         <div {...attributes} {...listeners} className="cursor-grab text-gray-500 hover:text-white">
           <GripVertical className="w-5 h-5" />
         </div>
+        <div className="w-8 h-10 flex-shrink-0 bg-surface-100 rounded-lg p-0.5">
+          <MuscleIcon muscles={ex.muscle_groups || []} size="sm" />
+        </div>
         <h4 className="font-bold text-white flex-grow">{ex.name}</h4>
         <button onClick={() => onRemove(ex.id)} className="p-2 text-gray-500 hover:text-error transition-colors">
           <Trash2 className="w-5 h-5" />
@@ -111,7 +117,7 @@ export function WorkoutEditor() {
   const navigate = useNavigate()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
   const { t, i18n } = useTranslation()
   const templateId = searchParams.get('templateId')
 
@@ -129,7 +135,14 @@ export function WorkoutEditor() {
   const [isActivePlan, setIsActivePlan] = useState(false)
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('')
   const [currentEditIndex, setCurrentEditIndex] = useState<number>(-1)
+  const [customMuscles, setCustomMuscles] = useState<string[]>([])
+  const [showMuscleStep, setShowMuscleStep] = useState(false)
   const location = useLocation()
+
+  const SELECTABLE_MUSCLES = [
+    'chest', 'back', 'shoulders', 'biceps', 'triceps', 'forearms',
+    'abs', 'obliques', 'quads', 'hamstrings', 'glutes', 'calves', 'traps',
+  ]
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -156,11 +169,13 @@ export function WorkoutEditor() {
           instructions: e.instructions as string | undefined
         })))
       } else {
-        console.warn('Nenhum exercício encontrado. Use o SQL seed para popular.')
+        console.warn('Nenhum exercício encontrado. Use o seeder para popular.')
         setAvailableExercises([
-          { id: 'squat', name: 'Agachamento', muscle_groups: ['legs'], difficulty: 3 },
-          { id: 'bench-press', name: 'Supino', muscle_groups: ['chest'], difficulty: 3 },
-          { id: 'deadlift', name: 'Levantamento Terra', muscle_groups: ['back', 'legs'], difficulty: 5 }
+          { id: 'squat', name: 'Squat', name_pt: 'Agachamento', muscle_groups: ['quads', 'glutes', 'hamstrings'], difficulty: 4 },
+          { id: 'bench-press', name: 'Bench Press', name_pt: 'Bench Press', muscle_groups: ['chest', 'triceps', 'shoulders'], difficulty: 3 },
+          { id: 'deadlift', name: 'Deadlift', name_pt: 'Levantamento Terra', muscle_groups: ['back', 'glutes', 'hamstrings'], difficulty: 5 },
+          { id: 'pull-up', name: 'Pull-up', name_pt: 'Barra Fixa', muscle_groups: ['lats', 'biceps'], difficulty: 4 },
+          { id: 'overhead-press', name: 'Overhead Press', name_pt: 'Press Militar', muscle_groups: ['shoulders', 'triceps'], difficulty: 4 },
         ])
       }
     } catch (err) {
@@ -217,6 +232,7 @@ export function WorkoutEditor() {
               sets: (pe.sets as number) || 3,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
+              muscle_groups: (ex?.muscle_groups as string[]) || [],
             }
           })
           setExercises(exerciseList)
@@ -265,6 +281,7 @@ export function WorkoutEditor() {
               sets: (pe.sets as number) || 3,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
+              muscle_groups: (ex?.muscle_groups as string[]) || [],
             }
           })
           setExercises(exerciseList)
@@ -304,13 +321,19 @@ export function WorkoutEditor() {
   }, [id, templateId, loadPlan, loadTemplate, loadExercises, location.state])
 
   const handleAddExercise = (exercise: Exercise) => {
+    const alreadyAdded = exercises.some(e => e.exercise_id === exercise.id)
+    if (alreadyAdded) {
+      setExercises(exercises.filter(e => e.exercise_id !== exercise.id))
+      return
+    }
     const newExercise: PlanExercise = {
       id: `${Date.now()}-${Math.random()}`,
       exercise_id: exercise.id,
       name: i18n.language.startsWith('pt') ? (exercise.name_pt || exercise.name) : exercise.name,
-      sets: 3,
+      sets: profile?.default_sets || 3,
       weight_kg: null,
-      is_superset: false
+      is_superset: false,
+      muscle_groups: exercise.muscle_groups || [],
     }
     // Insert after the current edit index (or at the end if -1)
     if (currentEditIndex >= 0 && currentEditIndex < exercises.length) {
@@ -320,9 +343,6 @@ export function WorkoutEditor() {
     } else {
       setExercises([...exercises, newExercise])
     }
-    setShowExerciseModal(false)
-    setSearchTerm('')
-    setSelectedMuscleGroup('')
   }
 
   const handleCreateCustomExercise = async () => {
@@ -335,7 +355,7 @@ export function WorkoutEditor() {
         .insert({
           name: searchTerm.trim(),
           name_pt: searchTerm.trim(),
-          muscle_groups: [],
+          muscle_groups: customMuscles,
           equipment: [],
           difficulty: 3,
           is_custom: true,
@@ -354,14 +374,16 @@ export function WorkoutEditor() {
           equipment: data.equipment || [],
           difficulty: data.difficulty || 3,
         }
-        // Add to available exercises so it shows up next time
         setAvailableExercises(prev => [newEx, ...prev])
-        // Add directly to plan
         handleAddExercise(newEx)
       }
+      setShowMuscleStep(false)
+      setCustomMuscles([])
+      setSearchTerm('')
+      setShowExerciseModal(false)
     } catch (err) {
       console.error('Erro ao criar exercício:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao criar exercício customizado')
+      setError(err instanceof Error ? err.message : t('editor.errorSaving'))
     } finally {
       setCreatingCustom(false)
     }
@@ -426,7 +448,6 @@ export function WorkoutEditor() {
             name: title,
             description: description || null,
             type: 'custom',
-            days_per_week: 3,
             is_public: isPublic,
           }])
           .select()
@@ -634,55 +655,94 @@ export function WorkoutEditor() {
                 onClick={() => setSelectedMuscleGroup(selectedMuscleGroup === group ? '' : group)}
                 className={`text-xs px-2.5 py-1 rounded-full border font-bold capitalize transition-all ${selectedMuscleGroup === group ? 'bg-primary text-black border-primary' : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-primary/50'}`}
               >
-                {group}
+                {humanizeMuscle(group, t)}
               </button>
             ))}
           </div>
 
           {/* Custom exercise creation */}
-          {searchTerm.trim().length > 1 && (
+          {searchTerm.trim().length > 1 && !showMuscleStep && (
             <button
-              onClick={handleCreateCustomExercise}
-              disabled={creatingCustom}
+              onClick={() => { setShowMuscleStep(true); setCustomMuscles([]) }}
               className="w-full text-left p-3 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors border border-primary/30 hover:border-primary/50 flex items-center gap-3"
             >
               <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="font-semibold text-primary">
-                  {creatingCustom ? t('editor.creating') : t('editor.createCustom', { name: searchTerm.trim() })}
-                </h4>
+                <h4 className="font-semibold text-primary">{t('editor.createCustom', { name: searchTerm.trim() })}</h4>
                 <p className="text-xs text-gray-400">{t('editor.addAsCustom')}</p>
               </div>
             </button>
           )}
 
+          {/* Muscle picker step for custom exercise */}
+          {showMuscleStep && (
+            <div className="border border-primary/30 rounded-xl p-4 space-y-3 bg-primary/5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-white">{searchTerm.trim()} — {t('editor.selectMuscles')}</p>
+                <button onClick={() => setShowMuscleStep(false)} className="text-gray-500 hover:text-white text-xs">{t('common.cancel')}</button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SELECTABLE_MUSCLES.map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setCustomMuscles(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
+                    className={`text-xs px-2.5 py-1 rounded-full border font-bold capitalize transition-all ${customMuscles.includes(m) ? 'bg-primary text-black border-primary' : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-primary/50'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleCreateCustomExercise}
+                disabled={creatingCustom}
+                className="w-full h-10 rounded-xl bg-primary text-black font-black text-sm disabled:opacity-60"
+              >
+                {creatingCustom ? t('editor.creating') : t('common.confirm')}
+              </button>
+            </div>
+          )}
+
           <div className="max-h-[60vh] overflow-y-auto space-y-2">
             {filteredExercises.length > 0 ? (
-              filteredExercises.map((ex) => (
-                <button
-                  key={ex.id}
-                  onClick={() => handleAddExercise(ex)}
-                  className="w-full text-left p-3 bg-surface-100 hover:bg-surface-100/80 rounded-lg transition-colors border border-surface-100 hover:border-primary"
-                >
-                  <h4 className="font-semibold text-white">
-                    {i18n.language.startsWith('pt') && ex.name_pt ? ex.name_pt : ex.name}
-                  </h4>
-                  <div className="flex gap-2 text-xs text-gray-400 mt-1">
-                    {ex.muscle_groups && ex.muscle_groups.length > 0 && (
-                      <span>{ex.muscle_groups.join(', ')}</span>
+              filteredExercises.map((ex) => {
+                const isAdded = exercises.some(e => e.exercise_id === ex.id)
+                return (
+                  <button
+                    key={ex.id}
+                    onClick={() => handleAddExercise(ex)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors border flex items-center gap-3 ${isAdded ? 'bg-primary/10 border-primary/40 hover:bg-primary/20' : 'bg-surface-100 hover:bg-surface-100/80 border-surface-100 hover:border-primary'}`}
+                  >
+                    <div className="w-10 h-12 flex-shrink-0 bg-surface-200 rounded-lg p-1">
+                      <MuscleIcon muscles={ex.muscle_groups || []} size="sm" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-white truncate">
+                        {i18n.language.startsWith('pt') && ex.name_pt ? ex.name_pt : ex.name}
+                      </h4>
+                      {ex.muscle_groups && ex.muscle_groups.length > 0 && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">{ex.muscle_groups.map(m => humanizeMuscle(m, t)).join(', ')}</p>
+                      )}
+                    </div>
+                    {isAdded && (
+                      <span className="text-[10px] font-black uppercase text-primary bg-primary/20 px-2 py-0.5 rounded-full shrink-0">{t('editor.added')}</span>
                     )}
-
-                  </div>
-                </button>
-              ))
+                  </button>
+                )
+              })
             ) : searchTerm.trim().length === 0 ? (
               <p className="text-center text-gray-500 py-8">{t('editor.typeToSearch')}</p>
             ) : (
               <p className="text-center text-gray-500 py-4">{t('editor.noExerciseFound')}</p>
             )}
           </div>
+          <button
+            onClick={() => { setShowExerciseModal(false); setSearchTerm(''); setSelectedMuscleGroup('') }}
+            className="w-full mt-4 h-12 rounded-xl bg-primary text-black font-black text-sm uppercase tracking-wider"
+          >
+            {t('editor.done')}
+          </button>
         </div>
       </Modal>
     </div>

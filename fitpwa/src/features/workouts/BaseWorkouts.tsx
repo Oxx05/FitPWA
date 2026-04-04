@@ -115,10 +115,7 @@ export function BaseWorkouts() {
                 <p className="text-sm text-gray-400 mt-2">{isPt ? workout.description_pt || workout.description : workout.description || t('workouts.noPlanDescription')}</p>
               </div>
 
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-surface-100">
-                <span className="text-sm bg-surface-100 px-3 py-1 rounded text-gray-300">
-                  {workout.days_per_week || 0}x / {t('common.week')}
-                </span>
+              <div className="flex items-center justify-end mt-6 pt-4 border-t border-surface-100">
                 <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
@@ -144,12 +141,6 @@ export function BaseWorkouts() {
               <span className="text-gray-400">{t('editor.difficulty')}:</span>
               <span className="text-white font-medium capitalize">
                 {selectedWorkout && difficulties[getDifficulty(selectedWorkout)].label}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">{t('workouts.frequency')}:</span>
-              <span className="text-white font-medium">
-                {selectedWorkout?.days_per_week || 0}x {t('common.perWeek') || t('common.week')}
               </span>
             </div>
           </div>

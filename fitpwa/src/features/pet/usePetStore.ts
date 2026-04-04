@@ -1167,7 +1167,9 @@ export const usePetStore = create<PetState>()(
       lastInteraction: null,
 
       setPet: (pet) => set({ selectedPet: pet }),
-      renamePet: (name) => set({ petName: name }),
+      renamePet: (name) => set((state) => ({
+        petName: name.trim() || state.petName
+      })),
       unlockPet: (pet) => set((state) => ({ 
         unlockedPets: state.unlockedPets.includes(pet) ? state.unlockedPets : [...state.unlockedPets, pet] 
       })),

@@ -7,8 +7,6 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
 import { useTranslation } from 'react-i18next'
-import { usePetStore, getPetAiComment } from '@/features/pet/usePetStore'
-import { PetSvg } from '@/features/pet/PetSvg'
 
 const SUGGESTION_CHIPS = [
   'ai.chips.backTriceps',
@@ -25,7 +23,6 @@ export function AiWorkoutGenerator() {
   const { user } = useAuthStore()
   const { t, i18n } = useTranslation()
   const isPt = i18n.language === 'pt'
-  const { selectedPet, getMood } = usePetStore()
 
   const chips = SUGGESTION_CHIPS.map(key => t(key))
 
@@ -34,7 +31,6 @@ export function AiWorkoutGenerator() {
   const [error, setError] = useState<string | null>(null)
   const [generatedPlan, setGeneratedPlan] = useState<AiGeneratedPlan | null>(null)
   const [saving, setSaving] = useState(false)
-  const [petComment, setPetComment] = useState<string | null>(null)
   const [filterMuscles, setFilterMuscles] = useState<string[]>([])
   const [filterEquipment, setFilterEquipment] = useState<string>('') // '' | 'gym' | 'dumbbells' | 'bodyweight'
   const [filterGoal, setFilterGoal] = useState<string>('') // '' | 'strength' | 'hypertrophy' | 'endurance'
@@ -59,7 +55,6 @@ export function AiWorkoutGenerator() {
       setError(null)
       const plan = generateWorkoutPlan(buildPrompt())
       setGeneratedPlan(plan)
-      setPetComment(getPetAiComment(selectedPet, isPt))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
@@ -70,7 +65,6 @@ export function AiWorkoutGenerator() {
       setError(null)
       const plan = generateWorkoutPlan(buildPrompt())
       setGeneratedPlan(plan)
-      setPetComment(getPetAiComment(selectedPet, isPt))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
     }
@@ -90,7 +84,6 @@ export function AiWorkoutGenerator() {
           name: generatedPlan.name,
           description: generatedPlan.description,
           type: 'custom',
-          days_per_week: 3,
         })
         .select()
         .single()
@@ -175,7 +168,7 @@ export function AiWorkoutGenerator() {
 
       <Modal
         isOpen={isOpen}
-        onClose={() => { setIsOpen(false); setGeneratedPlan(null); setError(null); setPetComment(null); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
+        onClose={() => { setIsOpen(false); setGeneratedPlan(null); setError(null); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
         title={`⚡ ${t('ai.title')}`}
         size="lg"
         closeButton
@@ -342,20 +335,6 @@ export function AiWorkoutGenerator() {
                 </div>
               </div>
 
-              {/* Pet trainer reaction */}
-              {petComment && (
-                <div className="flex items-end gap-3">
-                  <div className="shrink-0">
-                    <PetSvg model={selectedPet} mood={getMood()} size={64}/>
-                  </div>
-                  <div className="relative bg-surface-200 border border-surface-100 rounded-2xl rounded-bl-none px-4 py-3 flex-1">
-                    <p className="text-sm text-white font-medium leading-snug">{petComment}</p>
-                    <div className="absolute -bottom-2 left-0 w-3 h-3 bg-surface-200 border-l border-b border-surface-100"
-                      style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}/>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                 {generatedPlan.exercises.map((ex, idx) => (
                   <div key={idx} className="flex items-center gap-3 bg-surface-100 p-3 rounded-lg">
@@ -384,7 +363,7 @@ export function AiWorkoutGenerator() {
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => { setGeneratedPlan(null); setPrompt(''); setPetComment(null); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
+                  onClick={() => { setGeneratedPlan(null); setPrompt(''); setFilterMuscles([]); setFilterEquipment(''); setFilterGoal(''); setFilterDifficulty(''); setFilterDuration(null) }}
                   className="flex-1 gap-2"
                 >
                   <X className="w-4 h-4" />

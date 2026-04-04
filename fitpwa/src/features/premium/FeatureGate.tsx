@@ -34,7 +34,7 @@ export function FeatureGate({ children, fallback, featureName }: FeatureGateProp
       <div className="space-y-2">
         <h3 className="text-xl font-bold text-white">Esta funcionalidade é PRO</h3>
         <p className="text-gray-400 text-sm max-w-xs mx-auto">
-          Desbloqueia {featureName || 'esta funcionalidade'} e muito mais com o TitanPulse Premium.
+          Desbloqueia {featureName || 'esta funcionalidade'} e muito mais com o RepTrack Premium.
         </p>
       </div>
 

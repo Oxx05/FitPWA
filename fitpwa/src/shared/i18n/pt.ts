@@ -37,6 +37,7 @@ const pt = {
     create: 'Criar',
     by: 'por',
     all: 'Todos',
+    front: 'Frente',
     muscles: {
       chest: 'Peito',
       back: 'Costas',
@@ -53,7 +54,12 @@ const pt = {
       obliques: 'Oblíquos',
       calves: 'Panturrilha',
       grip: 'Grip',
-      arms: 'Braços'
+      arms: 'Braços',
+      lats: 'Dorsais',
+      traps: 'Trapézio',
+      abdominals: 'Abdominais',
+      lower_back: 'Lombar',
+      upper_back: 'Costas Superiores'
     },
     kg: 'kg',
   },
@@ -89,7 +95,7 @@ const pt = {
     confirmPassword: 'Confirmar Password',
     loginSubtitle: 'Entra na tua conta para continuares o teu progresso.',
     registerTitle: 'Criar Conta',
-    registerSubtitle: 'Junta-te ao TitanPulse e transforma o teu treino.',
+    registerSubtitle: 'Junta-te ao RepTrack e transforma o teu treino.',
     orContinueWith: 'ou continua com',
     noAccount: 'Ainda não tens conta?',
     registerHere: 'Regista-te aqui',
@@ -109,12 +115,14 @@ const pt = {
     selectPlan: 'Seleçiona um Plano',
     chooseSession: 'Escolhe uma sessão para começar',
     startWorkout: 'Começar Treino',
-    unlockPro: 'Desbloqueia o TitanPulse PRO',
+    unlockPro: 'Desbloqueia o RepTrack PRO',
     proDescription: 'Acede a estatísticas avançadas e planos exclusivos.',
     learnMore: 'Saber Mais',
     muscleVolumeAnalysis: 'Análise de Volume por Grupo Muscular',
     advancedMuscleAnalysis: 'Análise Muscular Avançada',
     muscleDistributionChart: 'Gráfico de Distribuição Muscular (Premium Only)',
+    activeSessionBanner: 'Treino em curso',
+    continueWorkout: 'Continuar',
   },
 
   // ─── Workouts ───
@@ -197,8 +205,11 @@ const pt = {
     creating: 'Criando...',
     createCustom: 'Criar "{{name}}"',
     addAsCustom: 'Adicionar como exercício customizado',
+    selectMuscles: 'Selecionar músculos',
     typeToSearch: 'Escreve para procurar exercícios',
     noExerciseFound: 'Nenhum exercício encontrado. Usa o botão acima para criar.',
+    added: 'Adicionado',
+    done: 'Concluir',
     planNameRequired: 'Nome do plano é obrigatório',
     addAtLeastOne: 'Adiciona pelo menos um exercício',
     failedToCreatePlan: 'Falha ao criar plano',
@@ -282,7 +293,7 @@ const pt = {
     proMember: 'PRO Member',
     browserNoNotifications: 'Este browser não suporta notificações.',
     notificationsActivated: 'Notificações Ativadas!',
-    notificationsBody: 'Vais receber avisos do temporizador de descanso do TitanPulse.',
+    notificationsBody: 'Vais receber avisos do temporizador de descanso do RepTrack.',
     soundEnabled: 'Som Ativado',
     soundDisabled: 'Som Desativado',
     soundAlerts: 'Sons e Alertas',
@@ -369,6 +380,8 @@ const pt = {
     control: 'Controlo',
     addNotePlaceholder: 'Adicionar nota (ex: mais devagar)...',
     copyPrevious: 'Copiar Ant.',
+    applyLast: 'Última',
+    applyLastSuccess: 'Valores da sessão anterior aplicados.',
     addSet: 'Adicionar Série',
     addExercise: 'Adicionar Exercício',
     noExercises: 'Sem exercícios',
@@ -393,6 +406,8 @@ const pt = {
     workoutSavedOffline: 'Sem internet. Treino guardado localmente.',
     workoutSavedOfflineFallback: 'Falha ao guardar online. Guardado localmente.',
     workoutSaveError: 'Erro ao finalizar treino.',
+    convertToPlanName: 'Plano de {{date}}',
+    convertToPlanDesc: 'Criado a partir de um treino rápido',
     focusModeDesc: 'Modo Foco Imersivo',
     exitFocus: 'Sair Modo Foco',
     manualRest: 'Descanso Manual (+30s)',
@@ -471,7 +486,7 @@ const pt = {
     accept: 'Aceitar',
     reject: 'Rejeitar',
     invite: 'Convidar',
-    inviteText: 'Junta-te a mim no TitanPulse! @{{username}}. Vamos treinar juntos?',
+    inviteText: 'Junta-te a mim no RepTrack! @{{username}}. Vamos treinar juntos?',
     inviteCopied: 'Link de convite copiado para o clipboard!',
     socialHub: 'Social Hub',
     socialSubtitle: 'Segue outros atletas e celebra as suas conquistas.',
@@ -617,7 +632,7 @@ const pt = {
 
   // ─── Premium ───
   premium: {
-    title: 'TitanPulse PRO',
+    title: 'RepTrack PRO',
     subtitle: 'Desbloqueia todo o potencial do teu treino.',
     feature1: 'Estatísticas avançadas',
     feature2: 'Planos ilimitados',
@@ -637,7 +652,7 @@ const pt = {
 
   // ─── Onboarding ───
   onboarding: {
-    welcome: 'Bem-vindo ao TitanPulse!',
+    welcome: 'Bem-vindo ao RepTrack!',
     step1Title: 'Como te chamas?',
     step1Placeholder: 'O teu nome ou apelido',
     yourGoals: 'Os teus objetivos',
@@ -748,6 +763,9 @@ const pt = {
   exercisesExtra: {
     libraryTitle: 'Exercícios',
     librarySubtitle: 'Encontra a execução perfeita para cada movimento.',
+    noResultsTitle: 'Sem Resultados',
+    noResultsDesc: 'Não encontrámos nenhum exercício para "{{search}}". Tenta procurar por outro nome.',
+    evolutionTitle: 'Evolução',
   },
 
 }
