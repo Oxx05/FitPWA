@@ -85,7 +85,6 @@ export function SessionScreen() {
   const [spotifyConnected, setSpotifyConnected] = useState(() => hasValidSpotifyToken())
   const [spotifyPlaying, setSpotifyPlaying] = useState<boolean | null>(null)
   const [spotifyTrack, setSpotifyTrack] = useState<{ name: string; artist: string; albumArt?: string } | null>(null)
-  const [isDesktop, setIsDesktop] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
@@ -523,15 +522,6 @@ export function SessionScreen() {
   }, [currentExerciseIndex, exercises, user])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const media = window.matchMedia('(min-width: 768px)')
-    const update = () => setIsDesktop(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-
-  useEffect(() => {
     if (!spotifyConnected) return
     let active = true
     const loadNowPlaying = async () => {
@@ -690,18 +680,19 @@ export function SessionScreen() {
       return { ...ex, sets: nextSets }
     }))
 
-    if (!shouldStartRest || nextRestTime === null) return
+    if (!shouldStartRest) return
+    const restTime = nextRestTime ?? 90
     if ('vibrate' in navigator) navigator.vibrate(50)
     if (isRestTimerRunning && restEndAt && restTimer && restTimer > 0) {
       showToast(t('session.setCompletedSuccess'), 'success')
       return
     }
 
-    localStorage.setItem('titanpulse_last_rest_time', nextRestTime.toString())
+    localStorage.setItem('titanpulse_last_rest_time', restTime.toString())
     if (!hasAutoRestStarted) setHasAutoRestStarted(true)
-    setTargetRestTimer(nextRestTime)
-    setRestTimer(nextRestTime)
-    setRestEndAt(Date.now() + nextRestTime * 1000)
+    setTargetRestTimer(restTime)
+    setRestTimer(restTime)
+    setRestEndAt(Date.now() + restTime * 1000)
     setIsRestTimerRunning(true)
     setShowRestTimer(true)
     setIsTimerMinimized(false)
@@ -1527,6 +1518,75 @@ export function SessionScreen() {
                 <p className="text-gray-400 text-sm">{t('session.setsCompletedTitle')}</p>
                 <p className="text-2xl font-bold text-white">{completedSetsCount}</p>
               </div>
+            </div>
+
+            <div className="bg-surface-200 border border-surface-100 p-4 rounded-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-white font-bold text-sm">Spotify</h3>
+                  <p className="text-xs text-gray-400">{t('session.spotifyDescription')}</p>
+                </div>
+                <Button
+                  variant={spotifyConnected ? 'secondary' : 'primary'}
+                  onClick={spotifyConnected ? handleSpotifyDisconnect : handleSpotifyConnect}
+                  className="shrink-0"
+                >
+                  {spotifyConnected ? t('session.disconnect') : t('session.connectSpotify')}
+                </Button>
+              </div>
+
+              {spotifyConnected && (
+                <div className="mt-4 flex items-center gap-3">
+                  {spotifyTrack?.albumArt ? (
+                    <img
+                      src={spotifyTrack.albumArt}
+                      alt={spotifyTrack.name}
+                      className="w-12 h-12 rounded-lg object-cover border border-surface-100"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-surface-100 border border-surface-100 flex items-center justify-center text-[10px] text-gray-500 font-bold">
+                      {t('session.noMusic')}
+                    </div>
+                  )}
+
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">
+                      {spotifyTrack?.name ?? t('session.noMusic')}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {spotifyTrack?.artist ?? ''}
+                    </p>
+                  </div>
+
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={handleSpotifyPrev}
+                      className="w-9 h-9 rounded-lg bg-surface-100 text-gray-400 hover:text-white hover:bg-surface-200 border border-surface-100/50 transition-colors"
+                      title={t('session.prevExercise')}
+                    >
+                      <ChevronLeft className="w-4 h-4 mx-auto" />
+                    </button>
+                    <button
+                      onClick={handleSpotifyPlayPause}
+                      className="w-9 h-9 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 transition-colors"
+                      title={spotifyPlaying ? t('session.pause') : t('session.resume')}
+                    >
+                      {spotifyPlaying ? (
+                        <Pause className="w-4 h-4 mx-auto" />
+                      ) : (
+                        <Play className="w-4 h-4 mx-auto" />
+                      )}
+                    </button>
+                    <button
+                      onClick={handleSpotifyNext}
+                      className="w-9 h-9 rounded-lg bg-surface-100 text-gray-400 hover:text-white hover:bg-surface-200 border border-surface-100/50 transition-colors"
+                      title={t('session.nextExercise')}
+                    >
+                      <ChevronRight className="w-4 h-4 mx-auto" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Button

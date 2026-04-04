@@ -61,7 +61,7 @@ export function ExerciseLibrary() {
   const filteredExercises = useMemo(() => exercises?.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase())
     const matchesMuscle = muscleFilter === 'all' ||
-      ex.muscle_groups.some(g => g.toLowerCase() === muscleFilter.toLowerCase())
+      ex.muscle_groups.some((g: string) => g.toLowerCase() === muscleFilter.toLowerCase())
     return matchesSearch && matchesMuscle
   }), [exercises, search, muscleFilter])
 
