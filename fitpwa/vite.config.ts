@@ -27,6 +27,8 @@ export default defineConfig({
       manifest: {
         name: 'RepTrack',
         short_name: 'RepTrack',
+        start_url: '/',
+        scope: '/',
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
         display: 'standalone',
@@ -34,16 +36,16 @@ export default defineConfig({
         categories: ['fitness', 'health'],
         icons: [
           {
-            src: 'logo_tp.png',
+            src: 'icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'logo_tp.png',
+            src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable'
+            purpose: 'any maskable'
           }
         ],
         screenshots: []
