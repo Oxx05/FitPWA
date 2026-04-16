@@ -64,7 +64,7 @@ export function LoginPage() {
           <Input 
             label={t('auth.email')}
             type="email" 
-            placeholder="exemplo@reptrack.com"
+            placeholder="exemplo@email.com"
             {...register('email')}
             error={errors.email?.message}
           />
@@ -77,7 +77,11 @@ export function LoginPage() {
             error={errors.password?.message}
           />
 
-          {error && <div className="text-error text-sm text-center">{error}</div>}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center rounded-lg p-3">
+              {error}
+            </div>
+          )}
 
           <Button type="submit" isLoading={isLoading} className="mt-2">
             {t('auth.login')}

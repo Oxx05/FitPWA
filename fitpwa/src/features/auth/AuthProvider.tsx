@@ -1,4 +1,5 @@
 import React from 'react'
+import { Loader2 } from 'lucide-react'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore, type Profile } from './authStore'
 import { initializeOfflineSync, OfflineSyncService } from '@/shared/lib/offlineSync'
@@ -8,12 +9,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const preFetchOfflineData = React.useCallback(async (userId: string) => {
     try {
-      // 1. Fetch and Cache Plans
       const { data: plans } = await supabase
         .from('workout_plans')
         .select('*')
         .eq('user_id', userId)
-      
+
       if (plans) {
         await OfflineSyncService.cachePlans(plans.map(p => ({
           id: p.id,
@@ -25,11 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })))
       }
 
-      // 2. Fetch and Cache Exercises
       const { data: exercises } = await supabase
         .from('exercises')
         .select('*')
-      
+
       if (exercises) {
         await OfflineSyncService.cacheExercises(exercises.map(e => ({
           id: e.id,
@@ -50,12 +49,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,username,full_name,avatar_url,is_premium,premium_expires_at,level,xp_total,login_streak,last_login_date,daily_xp_earned,last_xp_date,default_rest_seconds,default_reps_min,default_reps_max,default_sets')
+        .select('id,username,full_name,avatar_url,is_premium,premium_expires_at,level,xp_total,login_streak,last_login_date,daily_xp_earned,last_xp_date,default_rest_seconds,default_reps_min,default_reps_max,default_sets,sound_enabled,profile_visibility,total_volume_kg,social_likes_given')
         .eq('id', userId)
         .single()
-      
+
       if (!error && data) {
-        setProfile(data)
+        setProfile({
+          ...data,
+          sound_enabled: data.sound_enabled ?? true,
+          profile_visibility: data.profile_visibility ?? 'private',
+          total_volume_kg: data.total_volume_kg ?? 0,
+          social_likes_given: data.social_likes_given ?? 0,
+        })
         return data as Profile
       }
     } catch (e) {
@@ -68,8 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleStreak = React.useCallback(async (profile: Profile) => {
     const today = new Date().toISOString().split('T')[0]
     const lastLogin = profile.last_login_date ? profile.last_login_date.split('T')[0] : null
-    
-    if (lastLogin === today) return // Already updated today
+
+    if (lastLogin === today) return
 
     let newStreak = (profile.login_streak || 0)
     const yesterday = new Date()
@@ -79,15 +84,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (lastLogin === yesterdayStr) {
       newStreak += 1
     } else {
-      newStreak = 1 // Reset streak if missed a day
+      newStreak = 1
     }
 
-    await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').update({
       login_streak: newStreak,
       last_login_date: new Date().toISOString()
     }).eq('id', profile.id)
-    
-    setProfile({ ...profile, login_streak: newStreak, last_login_date: new Date().toISOString() })
+
+    // Only update local state if Supabase succeeded
+    if (!error) {
+      setProfile({ ...profile, login_streak: newStreak, last_login_date: new Date().toISOString() })
+    } else {
+      console.warn('Failed to update streak:', error.message)
+    }
   }, [setProfile])
 
   React.useEffect(() => {
@@ -122,7 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile, handleStreak, setLoading, setProfile, setSession, preFetchOfflineData])
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background text-white">Loading...</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
   }
 
   return <>{children}</>

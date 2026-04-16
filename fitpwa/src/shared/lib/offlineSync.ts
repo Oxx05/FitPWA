@@ -432,35 +432,34 @@ export class OfflineSyncService {
  * Monitor online/offline status and auto-sync
  */
 export function initializeOfflineSync(userId: string): void {
-  const sync = async () => {
-    if (!navigator.onLine || !userId) return
-    
-    if (await OfflineSyncService.hasUnsyncedData()) {
-      console.log('Syncing offline data...')
-      const result = await OfflineSyncService.syncAllData(userId)
-      console.log('Sync completed:', result)
-      
-      if (result.workoutsSynced > 0 || result.prsSynced > 0 || result.plansSynced > 0 || result.sessionsSynced > 0) {
-        await OfflineSyncService.clearSyncedData()
-      }
+  let isSyncing = false
 
-      if (result.errors.length > 0) {
-        console.warn('Sync errors:', result.errors)
+  const sync = async () => {
+    if (!navigator.onLine || !userId || isSyncing) return
+
+    isSyncing = true
+    try {
+      if (await OfflineSyncService.hasUnsyncedData()) {
+        console.log('Syncing offline data...')
+        const result = await OfflineSyncService.syncAllData(userId)
+        console.log('Sync completed:', result)
+
+        if (result.workoutsSynced > 0 || result.prsSynced > 0 || result.plansSynced > 0 || result.sessionsSynced > 0) {
+          await OfflineSyncService.clearSyncedData()
+        }
+
+        if (result.errors.length > 0) {
+          console.warn('Sync errors:', result.errors)
+        }
       }
+    } finally {
+      isSyncing = false
     }
   }
 
-  // Listen for online events
   window.addEventListener('online', sync)
-
-  // Sync periodically (every 5 minutes)
   setInterval(sync, 5 * 60 * 1000)
-
-  // Initial sync attempt
   void sync()
-
-  // Clean up if needed (though usually global)
-  // return () => clearInterval(timer);
 }
 
 export default db

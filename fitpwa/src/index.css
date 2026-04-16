@@ -5,9 +5,10 @@
 @layer base {
   body {
     @apply bg-background text-white antialiased font-sans selection:bg-primary/20;
+    overflow-x: hidden;
   }
   
-  /* Custom Scrollbar */
+  /* Custom Scrollbar — Webkit (Chrome, Safari) */
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -16,6 +17,11 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-surface-200 rounded-full hover:bg-surface-100;
+  }
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.surface.200') transparent;
   }
 }
 

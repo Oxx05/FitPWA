@@ -48,8 +48,15 @@ function App() {
       <AuthProvider>
         <ActiveSessionProvider>
           <Router>
-            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-32 md:pb-0 md:pl-24">
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary focus:text-black focus:rounded-lg focus:font-bold"
+            >
+              Saltar para o conteúdo
+            </a>
+            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-32 md:pb-0 md:pl-24 overflow-x-hidden">
             <Navbar />
+            <div id="main-content" />
             <LevelUpOverlay />
             <AchievementCelebration />
             <Suspense fallback={<PageLoader />}>

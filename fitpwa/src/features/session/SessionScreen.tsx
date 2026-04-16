@@ -1215,16 +1215,16 @@ export function SessionScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="min-h-screen bg-background flex flex-col pb-24 overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-white text-lg">{t('session.activeSession')}</h1>
+        <div className="max-w-4xl mx-auto flex justify-between items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-bold text-white text-lg truncate">{t('session.activeSession')}</h1>
             <p className="text-sm text-gray-400">{currentExerciseIndex + 1} / {exercises.length}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-right flex items-center gap-2">
               {restTimer !== null && (
                 <div
                   onClick={() => setRestTimer(null)}
@@ -1278,7 +1278,7 @@ export function SessionScreen() {
         {activeTab === 'workout' ? (
           <>
             {/* Exercise Card */}
-            <div className="bg-surface-200 border border-surface-100 p-6 rounded-2xl shadow-lg">
+            <div className="bg-surface-200 border border-surface-100 p-4 sm:p-6 rounded-2xl shadow-lg">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1 min-w-0 mr-2">
                   <div className="flex items-center gap-2">
@@ -1369,59 +1369,59 @@ export function SessionScreen() {
                 {currentExercise.sets.map((set, idx) => (
                   <div 
                     key={set.id}
-                    className={`flex flex-col gap-2 p-3 sm:p-4 rounded-xl transition-colors shadow-sm ${
+                    className={`flex flex-col gap-2 p-2.5 sm:p-4 rounded-xl transition-colors shadow-sm ${
                       set.completed 
                         ? 'bg-primary/10 border border-primary/30 shadow-primary/5' 
                         : 'bg-surface-100 border border-surface-100/50 hover:border-surface-100 hover:bg-surface-100/80'
                     }`}
                   >
                     {/* Main Row */}
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <span className={`font-black w-6 sm:w-8 text-center text-lg sm:text-xl ${set.completed ? 'text-primary/80' : 'text-gray-500'}`}>
+                    <div className="flex items-center gap-1.5 sm:gap-3">
+                      <span className={`font-black w-5 sm:w-8 text-center text-base sm:text-xl shrink-0 ${set.completed ? 'text-primary/80' : 'text-gray-500'}`}>
                         {set.setNumber}
                       </span>
 
-                      <div className="flex-1 flex gap-2">
+                      <div className="flex-1 flex gap-1.5 sm:gap-2 min-w-0">
                         {/* Weight with steppers */}
-                        <div className="flex-1 flex items-center gap-1">
+                        <div className="flex-1 flex items-center gap-0.5 sm:gap-1 min-w-0">
                           <button
                             onClick={() => handleSetChange(set.id, 'weight', Math.max(0, (set.weight || 0) - 2.5))}
-                            className="w-8 h-12 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-base font-black border border-surface-100/50 shrink-0"
+                            className="w-7 sm:w-8 h-11 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-sm sm:text-base font-black border border-surface-100/50 shrink-0"
                           >−</button>
                           <DebouncedNumericInput
                             value={set.weight}
                             onChange={val => handleSetChange(set.id, 'weight', val)}
-                            className={`flex-1 min-w-0 h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-base sm:text-lg placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
+                            className={`flex-1 min-w-0 w-0 h-11 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-sm sm:text-lg placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
                             placeholder="kg"
                           />
                           <button
                             onClick={() => handleSetChange(set.id, 'weight', (set.weight || 0) + 2.5)}
-                            className="w-8 h-12 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-base font-black border border-surface-100/50 shrink-0"
+                            className="w-7 sm:w-8 h-11 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-sm sm:text-base font-black border border-surface-100/50 shrink-0"
                           >+</button>
                         </div>
-                        <div className="flex items-center justify-center text-gray-500 font-bold opacity-50">×</div>
+                        <div className="flex items-center justify-center text-gray-500 font-bold opacity-50 shrink-0 text-xs">×</div>
                         {/* Reps with steppers */}
-                        <div className="flex-1 flex items-center gap-1">
+                        <div className="flex-1 flex items-center gap-0.5 sm:gap-1 min-w-0">
                           <button
                             onClick={() => handleSetChange(set.id, 'reps', Math.max(0, (set.reps || 0) - 1))}
-                            className="w-8 h-12 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-base font-black border border-surface-100/50 shrink-0"
+                            className="w-7 sm:w-8 h-11 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-sm sm:text-base font-black border border-surface-100/50 shrink-0"
                           >−</button>
                           <DebouncedNumericInput
                             value={set.reps}
                             onChange={val => handleSetChange(set.id, 'reps', val)}
-                            className={`flex-1 min-w-0 h-12 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-base sm:text-lg placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
+                            className={`flex-1 min-w-0 w-0 h-11 sm:h-14 bg-background border ${set.completed ? 'border-primary/20' : 'border-surface-200'} rounded-xl text-center text-white font-bold text-sm sm:text-lg placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner`}
                             placeholder="reps"
                           />
                           <button
                             onClick={() => handleSetChange(set.id, 'reps', (set.reps || 0) + 1)}
-                            className="w-8 h-12 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-base font-black border border-surface-100/50 shrink-0"
+                            className="w-7 sm:w-8 h-11 sm:h-14 flex items-center justify-center bg-surface-100 rounded-lg text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-sm sm:text-base font-black border border-surface-100/50 shrink-0"
                           >+</button>
                         </div>
                       </div>
 
                       <button
                         onClick={() => handleCompleteSet(set.id)}
-                        className={`w-14 sm:w-16 h-12 sm:h-14 flex items-center justify-center rounded-xl transition-all font-bold text-lg sm:text-xl shadow-sm active:scale-95 ${
+                        className={`w-11 sm:w-14 h-11 sm:h-14 flex items-center justify-center rounded-xl transition-all font-bold text-base sm:text-xl shadow-sm active:scale-95 shrink-0 ${
                           set.completed
                             ? 'bg-primary text-black shadow-primary/20 scale-[0.98]'
                             : 'bg-surface-200 border border-surface-100 text-gray-400 hover:bg-primary/20 hover:text-primary hover:border-primary/30'
@@ -1651,7 +1651,7 @@ export function SessionScreen() {
       <div className={`fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface-200 border-t border-surface-100 z-40 transition-opacity ${
         isBottomOverlayActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}>
-        <div className="max-w-4xl mx-auto flex gap-4">
+        <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4">
           <button
             onClick={() => setIsFocusMode(!isFocusMode)}
             className={`p-2.5 rounded-xl transition-all border active:scale-90 shrink-0 ${isFocusMode ? 'bg-primary text-black border-primary' : 'bg-surface-100 text-primary border-white/5 hover:bg-primary/20'}`}

@@ -1,7 +1,8 @@
+import React from 'react'
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
-import { Button } from './Button'
 import { Link } from 'react-router-dom'
+import { cn } from '../utils/cn'
 
 interface EmptyStateProps {
   icon: React.ReactNode
@@ -12,9 +13,12 @@ interface EmptyStateProps {
   onClick?: () => void
 }
 
+const actionClass =
+  'inline-flex items-center justify-center gap-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background bg-primary text-black hover:bg-primary-hover font-bold h-11 px-4 text-sm'
+
 export function EmptyState({ icon, title, description, actionLabel, actionTo, onClick }: EmptyStateProps) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-20 px-6 bg-surface-200/50 rounded-3xl border border-dashed border-surface-100 text-center"
@@ -24,18 +28,16 @@ export function EmptyState({ icon, title, description, actionLabel, actionTo, on
       </div>
       <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
       <p className="text-gray-400 text-sm max-w-xs mb-8">{description}</p>
-      
+
       {actionLabel && (
         actionTo ? (
-          <Link to={actionTo}>
-            <Button className="font-bold">
-              <Plus className="w-4 h-4 mr-2" /> {actionLabel}
-            </Button>
+          <Link to={actionTo} className={actionClass}>
+            <Plus className="w-4 h-4" aria-hidden="true" /> {actionLabel}
           </Link>
         ) : (
-          <Button onClick={onClick} className="font-bold">
-            <Plus className="w-4 h-4 mr-2" /> {actionLabel}
-          </Button>
+          <button onClick={onClick} className={cn(actionClass, 'cursor-pointer')}>
+            <Plus className="w-4 h-4" aria-hidden="true" /> {actionLabel}
+          </button>
         )
       )}
     </motion.div>

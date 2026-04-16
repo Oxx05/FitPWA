@@ -356,17 +356,19 @@ export function ProgressDashboard() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); setCompareSession(session) }}
-                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
+                    className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    aria-label="Comparar treino"
                     title="Comparar treino"
                   >
-                    <TrendingUp className="w-5 h-5" />
+                    <TrendingUp className="w-5 h-5" aria-hidden="true" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setSessionToDelete(session.id) }}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    aria-label="Apagar treino"
                     title="Apagar treino"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" aria-hidden="true" />
                   </button>
                   <ChevronRight className="w-5 h-5 text-gray-600" />
                 </div>

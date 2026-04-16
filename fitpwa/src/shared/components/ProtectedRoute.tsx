@@ -1,22 +1,24 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/authStore'
-import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, profile, isLoading } = useAuthStore()
   const location = useLocation()
-  const { t } = useTranslation()
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background text-white flex items-center justify-center">{t('authExtra.checkingSession')}</div>
+    return (
+      <div className="min-h-screen bg-background text-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    )
   }
 
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // If user is logged in but hasn't completed onboarding, and they are not currently ON the onboarding page
   if (session && !profile?.full_name && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />
   }
