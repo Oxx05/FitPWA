@@ -22,17 +22,21 @@ export function Modal({
 }: ModalProps) {
   const titleId = React.useId()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  // Ref para onClose: evita que o effect reexecute (e roube o foco) quando
+  // o pai passa uma nova arrow function por referência a cada re-render.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', handleKeyDown)
-    // Focus close button when modal opens for keyboard users
+    // Foca o botão de fechar apenas na abertura do modal
     setTimeout(() => closeButtonRef.current?.focus(), 0)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen]) // onClose removido das deps — usamos o ref acima
 
   const sizes = {
     sm: 'max-w-sm',
@@ -40,7 +44,6 @@ export function Modal({
     lg: 'max-w-lg'
   }
 
-  if (!isOpen) return null
   if (typeof document === 'undefined') return null
 
   const content = (

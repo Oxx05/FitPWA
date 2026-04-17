@@ -165,6 +165,8 @@ const en = {
     saveAsPlanError: 'Error saving plan.',
     favorites: 'Favorites',
     showFavorites: 'Show Favorites',
+    noFavoritesYet: 'No favorites yet',
+    noFavoritesDescription: 'Mark a plan as favorite to find it here.',
     addedToFavorites: 'Added to favorites!',
     removedFromFavorites: 'Removed from favorites.',
     deleteCustomExercise: 'Delete Custom Exercise',

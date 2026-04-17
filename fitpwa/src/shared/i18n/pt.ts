@@ -162,6 +162,8 @@ const pt = {
     saveAsPlanError: 'Erro ao guardar plano.',
     favorites: 'Favoritos',
     showFavorites: 'Mostrar Favoritos',
+    noFavoritesYet: 'Sem favoritos',
+    noFavoritesDescription: 'Marca um plano como favorito para o encontrares aqui.',
     addedToFavorites: 'Adicionado aos favoritos!',
     removedFromFavorites: 'Removido dos favoritos.',
     deleteCustomExercise: 'Apagar Exercício Custom',

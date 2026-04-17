@@ -90,7 +90,10 @@ export function Navbar() {
   const { profile } = useAuthStore()
   const { t } = useTranslation()
 
-  const hideNavbar = ['/login', '/register', '/onboarding', '/session'].includes(location.pathname)
+  const hideNavbar =
+    ['/login', '/register', '/onboarding'].includes(location.pathname) ||
+    (location.pathname.startsWith('/session') && location.pathname !== '/session/summary') ||
+    /^\/workouts\/.+\/start$/.test(location.pathname)
   if (hideNavbar) return null
 
   const navItems = [

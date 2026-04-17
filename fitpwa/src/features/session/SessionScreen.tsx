@@ -86,7 +86,7 @@ export function SessionScreen() {
   const [spotifyPlaying, setSpotifyPlaying] = useState<boolean | null>(null)
   const [spotifyTrack, setSpotifyTrack] = useState<{ name: string; artist: string; albumArt?: string } | null>(null)
   const [isFocusMode, setIsFocusMode] = useState(false)
-  const [voiceEnabled, setVoiceEnabled] = useState(true)
+  const [voiceEnabled, setVoiceEnabled] = useState(() => profile?.sound_enabled !== false)
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false)
   const [exerciseSearchTerm, setExerciseSearchTerm] = useState('')
   const [availableExercises, setAvailableExercises] = useState<any[]>([])
@@ -144,7 +144,7 @@ export function SessionScreen() {
   }
 
   const fetchAvailableExercises = async () => {
-    const { data } = await supabase.from('exercises').select('*').limit(100)
+    const { data } = await supabase.from('exercises').select('id, name, name_pt, muscle_groups').order('name')
     if (data) setAvailableExercises(data)
   }
 
@@ -250,7 +250,7 @@ export function SessionScreen() {
         setIsRestTimerRunning(false)
 
         // Haptic Feedback
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate && profile?.sound_enabled !== false) {
           navigator.vibrate([200, 100, 200])
         }
 
@@ -367,7 +367,7 @@ export function SessionScreen() {
           const exerciseIds = workout.exercises.map((ex: any) => ex.exerciseId)
           const { data: exerciseDetails, error: exError } = await supabase
             .from('exercises')
-            .select('id, name, name_pt, muscle_groups')
+            .select('id, name, name_pt, muscle_groups, gif_url, tips')
             .in('id', exerciseIds)
             
           if (exError) throw exError
@@ -393,7 +393,9 @@ export function SessionScreen() {
               repsMin: 8,
               repsMax: 12,
               restSeconds: 90,
-              notes: ''
+              notes: '',
+              gifUrl: detail?.gif_url || null,
+              tips: detail?.tips || null,
             }
           })
           
@@ -602,12 +604,12 @@ export function SessionScreen() {
 
   // Effect to announce new exercise (moved after currentExercise declaration)
   useEffect(() => {
-    if (!voiceEnabled || !currentExercise) return
-    const msg = isPt 
+    if (!voiceEnabled || !currentExercise || !hasStartedSession) return
+    const msg = isPt
       ? `Próximo exercício: ${currentExercise.name_pt || currentExercise.name}. Objetivo: ${currentExercise.repsMin} a ${currentExercise.repsMax} repetições.`
       : `Next exercise: ${currentExercise.name}. Goal: ${currentExercise.repsMin} to ${currentExercise.repsMax} reps.`
     speak(msg)
-  }, [currentExerciseIndex, voiceEnabled, speak, currentExercise, isPt])
+  }, [currentExerciseIndex, voiceEnabled, speak, currentExercise, isPt, hasStartedSession])
 
   const completedVolume = exercises.reduce((acc, ex) =>
     acc + ex.sets.reduce((setAcc, set) =>
@@ -682,7 +684,7 @@ export function SessionScreen() {
 
     if (!shouldStartRest) return
     const restTime = nextRestTime ?? 90
-    if ('vibrate' in navigator) navigator.vibrate(50)
+    if ('vibrate' in navigator && profile?.sound_enabled !== false) navigator.vibrate(50)
     if (isRestTimerRunning && restEndAt && restTimer && restTimer > 0) {
       showToast(t('session.setCompletedSuccess'), 'success')
       return
@@ -694,8 +696,7 @@ export function SessionScreen() {
     setRestTimer(restTime)
     setRestEndAt(Date.now() + restTime * 1000)
     setIsRestTimerRunning(true)
-    setShowRestTimer(true)
-    setIsTimerMinimized(false)
+    // Bottom sheet é opt-in: o utilizador abre clicando no timer do header
     showToast(t('session.setCompletedSuccess'), 'success')
   }
 
@@ -816,7 +817,6 @@ export function SessionScreen() {
 
       if (isSuspiciousValue && !showSuspiciousModal && !force) {
         setShowSuspiciousModal(true)
-        setIsRunning(true) 
         return
       }
 
@@ -1215,7 +1215,7 @@ export function SessionScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24 overflow-x-hidden">
+    <div className="min-h-screen bg-background flex flex-col pb-24 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center gap-2">
@@ -1227,12 +1227,12 @@ export function SessionScreen() {
             <div className="text-right flex items-center gap-2">
               {restTimer !== null && (
                 <div
-                  onClick={() => setRestTimer(null)}
+                  onClick={() => { setShowRestTimer(true); setIsTimerMinimized(false) }}
                   className="bg-primary/20 px-2 py-1 rounded border border-primary/30 animate-pulse cursor-pointer hover:bg-primary/30 transition-colors flex flex-col items-center"
-                  title="Pular descanso"
+                  title={t('session.manualRest')}
                 >
                    <p className="text-primary font-mono font-bold leading-none">{formatTime(restTimer)}</p>
-                   <p className="text-[8px] text-primary/70 uppercase">{t('session.skip')}</p>
+                   <p className="text-[8px] text-primary/70 uppercase">{t('session.rest')}</p>
                 </div>
               )}
               <div>
@@ -1254,7 +1254,7 @@ export function SessionScreen() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow p-4 max-w-4xl mx-auto w-full space-y-6">
+      <main className="flex-grow p-4 max-w-4xl mx-auto w-full min-w-0 space-y-6 overflow-x-hidden">
         <div className="flex gap-2 bg-surface-200/80 border border-surface-100 p-2 rounded-xl">
           <button
             onClick={() => setActiveTab('workout')}
@@ -1270,9 +1270,33 @@ export function SessionScreen() {
               activeTab === 'control' ? 'bg-primary text-black' : 'text-gray-300 hover:text-white'
             }`}
           >
-            {t('session.control')}
+            {t('session.session') || 'Sessão'}
           </button>
         </div>
+
+        {/* Exercise Progress Dots — sempre visíveis na tab de treino */}
+        {activeTab === 'workout' && exercises.length > 1 && (
+          <div className="flex items-center justify-center gap-1.5 py-1">
+            {exercises.map((ex, idx) => {
+              const allDone = ex.sets.length > 0 && ex.sets.every(s => s.completed)
+              const isCurrent = idx === currentExerciseIndex
+              return (
+                <button
+                  key={ex.id}
+                  onClick={() => setCurrentExerciseIndex(idx)}
+                  aria-label={`Exercício ${idx + 1}: ${ex.name}`}
+                  className={`transition-all rounded-full ${
+                    isCurrent
+                      ? 'w-6 h-2 bg-primary'
+                      : allDone
+                        ? 'w-2 h-2 bg-primary/40'
+                        : 'w-2 h-2 bg-surface-100 hover:bg-primary/30'
+                  }`}
+                />
+              )
+            })}
+          </div>
+        )}
 
 
         {activeTab === 'workout' ? (
@@ -1648,45 +1672,30 @@ export function SessionScreen() {
       )}
 
       {/* Footer Controls */}
-      <div className={`fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface-200 border-t border-surface-100 z-40 transition-opacity ${
+      <div className={`fixed bottom-0 left-0 right-0 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-surface-200 border-t border-surface-100 z-40 transition-opacity ${
         isBottomOverlayActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}>
-        <div className="max-w-4xl mx-auto flex gap-2 sm:gap-4">
+        <div className="max-w-4xl mx-auto flex items-center gap-2">
+          {/* Focus — ícone apenas */}
           <button
             onClick={() => setIsFocusMode(!isFocusMode)}
-            className={`p-2.5 rounded-xl transition-all border active:scale-90 shrink-0 ${isFocusMode ? 'bg-primary text-black border-primary' : 'bg-surface-100 text-primary border-white/5 hover:bg-primary/20'}`}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all border active:scale-90 ${isFocusMode ? 'bg-primary text-black border-primary' : 'bg-surface-100 text-primary border-white/5 hover:bg-primary/20'}`}
             title={isFocusMode ? t('session.exitFocus') : t('session.focusModeDesc')}
           >
             <Target className="w-5 h-5" />
           </button>
-          <Button
-            variant="secondary"
+
+          {/* Back — ícone apenas */}
+          <button
             disabled={currentExerciseIndex === 0}
             onClick={() => setCurrentExerciseIndex(i => i - 1)}
-            className="flex-1 gap-2 active:scale-95 transition-transform"
+            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-surface-100 border border-white/5 text-gray-400 hover:text-white disabled:opacity-30 active:scale-90 transition-all"
+            title={t('common.back')}
           >
             <ChevronLeft className="w-5 h-5" />
-            {t('common.back')}
-          </Button>
+          </button>
 
-          <Button
-            variant={isRunning ? 'secondary' : 'primary'}
-            onClick={() => setIsRunning(prev => !prev)}
-            className="flex-1 gap-2 active:scale-95 transition-transform shadow-lg"
-          >
-            {isRunning ? (
-              <>
-                <Pause className="w-4 h-4" />
-                {t('session.pause')}
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                {t('session.resume')}
-              </>
-            )}
-          </Button>
-
+          {/* Next / Finish — botão dominante */}
           <Button
             onClick={() => {
               if (currentExerciseIndex === exercises.length - 1) {
@@ -1695,20 +1704,29 @@ export function SessionScreen() {
                 setCurrentExerciseIndex(i => i + 1)
               }
             }}
-            className="flex-1 gap-2 active:scale-95 transition-transform"
+            className="flex-1 h-11 gap-1.5 font-black uppercase tracking-tight text-sm active:scale-95 transition-transform shadow-lg shadow-primary/10"
           >
             {currentExerciseIndex === exercises.length - 1 ? (
               <>
                 {t('session.finishWorkout')}
-                <Square className="w-5 h-5" />
+                <Square className="w-4 h-4 ml-1" />
               </>
             ) : (
               <>
                 {t('common.next')}
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </>
             )}
           </Button>
+
+          {/* Pause/Resume — ícone apenas */}
+          <button
+            onClick={() => setIsRunning(prev => !prev)}
+            className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border active:scale-90 transition-all ${isRunning ? 'bg-surface-100 border-white/5 text-gray-400 hover:text-white' : 'bg-primary/20 border-primary/30 text-primary'}`}
+            title={isRunning ? t('session.pause') : t('session.resume')}
+          >
+            {isRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
@@ -1719,15 +1737,15 @@ export function SessionScreen() {
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-3xl flex flex-col p-6 overflow-y-auto"
+            className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-3xl flex flex-col p-4 sm:p-6 overflow-y-auto overflow-x-hidden"
           >
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-black font-black text-sm">FP</div>
-                <span className="text-xs font-black text-white uppercase tracking-widest italic">{t('session.focusMode')}</span>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2 min-w-0 shrink">
+                <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-black font-black text-xs shrink-0">FP</div>
+                <span className="text-xs font-black text-white uppercase tracking-widest italic hidden sm:block">{t('session.focusMode')}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
                   onClick={() => {
                     const next = !voiceEnabled
                     setVoiceEnabled(next)
@@ -1737,23 +1755,21 @@ export function SessionScreen() {
                       window.speechSynthesis.cancel()
                     }
                   }}
-                  className={`p-3 rounded-2xl transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-surface-200 text-gray-500'}`}
                   title={t('profile.notifications')}
                 >
-                  {voiceEnabled ? <Volume2 className="w-6 h-6 animate-pulse" /> : <VolumeX className="w-6 h-6" />}
+                  {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                 </button>
-                <button 
+                <button
                   onClick={() => setIsRunning(prev => !prev)}
-                  className={`p-3 rounded-2xl transition-all border border-white/5 active:scale-90 ${isRunning ? 'bg-surface-200 text-primary' : 'bg-primary text-black'}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border border-white/5 active:scale-90 ${isRunning ? 'bg-surface-200 text-primary' : 'bg-primary text-black'}`}
                   title={isRunning ? t('session.pause') : t('session.resume')}
                 >
-                  {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+                  {isRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
                 </button>
-                <button 
+                <button
                   onClick={() => {
-                    if (isRestTimerRunning && restEndAt) {
-                      return
-                    }
+                    if (isRestTimerRunning && restEndAt) return
                     if (restTimer === null) {
                       const nextRest = currentExercise?.restSeconds ?? targetRestTimer
                       setTargetRestTimer(nextRest)
@@ -1770,24 +1786,25 @@ export function SessionScreen() {
                     setShowRestTimer(true)
                     setIsTimerMinimized(false)
                   }}
-                  className="p-3 bg-surface-200 text-primary rounded-2xl hover:bg-primary/20 active:scale-90 transition-all border border-white/5"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-200 text-primary hover:bg-primary/20 active:scale-90 transition-all border border-white/5"
                   title={t('session.manualRest')}
                 >
-                  <Clock className="w-6 h-6" />
+                  <Clock className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => setIsFocusMode(false)}
-                  className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20 active:scale-90 transition-all"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-200 text-gray-400 hover:text-white hover:bg-surface-100 active:scale-90 transition-all"
+                  title={t('session.exitFocus')}
                 >
-                  <Minimize2 className="w-6 h-6" />
+                  <Minimize2 className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-grow flex flex-col justify-center gap-6 max-w-lg mx-auto w-full">
-              <div className="text-center space-y-1">
+            <div className="flex-grow flex flex-col justify-center gap-5 max-w-lg mx-auto w-full min-w-0">
+              <div className="text-center space-y-1 min-w-0 px-1">
                 <p className="text-primary font-black uppercase tracking-widest text-[10px]">{t('session.trainingNow')}</p>
-                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-2">
+                <h2 className="text-2xl sm:text-3xl font-black text-white italic uppercase tracking-tighter mb-2 break-words">
                   {isPt ? currentExercise.name_pt || currentExercise.name : currentExercise.name}
                 </h2>
                 <div className="inline-flex bg-surface-200 px-4 py-1.5 rounded-full border border-white/10 gap-4">
@@ -1856,7 +1873,7 @@ export function SessionScreen() {
               </AnimatePresence>
 
               {/* Huge Active Set Display */}
-              <div className="bg-surface-200/40 backdrop-blur-md border border-white/10 p-6 rounded-[32px] shadow-2xl flex flex-col gap-6">
+              <div className="bg-surface-200/40 backdrop-blur-md border border-white/10 p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] shadow-2xl flex flex-col gap-5 min-w-0">
                  {(() => {
                     const firstUncompletedIdx = currentExercise.sets.findIndex(s => !s.completed)
                     const activeSetIdx = focusSetIndex !== null
@@ -1865,48 +1882,48 @@ export function SessionScreen() {
                     const activeSet = currentExercise.sets[activeSetIdx]
                     return (
                       <>
-                        <div className="flex justify-between items-center px-2">
+                        <div className="flex justify-between items-center">
                           <span className="text-gray-500 font-black text-xs uppercase">{t('session.set')} {activeSet.setNumber}</span>
                           {restTimer !== null && (
-                            <span className="text-primary font-black animate-pulse text-sm">{t('session.restTimer').toUpperCase()}: {formatTime(restTimer)}</span>
+                            <span className="text-primary font-black animate-pulse text-sm">{formatTime(restTimer)}</span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4">
-                           <div className="flex-1 space-y-1 text-center">
-                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.weightTitle').toUpperCase()}</p>
-                             <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                           <div className="flex-1 space-y-1 text-center min-w-0">
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">kg</p>
+                             <div className="flex items-center gap-1 min-w-0">
                                <button
                                  onClick={() => handleSetChange(activeSet.id, 'weight', Math.max(0, (activeSet.weight || 0) - 2.5))}
-                                 className="w-11 h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-2xl font-black border border-white/5 shrink-0"
+                                 className="w-9 h-16 sm:w-11 sm:h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-xl font-black border border-white/5 shrink-0"
                                >−</button>
                                <DebouncedNumericInput
                                   value={activeSet.weight}
                                   onChange={val => handleSetChange(activeSet.id, 'weight', val)}
-                                  className="flex-1 min-w-0 h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-3xl font-black text-white focus:border-primary transition-all shadow-inner"
+                                  className="flex-1 min-w-0 h-16 sm:h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-2xl sm:text-3xl font-black text-white focus:border-primary transition-all shadow-inner"
                                />
                                <button
                                  onClick={() => handleSetChange(activeSet.id, 'weight', (activeSet.weight || 0) + 2.5)}
-                                 className="w-11 h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-2xl font-black border border-white/5 shrink-0"
+                                 className="w-9 h-16 sm:w-11 sm:h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-xl font-black border border-white/5 shrink-0"
                                >+</button>
                              </div>
                            </div>
-                           <div className="text-3xl font-black text-gray-700 mt-6">×</div>
-                           <div className="flex-1 space-y-1 text-center">
-                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.repsTitle').toUpperCase()}</p>
-                             <div className="flex items-center gap-2">
+                           <div className="text-2xl font-black text-gray-700 mt-5 shrink-0">×</div>
+                           <div className="flex-1 space-y-1 text-center min-w-0">
+                             <p className="text-[10px] font-bold text-gray-500 uppercase">{t('session.reps')}</p>
+                             <div className="flex items-center gap-1 min-w-0">
                                <button
                                  onClick={() => handleSetChange(activeSet.id, 'reps', Math.max(0, (activeSet.reps || 0) - 1))}
-                                 className="w-11 h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-2xl font-black border border-white/5 shrink-0"
+                                 className="w-9 h-16 sm:w-11 sm:h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-xl font-black border border-white/5 shrink-0"
                                >−</button>
                                <DebouncedNumericInput
                                   value={activeSet.reps}
                                   onChange={val => handleSetChange(activeSet.id, 'reps', val)}
-                                  className="flex-1 min-w-0 h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-3xl font-black text-white focus:border-primary transition-all shadow-inner"
+                                  className="flex-1 min-w-0 h-16 sm:h-20 bg-background border-2 border-surface-100 rounded-3xl text-center text-2xl sm:text-3xl font-black text-white focus:border-primary transition-all shadow-inner"
                                />
                                <button
                                  onClick={() => handleSetChange(activeSet.id, 'reps', (activeSet.reps || 0) + 1)}
-                                 className="w-11 h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-2xl font-black border border-white/5 shrink-0"
+                                 className="w-9 h-16 sm:w-11 sm:h-20 bg-surface-100 rounded-2xl text-gray-400 hover:text-white hover:bg-surface-200 active:scale-90 transition-all text-xl font-black border border-white/5 shrink-0"
                                >+</button>
                              </div>
                            </div>
@@ -1942,85 +1959,82 @@ export function SessionScreen() {
             </div>
 
             <div className="mt-auto flex flex-col gap-2">
-              {/* Set navigation row */}
+              {/* Navegação unificada: sets + exercícios numa só linha */}
               {(() => {
                 const firstUncompletedIdx = currentExercise.sets.findIndex(s => !s.completed)
                 const activeSetIdx = focusSetIndex !== null
                   ? Math.max(0, Math.min(focusSetIndex, currentExercise.sets.length - 1))
                   : (firstUncompletedIdx >= 0 ? firstUncompletedIdx : currentExercise.sets.length - 1)
+                const isFirstItem = activeSetIdx === 0 && currentExerciseIndex === 0
+                const isLastItem = activeSetIdx === currentExercise.sets.length - 1 && currentExerciseIndex === exercises.length - 1
                 return (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      className="flex-1 h-14 rounded-2xl text-primary font-black uppercase text-xs border border-primary/20 bg-primary/5 active:scale-95 transition-all"
-                      disabled={activeSetIdx === 0 && currentExerciseIndex === 0}
+                  <div className="flex items-center gap-2">
+                    {/* ← Set ou Exercício anterior */}
+                    <button
+                      disabled={isFirstItem}
                       onClick={() => {
                         if (activeSetIdx > 0) {
                           setFocusSetIndex(activeSetIdx - 1)
-                          return
-                        }
-                        if (currentExerciseIndex > 0) {
-                          const prevExercise = exercises[currentExerciseIndex - 1]
+                        } else if (currentExerciseIndex > 0) {
+                          const prevEx = exercises[currentExerciseIndex - 1]
                           setCurrentExerciseIndex(i => i - 1)
-                          setFocusSetIndex(prevExercise ? Math.max(0, prevExercise.sets.length - 1) : 0)
+                          setFocusSetIndex(prevEx ? Math.max(0, prevEx.sets.length - 1) : 0)
                         }
                       }}
+                      className="w-14 h-14 rounded-2xl bg-primary/5 border border-primary/20 text-primary flex items-center justify-center disabled:opacity-30 active:scale-90 transition-all"
                     >
-                      <ChevronLeft className="w-4 h-4 mr-1" />
-                      {t('session.prevSet')}
-                    </Button>
-                    <div className="flex items-center px-3 text-xs font-black text-primary uppercase whitespace-nowrap">
-                      {activeSetIdx + 1}/{currentExercise.sets.length}
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    {/* Dots de sets */}
+                    <div className="flex-1 flex items-center justify-center gap-1.5">
+                      {currentExercise.sets.map((s, i) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setFocusSetIndex(i)}
+                          className={`transition-all rounded-full ${
+                            i === activeSetIdx
+                              ? 'w-5 h-2 bg-primary'
+                              : s.completed
+                                ? 'w-2 h-2 bg-primary/40'
+                                : 'w-2 h-2 bg-surface-100'
+                          }`}
+                        />
+                      ))}
                     </div>
-                    <Button
-                      variant="ghost"
-                      className="flex-1 h-14 rounded-2xl text-primary font-black uppercase text-xs border border-primary/20 bg-primary/5 active:scale-95 transition-all"
-                      disabled={activeSetIdx === currentExercise.sets.length - 1 && currentExerciseIndex === exercises.length - 1}
+
+                    {/* → Set, Exercício ou Terminar */}
+                    <button
+                      disabled={isLastItem}
                       onClick={() => {
                         if (activeSetIdx < currentExercise.sets.length - 1) {
                           setFocusSetIndex(activeSetIdx + 1)
-                          return
-                        }
-                        if (currentExerciseIndex < exercises.length - 1) {
+                        } else if (currentExerciseIndex < exercises.length - 1) {
                           setCurrentExerciseIndex(i => i + 1)
                           setFocusSetIndex(0)
                         } else {
                           setShowFinishModal(true)
                         }
                       }}
+                      className="w-14 h-14 rounded-2xl bg-primary/5 border border-primary/20 text-primary flex items-center justify-center disabled:opacity-30 active:scale-90 transition-all"
                     >
-                      {t('session.nextSet')}
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
                   </div>
                 )
               })()}
-              {/* Exercise navigation row */}
-              <div className="flex gap-3">
+
+              {/* Finalizar — visível apenas no último set do último exercício */}
+              {currentExerciseIndex === exercises.length - 1 && (
                 <Button
-                  variant="ghost"
-                  className="flex-1 h-10 rounded-2xl text-gray-500 font-black uppercase text-[10px]"
-                  disabled={currentExerciseIndex === 0}
-                  onClick={() => setCurrentExerciseIndex(i => i - 1)}
+                  variant="secondary"
+                  className="w-full h-10 rounded-2xl text-gray-400 font-black uppercase text-xs active:scale-95 transition-all border-white/10"
+                  onClick={() => setShowFinishModal(true)}
                 >
-                  <ChevronLeft className="w-3.5 h-3.5 mr-0.5" />
-                  {t('session.prevExercise')}
+                  {t('session.finishWorkout')}
+                  <Square className="w-3.5 h-3.5 ml-1" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-[1.5] h-10 rounded-2xl text-gray-500 font-black uppercase text-[10px] active:scale-95 transition-all"
-                  onClick={() => {
-                    if (currentExerciseIndex === exercises.length - 1) {
-                      setShowFinishModal(true)
-                    } else {
-                      setCurrentExerciseIndex(i => i + 1)
-                    }
-                  }}
-                >
-                  {currentExerciseIndex === exercises.length - 1 ? t('session.finishWorkout') : t('session.nextExercise')}
-                  {currentExerciseIndex !== exercises.length - 1 && <ChevronRight className="w-3.5 h-3.5 ml-0.5" />}
-                </Button>
-              </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -2295,7 +2309,7 @@ export function SessionScreen() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">{t('session.totalSets')}:</span>
               <span className="text-white font-medium">
-                {exercises.reduce((acc, ex) => acc + ex.sets.length, 0)}
+                {exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)}
               </span>
             </div>
           </div>

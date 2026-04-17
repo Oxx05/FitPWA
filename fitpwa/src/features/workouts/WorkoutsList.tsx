@@ -124,7 +124,6 @@ export function WorkoutsList() {
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-24">
       <div>
         <h1 className="text-3xl font-bold">{t('workouts.title')}</h1>
-        <p className="text-gray-400">{t('workouts.chooseHowToTrain')}</p>
       </div>
       
       {activeSession && (
@@ -151,7 +150,7 @@ export function WorkoutsList() {
             
             <Link to={activeSession.planId === 'quick' ? '/session/quick' : `/workouts/${activeSession.planId}/start`}>
               <Button className="bg-primary text-black font-black uppercase italic px-8 h-12 shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                {t('common.next')}
+                {t('session.continueTraining')}
                 <ChevronRight className="w-5 h-5 ml-1" />
               </Button>
             </Link>
@@ -159,47 +158,13 @@ export function WorkoutsList() {
         </motion.div>
       )}
 
-      {/* Quick Options */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {workoutOptions.map((option, idx) => (
-          <Link key={option.path} to={option.path} className="flex w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className={`flex-1 bg-gradient-to-br ${option.color} p-6 rounded-2xl border border-white/10 hover:border-white/30 transition-all hover:shadow-lg hover:shadow-white/10 cursor-pointer group`}
-            >
-              <div className="mb-4 text-white group-hover:scale-110 transition-transform">
-                {option.icon}
-              </div>
-              <h3 className="font-bold text-white text-lg mb-1">{option.title}</h3>
-              <p className="text-white/80 text-sm">{option.description}</p>
-              <ChevronRight className="w-5 h-5 text-white/60 mt-4 group-hover:translate-x-2 transition-transform" />
-            </motion.div>
-          </Link>
-        ))}
-      </div>
-
-      <div className="my-8">
-        <AiWorkoutGenerator />
-      </div>
-
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-surface-100"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-background text-gray-500">{t('workouts.myPlans')}</span>
-        </div>
-      </div>
-
-      {/* Favorites Filter */}
-      {plans && plans.length > 0 && (
-        <div className="flex items-center gap-3">
+      {/* Divider + Favorites Filter */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-black text-white uppercase tracking-tight">{t('workouts.myPlans')}</h2>
+        {plans && plans.length > 0 && (
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-sm font-bold ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-sm font-bold ${
               showFavoritesOnly
                 ? 'bg-red-500/10 border-red-500/30 text-red-400'
                 : 'bg-surface-200 border-surface-100 text-gray-400 hover:border-primary/50'
@@ -208,8 +173,8 @@ export function WorkoutsList() {
             <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-red-400' : ''}`} />
             {t('workouts.favorites')}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* My Workouts */}
       {isLoading ? (
@@ -284,13 +249,44 @@ export function WorkoutsList() {
             </motion.div>
           ))}
         </motion.div>
+      ) : showFavoritesOnly ? (
+        <EmptyState
+          icon={<Heart className="w-16 h-16" />}
+          title={t('workouts.noFavoritesYet')}
+          description={t('workouts.noFavoritesDescription')}
+        />
       ) : (
-        <EmptyState 
+        <EmptyState
           icon={<Dumbbell className="w-16 h-16" />}
           title={t('workouts.noPlanYet')}
           description={t('workouts.noPlanDescription')}
         />
       )}
+
+      {/* Secção Criar — fica no fundo, após os planos existentes */}
+      <div className="pt-4 border-t border-surface-100">
+        <h2 className="text-lg font-black text-white uppercase tracking-tight mb-4">{t('workouts.chooseHowToTrain')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {workoutOptions.map((option, idx) => (
+            <Link key={option.path} to={option.path} className="flex w-full">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className={`flex-1 bg-gradient-to-br ${option.color} p-5 rounded-2xl border border-white/10 hover:border-white/30 transition-all hover:shadow-lg hover:shadow-white/10 cursor-pointer group`}
+              >
+                <div className="mb-3 text-white group-hover:scale-110 transition-transform">
+                  {option.icon}
+                </div>
+                <h3 className="font-bold text-white text-base mb-1">{option.title}</h3>
+                <p className="text-white/80 text-xs">{option.description}</p>
+                <ChevronRight className="w-4 h-4 text-white/60 mt-3 group-hover:translate-x-2 transition-transform" />
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+        <AiWorkoutGenerator />
+      </div>
 
       {/* Delete Confirmation Modal */}
       <Modal

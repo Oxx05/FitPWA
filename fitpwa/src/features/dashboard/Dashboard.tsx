@@ -29,7 +29,7 @@ const itemVariants = {
 }
 
 export function Dashboard() {
-  const { profile, signOut } = useAuthStore()
+  const { profile } = useAuthStore()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [hasActiveSession, setHasActiveSession] = useState(false)
@@ -49,32 +49,27 @@ export function Dashboard() {
       className="p-4 md:p-8 max-w-4xl mx-auto space-y-6"
     >
       {/* Header */}
-      <motion.div variants={itemVariants} className="flex justify-between items-center bg-surface-200 p-6 rounded-3xl shadow-lg border border-surface-100">
-        <div>
-          <h1 className="text-3xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent italic">
+      <motion.div variants={itemVariants} className="flex justify-between items-start bg-surface-200 p-6 rounded-3xl shadow-lg border border-surface-100">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent italic truncate">
             {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.athlete') })}
           </h1>
           <p className="text-gray-400 mt-1">{t('dashboard.readyForWorkout')}</p>
         </div>
-        <div className="flex flex-col items-end gap-3">
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span className="text-primary font-bold text-sm">{t('common.level')} {profile?.level || 1}</span>
-              <span className="text-gray-400 text-xs">{profile?.xp_total || 0} XP</span>
-            </div>
-            <div className="w-32 h-2 bg-surface-100 rounded-full overflow-hidden border border-surface-200">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${levelProgress}%` }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full"
-              />
-            </div>
+        <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <span className="text-primary font-bold text-sm">{t('common.level')} {profile?.level || 1}</span>
+            <span className="text-gray-400 text-xs">{profile?.xp_total || 0} XP</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-white h-auto py-0 px-0 text-xs">
-            {t('auth.logout')}
-          </Button>
+          <div className="w-28 h-2 bg-surface-100 rounded-full overflow-hidden border border-surface-200">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${levelProgress}%` }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -97,45 +92,7 @@ export function Dashboard() {
         </motion.div>
       )}
 
-      <motion.div variants={itemVariants}>
-        <CommunityChallenge />
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
-        <SmartInsights hideIcon={true} />
-      </motion.div>
-
-      {/* Virtual Pet */}
-      <motion.div variants={itemVariants}>
-        <PetWidget />
-      </motion.div>
-
-      {/* Premium CTA */}
-      {!profile?.is_premium && (
-        <motion.div
-          variants={itemVariants}
-          whileHover={{ scale: 1.01 }}
-          className="bg-gradient-to-r from-primary/20 via-primary/10 to-purple-500/20 border border-primary/30 p-5 rounded-3xl flex items-center justify-between shadow-xl shadow-primary/5 relative overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner">
-              <Crown className="w-7 h-7" />
-            </div>
-            <div>
-              <p className="text-white font-black text-base italic uppercase tracking-tight">{t('dashboard.unlockPro')}</p>
-              <p className="text-gray-400 text-xs">{t('dashboard.proDescription')}</p>
-            </div>
-          </div>
-          <Link to="/premium" className="relative z-10">
-            <Button size="sm" className="font-black uppercase tracking-tighter">
-              {t('dashboard.learnMore')}
-            </Button>
-          </Link>
-        </motion.div>
-      )}
-
-      {/* Stats Cards + Today's Workout */}
+      {/* Stats Cards + Today's Workout — CTA principal logo acima do fold */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div
           variants={itemVariants}
@@ -173,11 +130,47 @@ export function Dashboard() {
         </motion.div>
       </div>
 
+      <motion.div variants={itemVariants}>
+        <SmartInsights hideIcon={true} />
+      </motion.div>
 
+      <motion.div variants={itemVariants}>
+        <CommunityChallenge />
+      </motion.div>
+
+      {/* Virtual Pet */}
+      <motion.div variants={itemVariants}>
+        <PetWidget />
+      </motion.div>
 
       <motion.div variants={itemVariants}>
         <GamificationManager />
       </motion.div>
+
+      {/* Premium CTA */}
+      {!profile?.is_premium && (
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ scale: 1.01 }}
+          className="bg-gradient-to-r from-primary/20 via-primary/10 to-purple-500/20 border border-primary/30 p-5 rounded-3xl flex items-center justify-between shadow-xl shadow-primary/5 relative overflow-hidden group"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner shrink-0">
+              <Crown className="w-7 h-7" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-white font-black text-base italic uppercase tracking-tight">{t('dashboard.unlockPro')}</p>
+              <p className="text-gray-400 text-xs">{t('dashboard.proDescription')}</p>
+            </div>
+          </div>
+          <Link to="/premium" className="relative z-10 shrink-0 ml-3">
+            <Button size="sm" className="font-black uppercase tracking-tighter">
+              {t('dashboard.learnMore')}
+            </Button>
+          </Link>
+        </motion.div>
+      )}
     </motion.div>
   )
 }
