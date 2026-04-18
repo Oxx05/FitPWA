@@ -1,17 +1,51 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR" class="h-full">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0a0a0a" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- Primary Meta -->
     <title>RepTrack | Ultimate Fitness</title>
+    <meta name="description" content="Track your workouts, build habits, and level up your fitness journey with XP, achievements, and AI coaching." />
+    <meta name="application-name" content="RepTrack" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="RepTrack" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+
+    <!-- Android PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="RepTrack | Ultimate Fitness" />
+    <meta property="og:description" content="Track your workouts, build habits, and level up your fitness journey." />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:url" content="https://fit-pwa.vercel.app/" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="RepTrack | Ultimate Fitness" />
+    <meta name="twitter:description" content="Track your workouts, build habits, and level up your fitness journey." />
+    <meta name="twitter:image" content="/icon-512.png" />
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="h-full">
+    <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -168,7 +168,8 @@ export function Navbar() {
       {/* Mobile Bottom Bar */}
       <nav
         aria-label="Navegação principal"
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-200/80 backdrop-blur-lg border-t border-surface-100 z-40 flex justify-around items-center px-2 py-2"
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-200/80 backdrop-blur-lg border-t border-surface-100 z-40 flex justify-around items-center px-2 pt-2 pb-safe"
+        style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }}
       >
         {navItems.map((item) => {
           const isActive = location.pathname === item.path

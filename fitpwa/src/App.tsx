@@ -54,7 +54,7 @@ function App() {
             >
               Saltar para o conteúdo
             </a>
-            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-32 md:pb-0 md:pl-24 overflow-x-hidden">
+            <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-nav md:pb-0 md:pl-24 overflow-x-hidden">
             <Navbar />
             <div id="main-content" />
             <LevelUpOverlay />

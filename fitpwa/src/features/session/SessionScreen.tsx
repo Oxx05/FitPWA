@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
-import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, Dumbbell, X, Info } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, Dumbbell, X, Info, History, Calculator, Shuffle } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 import { Modal } from '@/shared/components/Modal'
@@ -103,6 +103,14 @@ export function SessionScreen() {
   const [tipsExercise, setTipsExercise] = useState<ExerciseInSession | null>(null)
   const [focusSetIndex, setFocusSetIndex] = useState<number | null>(null)
   const [hasAutoRestStarted, setHasAutoRestStarted] = useState(false)
+  const [showHistorySheet, setShowHistorySheet] = useState(false)
+  const [historySheetData, setHistorySheetData] = useState<{ date: string; sets: { weight_kg: number; reps: number }[] }[]>([])
+  const [historySheetLoading, setHistorySheetLoading] = useState(false)
+  const [showPlateMath, setShowPlateMath] = useState(false)
+  const [plateMathWeight, setPlateMathWeight] = useState(0)
+  const [barbellWeight, setBarbellWeight] = useState(20)
+  const [showSwapModal, setShowSwapModal] = useState(false)
+  const [swapSearchTerm, setSwapSearchTerm] = useState('')
   
   const { speak } = useVoiceGuide()
 
@@ -306,6 +314,45 @@ export function SessionScreen() {
   // Load plan data
   useEffect(() => {
     const loadPlanData = async () => {
+      const prefillSets = async (exs: ExerciseInSession[]): Promise<ExerciseInSession[]> => {
+        if (!user) return exs
+        const ids = [...new Set(exs.map(e => e.exerciseId).filter(Boolean))]
+        if (!ids.length) return exs
+        try {
+          const { data } = await supabase
+            .from('session_sets')
+            .select('exercise_id, weight_kg, reps, completed_at, session_id')
+            .in('exercise_id', ids)
+            .order('completed_at', { ascending: false })
+            .limit(ids.length * 10)
+          if (!data?.length) return exs
+          const seenEx = new Set<string>()
+          const lastSessId = new Map<string, string>()
+          for (const r of data) {
+            if (!seenEx.has(r.exercise_id)) {
+              seenEx.add(r.exercise_id)
+              lastSessId.set(r.exercise_id, r.session_id)
+            }
+          }
+          const setsMap = new Map<string, { weight_kg: number; reps: number }[]>()
+          for (const [eId, sId] of lastSessId) {
+            setsMap.set(eId, data.filter((r: { exercise_id: string; session_id: string; weight_kg: number; reps: number }) => r.exercise_id === eId && r.session_id === sId).map((r: { weight_kg: number; reps: number }) => ({ weight_kg: r.weight_kg, reps: r.reps })))
+          }
+          return exs.map(ex => {
+            const prev = setsMap.get(ex.exerciseId)
+            if (!prev?.length) return ex
+            return {
+              ...ex,
+              sets: ex.sets.map((s: SetRecord, i: number) => ({
+                ...s,
+                weight: prev[i]?.weight_kg ?? prev[0].weight_kg ?? s.weight,
+                reps: prev[i]?.reps ?? prev[0].reps ?? s.reps,
+              }))
+            }
+          })
+        } catch { return exs }
+      }
+
       try {
         const rawActiveSession = localStorage.getItem('titanpulse_active_session')
         if (rawActiveSession) {
@@ -399,7 +446,7 @@ export function SessionScreen() {
             }
           })
           
-          setExercises(sessionExercises)
+          setExercises(await prefillSets(sessionExercises))
           setIsLoading(false)
           return
         }
@@ -460,7 +507,7 @@ export function SessionScreen() {
           }
         })
 
-        setExercises(sessionExercises)
+        setExercises(await prefillSets(sessionExercises))
       } catch (error) {
         console.error('Failed to load plan:', error)
       } finally {
@@ -717,6 +764,85 @@ export function SessionScreen() {
     showToast(t('session.copySetSuccess'), 'success')
   }
 
+  const calculatePlates = (totalKg: number, barbell: number): { plate: number; count: number }[] => {
+    const plateSizes = [25, 20, 15, 10, 5, 2.5, 1.25]
+    let remaining = Math.max(0, Math.round((totalKg - barbell) / 2 * 100) / 100)
+    const result: { plate: number; count: number }[] = []
+    for (const plate of plateSizes) {
+      if (remaining < 0.01) break
+      const count = Math.floor(Math.round(remaining / plate * 1000) / 1000)
+      if (count > 0) {
+        result.push({ plate, count })
+        remaining = Math.round((remaining - count * plate) * 100) / 100
+      }
+    }
+    return result
+  }
+
+  const openExerciseHistory = async (exerciseId: string) => {
+    if (!user) return
+    setShowHistorySheet(true)
+    setHistorySheetLoading(true)
+    try {
+      const { data } = await supabase
+        .from('session_sets')
+        .select('weight_kg, reps, completed_at, session_id')
+        .eq('exercise_id', exerciseId)
+        .order('completed_at', { ascending: false })
+        .limit(30)
+
+      if (!data || data.length === 0) {
+        setHistorySheetData([])
+        return
+      }
+
+      const sessions: { date: string; sets: { weight_kg: number; reps: number }[] }[] = []
+      const seenSessions = new Set<string>()
+
+      for (const row of data) {
+        if (!seenSessions.has(row.session_id)) {
+          seenSessions.add(row.session_id)
+          const sessionSets = data
+            .filter((r: { session_id: string; weight_kg: number; reps: number }) => r.session_id === row.session_id)
+            .map((r: { weight_kg: number; reps: number }) => ({ weight_kg: r.weight_kg, reps: r.reps }))
+          sessions.push({ date: row.completed_at, sets: sessionSets })
+          if (sessions.length >= 3) break
+        }
+      }
+
+      setHistorySheetData(sessions)
+    } catch {
+      setHistorySheetData([])
+    } finally {
+      setHistorySheetLoading(false)
+    }
+  }
+
+  const handleSwapExercise = async (exercise: { id: string; name: string; name_pt?: string; muscle_groups?: string[] }) => {
+    const { data: detail } = await supabase
+      .from('exercises')
+      .select('id, name, name_pt, muscle_groups, gif_url, tips')
+      .eq('id', exercise.id)
+      .maybeSingle()
+
+    setExercises(prev => prev.map((ex, idx) => {
+      if (idx !== currentExerciseIndex) return ex
+      return {
+        ...ex,
+        exerciseId: exercise.id,
+        name: detail?.name || exercise.name,
+        name_pt: detail?.name_pt || exercise.name_pt,
+        muscleGroups: detail?.muscle_groups || exercise.muscle_groups || [],
+        gifUrl: detail?.gif_url || null,
+        tips: detail?.tips || null,
+      }
+    }))
+    setShowSwapModal(false)
+    setSwapSearchTerm('')
+    setPreviousExerciseData(null)
+    showToast(t('session.swapSuccess'), 'success')
+  }
+
   const handleApplyLastSet = (setId: string, setIdx: number) => {
     if (!previousExerciseData?.sets[setIdx]) return
     const lastSet = previousExerciseData.sets[setIdx]
@@ -733,23 +859,23 @@ export function SessionScreen() {
 
   const handleAddSet = () => {
     if (!currentExercise) return
-    setExercises(prev => prev.map((ex, idx) =>
-      idx === currentExerciseIndex
-        ? {
-            ...ex,
-            sets: reindexSets([
-              ...ex.sets,
-              {
-                id: createSetId(ex.id),
-                setNumber: ex.sets.length + 1,
-                reps: 0,
-                weight: 0,
-                completed: false
-              }
-            ])
+    setExercises(prev => prev.map((ex, idx) => {
+      if (idx !== currentExerciseIndex) return ex
+      const lastSet = ex.sets[ex.sets.length - 1]
+      return {
+        ...ex,
+        sets: reindexSets([
+          ...ex.sets,
+          {
+            id: createSetId(ex.id),
+            setNumber: ex.sets.length + 1,
+            reps: lastSet?.reps ?? 0,
+            weight: lastSet?.weight ?? 0,
+            completed: false
           }
-        : ex
-    ))
+        ])
+      }
+    }))
     showToast(t('session.setAdded'), 'info')
   }
 
@@ -1318,14 +1444,45 @@ export function SessionScreen() {
                         <Info className="w-4 h-4" />
                       </button>
                     )}
+                    <button
+                      onClick={() => openExerciseHistory(currentExercise.exerciseId)}
+                      className="p-1.5 rounded-lg bg-surface-100 border border-surface-100/50 text-gray-400 hover:text-white transition-colors shrink-0"
+                      title={t('session.historyTitle')}
+                    >
+                      <History className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (availableExercises.length === 0) fetchAvailableExercises()
+                        setShowSwapModal(true)
+                      }}
+                      className="p-1.5 rounded-lg bg-surface-100 border border-surface-100/50 text-gray-400 hover:text-white transition-colors shrink-0"
+                      title={t('session.swapExercise')}
+                    >
+                      <Shuffle className="w-4 h-4" />
+                    </button>
                   </div>
                   <p className="text-sm text-gray-400 capitalize mt-1">
                     {currentExercise.muscleGroups.map(mg => t(`common.muscles.${mg.toLowerCase()}`)).join(', ')}
                   </p>
                 </div>
-                <span className="text-sm bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">
-                  {currentExercise.repsMin}–{currentExercise.repsMax} {t('session.reps')}
-                </span>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    {currentExercise.repsMin}–{currentExercise.repsMax} {t('session.reps')}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const lastWeight = currentExercise.sets[currentExercise.sets.length - 1]?.weight || 0
+                      setPlateMathWeight(lastWeight)
+                      setShowPlateMath(true)
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-100 border border-surface-100/50 text-gray-400 hover:text-white text-[9px] font-black uppercase tracking-wider transition-colors"
+                    title={t('session.plateMathTitle')}
+                  >
+                    <Calculator className="w-3 h-3" />
+                    {t('session.plates')}
+                  </button>
+                </div>
               </div>
 
               {/* Pro Insights: Last Performance (Normal UI) */}
@@ -2447,6 +2604,174 @@ export function SessionScreen() {
                     <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || t('session.general')}</p>
                   </div>
                   <Plus className="w-5 h-5 text-gray-600 group-hover:text-primary" />
+                </button>
+              ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Exercise History Bottom Sheet */}
+      <AnimatePresence>
+        {showHistorySheet && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[70] flex flex-col justify-end"
+          >
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowHistorySheet(false)} />
+            <div className="relative bg-surface-200 border-t border-primary/20 rounded-t-[32px] p-6 pb-[calc(3rem+env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto">
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 cursor-pointer" onClick={() => setShowHistorySheet(false)} />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">{t('session.historyTitle')}</h3>
+                <button onClick={() => setShowHistorySheet(false)} className="p-2 rounded-xl bg-surface-100 text-gray-400 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {historySheetLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
+              ) : historySheetData.length === 0 ? (
+                <p className="text-center text-gray-500 py-8 text-sm">{t('session.noHistory')}</p>
+              ) : (
+                <div className="space-y-4">
+                  {historySheetData.map((session, si) => (
+                    <div key={si} className="bg-surface-100 border border-white/5 rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <History className="w-4 h-4 text-primary" />
+                          <span className="text-xs font-black text-primary uppercase">{si === 0 ? t('session.lastTime') : `–${si}`}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500 font-bold">{new Date(session.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {session.sets.map((s, i) => (
+                          <div key={i} className="bg-background px-3 py-2 rounded-xl border border-white/5 flex flex-col items-center min-w-[64px]">
+                            <span className="text-[8px] text-gray-500 font-bold uppercase">{t('session.set').charAt(0).toUpperCase()}{i + 1}</span>
+                            <span className="text-sm text-white font-black">{s.weight_kg}kg</span>
+                            <span className="text-[10px] text-primary font-bold">× {s.reps}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Plate Math Bottom Sheet */}
+      <AnimatePresence>
+        {showPlateMath && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[70] flex flex-col justify-end"
+          >
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowPlateMath(false)} />
+            <div className="relative bg-surface-200 border-t border-primary/20 rounded-t-[32px] p-6 pb-[calc(3rem+env(safe-area-inset-bottom))]">
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 cursor-pointer" onClick={() => setShowPlateMath(false)} />
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">{t('session.plateMathTitle')}</h3>
+                <button onClick={() => setShowPlateMath(false)} className="p-2 rounded-xl bg-surface-100 text-gray-400 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex gap-3 mb-6">
+                <div className="flex-1">
+                  <p className="text-[10px] font-black text-gray-500 uppercase mb-1">{t('session.weightTitle')}</p>
+                  <DebouncedNumericInput
+                    value={plateMathWeight}
+                    onChange={v => setPlateMathWeight(v ?? 0)}
+                    className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white font-black text-xl focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black text-gray-500 uppercase mb-1">{t('session.barbellWeight')}</p>
+                  <div className="flex gap-1.5">
+                    {[15, 20].map(w => (
+                      <button
+                        key={w}
+                        onClick={() => setBarbellWeight(w)}
+                        className={`flex-1 h-12 rounded-xl text-sm font-black border transition-all ${barbellWeight === w ? 'bg-primary text-black border-primary' : 'bg-surface-100 text-gray-400 border-surface-100/50 hover:border-primary/30'}`}
+                      >{w}kg</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {(() => {
+                const plates = calculatePlates(plateMathWeight, barbellWeight)
+                const totalCheck = barbellWeight + plates.reduce((acc, p) => acc + p.plate * p.count * 2, 0)
+                return (
+                  <div className="space-y-3">
+                    <div className="bg-surface-100 rounded-2xl p-4 border border-white/5">
+                      <p className="text-[10px] font-black text-primary uppercase tracking-wider mb-3">{t('session.perSide')}</p>
+                      {plates.length === 0 ? (
+                        <p className="text-gray-400 text-sm text-center font-bold">{t('session.plateMathOnlyBar')}</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {plates.map((p, i) => (
+                            <div key={i} className="flex items-center gap-1.5 bg-background px-3 py-2 rounded-xl border border-white/5">
+                              <span className="text-base font-black text-white">{p.count}×</span>
+                              <span className="text-primary font-black">{p.plate}kg</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3">
+                      <span className="text-[10px] font-black text-gray-400 uppercase">{t('session.totalWeight')}</span>
+                      <span className="text-lg font-black text-primary">{totalCheck}kg</span>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Swap Exercise Modal */}
+      <Modal
+        isOpen={showSwapModal}
+        onClose={() => { setShowSwapModal(false); setSwapSearchTerm('') }}
+        title={t('session.swapExercise')}
+        size="md"
+        closeButton
+      >
+        <div className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              placeholder={t('session.searchExercisePlaceholder')}
+              value={swapSearchTerm}
+              onChange={e => setSwapSearchTerm(e.target.value)}
+              className="w-full bg-surface-100 border border-surface-200 rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+            {availableExercises
+              .filter(ex =>
+                ex.name.toLowerCase().includes(swapSearchTerm.toLowerCase()) ||
+                ex.name_pt?.toLowerCase().includes(swapSearchTerm.toLowerCase())
+              )
+              .slice(0, 10)
+              .map(ex => (
+                <button
+                  key={ex.id}
+                  onClick={() => handleSwapExercise(ex)}
+                  className="w-full flex items-center justify-between p-4 bg-surface-100 hover:bg-primary/10 border border-white/5 rounded-xl transition-all group"
+                >
+                  <div className="text-left">
+                    <p className="font-bold text-white group-hover:text-primary transition-colors">{isPt ? ex.name_pt || ex.name : ex.name}</p>
+                    <p className="text-[10px] text-gray-500 uppercase font-black">{ex.muscle_groups?.[0] || t('session.general')}</p>
+                  </div>
+                  <Shuffle className="w-5 h-5 text-gray-600 group-hover:text-primary" />
                 </button>
               ))}
           </div>

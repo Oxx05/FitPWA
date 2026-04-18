@@ -472,6 +472,16 @@ const en = {
     exerciseNoTips: 'No tips available for this exercise.',
     exerciseNoGif: 'No demonstration available.',
     howToPerform: 'How to perform',
+    historyTitle: 'Exercise History',
+    noHistory: 'No history yet for this exercise.',
+    plateMathTitle: 'Plate Calculator',
+    barbellWeight: 'Bar Weight',
+    perSide: 'Per Side',
+    plateMathOnlyBar: 'Just the bar!',
+    totalWeight: 'Total',
+    swapExercise: 'Swap Exercise',
+    swapSuccess: 'Exercise swapped.',
+    plates: 'Plates',
   },
 
   // ─── Social ───

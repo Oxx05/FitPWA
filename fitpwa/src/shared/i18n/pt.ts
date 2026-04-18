@@ -474,6 +474,16 @@ const pt = {
     exerciseNoTips: 'Sem dicas disponíveis para este exercício.',
     exerciseNoGif: 'Sem demonstração disponível.',
     howToPerform: 'Como executar',
+    historyTitle: 'Histórico do Exercício',
+    noHistory: 'Sem histórico para este exercício.',
+    plateMathTitle: 'Calculadora de Discos',
+    barbellWeight: 'Peso da Barra',
+    perSide: 'Por Lado',
+    plateMathOnlyBar: 'Só a barra!',
+    totalWeight: 'Total',
+    swapExercise: 'Trocar Exercício',
+    swapSuccess: 'Exercício trocado.',
+    plates: 'Discos',
   },
 
   // ─── Social ───
