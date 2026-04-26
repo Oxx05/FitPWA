@@ -57,7 +57,7 @@ export function BenchAngleMeter() {
   const navigate = useNavigate()
 
   const [permission, setPermission] = useState<PermissionState>('idle')
-  const [angle, setAngle] = useState<number>(0)
+  const [, setAngle] = useState<number>(0)
   const [smoothedAngle, setSmoothedAngle] = useState<number>(0)
   const [lockedReading, setLockedReading] = useState<number | null>(null)
   const [isLocked, setIsLocked] = useState(false)
