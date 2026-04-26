@@ -113,7 +113,7 @@ export function PetWidget() {
     : hungerPercent >= 30 ? 'bg-yellow-500' : 'bg-red-500'
   const cleanlinessColor = cleanlinessPercent >= 70 ? 'bg-blue-400'
     : cleanlinessPercent >= 30 ? 'bg-blue-600' : 'bg-red-500'
-  const hungerRingColor = hungerPercent >= 60 ? '#00ff87'
+  const hungerRingColor = hungerPercent >= 60 ? '#c6ff3d'
     : hungerPercent >= 30 ? '#f59e0b' : '#ef4444'
   const cleanlinessRingColor = cleanlinessPercent >= 70 ? '#60a5fa'
     : cleanlinessPercent >= 30 ? '#2563eb' : '#ef4444'
@@ -246,7 +246,7 @@ export function PetWidget() {
                   type="text"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  placeholder="Rex, Luna..."
+                  placeholder={t('gamification.petNamePlaceholder')}
                   className="flex-1 bg-background/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-primary/50"
                 />
                 <button

@@ -17,7 +17,7 @@ export function LevelUpOverlay() {
         particleCount: 150,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#00ff87', '#00dfd8', '#ffffff']
+        colors: ['#c6ff3d', '#00dfd8', '#ffffff']
       })
     }
   }, [pendingLevelUp])

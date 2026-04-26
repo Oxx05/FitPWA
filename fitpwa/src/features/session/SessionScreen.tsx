@@ -1107,7 +1107,7 @@ export function SessionScreen() {
                   particleCount: 200,
                   spread: 100,
                   origin: { y: 0.6 },
-                  colors: ['#00ff87', '#ffffff', '#00e5ff'],
+                  colors: ['#c6ff3d', '#ffffff', '#00e5ff'],
                   scalar: 1.2,
                   gravity: 0.8
                 })
@@ -1118,14 +1118,14 @@ export function SessionScreen() {
                     angle: 60,
                     spread: 55,
                     origin: { x: 0 },
-                    colors: ['#00ff87', '#00e5ff']
+                    colors: ['#c6ff3d', '#00e5ff']
                   })
                   confetti({
                     particleCount: 100,
                     angle: 120,
                     spread: 55,
                     origin: { x: 1 },
-                    colors: ['#00ff87', '#00e5ff']
+                    colors: ['#c6ff3d', '#00e5ff']
                   })
                 }, 250)
               }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import { MuscleIcon } from '@/shared/components/MuscleIcon'
 
@@ -13,6 +14,7 @@ interface ExerciseRow {
 }
 
 export function ExerciseList() {
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState('')
 
   const { data, isLoading, isError } = useQuery({
@@ -60,12 +62,12 @@ export function ExerciseList() {
           <input
             value={searchQuery || ''}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search exercises..."
+            placeholder={t('exercisesExtra.searchPlaceholder')}
             className="w-full bg-surface-200/60 border border-white/5 rounded-2xl pl-10 pr-3 py-2 text-sm text-gray-300 placeholder:text-gray-500"
           />
         </div>
         <div className="text-sm text-gray-400 bg-surface-200/60 border border-white/5 rounded-2xl p-4">
-          Unable to load exercises right now.
+          {t('exercisesExtra.loadError')}
         </div>
       </div>
     )
@@ -80,13 +82,13 @@ export function ExerciseList() {
         <input
           value={searchQuery || ''}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search exercises..."
+          placeholder={t('exercisesExtra.searchPlaceholder')}
           className="w-full bg-surface-200/60 border border-white/5 rounded-2xl pl-10 pr-3 py-2 text-sm text-gray-300 placeholder:text-gray-500"
         />
       </div>
       {exercises.length === 0 && (
         <div className="text-sm text-gray-400 bg-surface-200/60 border border-white/5 rounded-2xl p-4">
-          No exercises found.
+          {t('exercisesExtra.noneFound')}
         </div>
       )}
       {exercises.map(exercise => {
