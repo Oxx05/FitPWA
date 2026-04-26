@@ -2,76 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   REPTRACK — Design System v2
+   Editorial-athletic aesthetic. Acid-lime + electric magenta.
+   Bebas Neue display • Inter Tight body • JetBrains Mono numerics.
+   ============================================================ */
+
 @layer base {
+  :root {
+    --grad-hero: radial-gradient(circle at 15% -10%, rgba(198, 255, 61, 0.22) 0%, transparent 45%),
+                 radial-gradient(circle at 90% 10%, rgba(255, 45, 117, 0.16) 0%, transparent 50%);
+  }
+
   html {
-    /* Prevent overscroll bounce — native app feel */
     overscroll-behavior: none;
     height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-white antialiased font-sans selection:bg-primary/20;
+    @apply bg-background text-ink antialiased font-sans selection:bg-primary/30 selection:text-black;
     overflow-x: hidden;
     height: 100%;
-    /* Remove iOS tap flash on all elements */
     -webkit-tap-highlight-color: transparent;
+    font-feature-settings: "ss01", "cv11", "cv09";
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(198, 255, 61, 0.05) 0%, transparent 35%),
+      radial-gradient(circle at 100% 100%, rgba(255, 45, 117, 0.04) 0%, transparent 40%);
+    background-attachment: fixed;
   }
 
-  /* Native-feel: disable text selection on interactive / layout elements */
+  /* Headings get the editorial display face by default */
+  h1, h2, h3 {
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* Native-feel: disable text selection on interactive elements */
   button, a, nav, label,
   [role="button"], [role="tab"], [role="menuitem"],
   [role="option"], [role="listbox"] {
     -webkit-user-select: none;
     user-select: none;
-    /* Prevent double-tap zoom on buttons/links */
     touch-action: manipulation;
   }
 
-  /* Custom Scrollbar — Webkit (Chrome, Safari) */
-  ::-webkit-scrollbar {
-    width: 6px;
+  /* Tabular numerals on stat / timer / counter elements */
+  .tabular, .font-mono, [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
+
+  /* Scrollbar — minimal, lime accent on hover */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-200 rounded-full hover:bg-surface-100;
+    @apply bg-surface-50 rounded-full;
+    transition: background 200ms ease;
   }
-  /* Firefox */
+  ::-webkit-scrollbar-thumb:hover { @apply bg-primary/50; }
   * {
     scrollbar-width: thin;
-    scrollbar-color: theme('colors.surface.200') transparent;
+    scrollbar-color: theme('colors.surface.50') transparent;
   }
 }
 
 @layer utilities {
-  /* Safe-area inset utilities for notch / home-bar */
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  .pl-safe {
-    padding-left: env(safe-area-inset-left, 0px);
-  }
-  .pr-safe {
-    padding-right: env(safe-area-inset-right, 0px);
+  /* Safe-area inset utilities */
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+
+  .pb-nav {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Combined bottom nav + safe area offset for main content */
-  .pb-nav {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  /* Editorial display heading */
+  .text-display {
+    @apply font-display tracking-tightest leading-[0.9];
+  }
+
+  /* Atmospheric mesh background — for hero cards */
+  .bg-atmos {
+    background-image: var(--grad-hero), linear-gradient(180deg, theme('colors.surface.100') 0%, theme('colors.surface.200') 100%);
+  }
+
+  /* Subtle film grain overlay */
+  .with-grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .with-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: theme('backgroundImage.grain');
+    opacity: 0.5;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: -1;
+    border-radius: inherit;
+  }
+
+  /* Card surface with soft inner highlight */
+  .card-surface {
+    @apply bg-surface-100 border border-white/[0.06] rounded-3xl;
+    box-shadow: theme('boxShadow.card');
+  }
+
+  /* Glow text — for stat punch lines */
+  .text-glow-primary {
+    color: theme('colors.primary.DEFAULT');
+    text-shadow: 0 0 24px theme('colors.primary.glow');
+  }
+  .text-glow-accent {
+    color: theme('colors.accent.DEFAULT');
+    text-shadow: 0 0 24px theme('colors.accent.glow');
+  }
+
+  /* Diagonal label badge */
+  .badge-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tightest border;
   }
 }
 
-/* Shared keyframes (used by pull-to-refresh indicator SVG and spinners) */
+/* ============================================================
+   Animations
+   ============================================================ */
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Pet Animations */
+/* Pet & micro-interactions */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-3px) rotate(-2deg); }
@@ -85,10 +149,12 @@
   50% { transform: translateY(-8px); }
 }
 
-.animate-shake {
-  animation: shake 0.6s ease-in-out infinite;
+@keyframes scan-line {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
 }
 
-.animate-bounce-slow {
-  animation: bounce-slow 1.5s ease-in-out infinite;
-}
+.animate-shake { animation: shake 0.6s ease-in-out infinite; }
+.animate-bounce-slow { animation: bounce-slow 1.5s ease-in-out infinite; }
+.animate-scan { animation: scan-line 3s linear infinite; }

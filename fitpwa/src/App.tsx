@@ -31,6 +31,7 @@ const FriendsPage = React.lazy(() => import('@/features/social/FriendsPage').the
 const ProfilePage = React.lazy(() => import('@/features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const AchievementsPage = React.lazy(() => import('@/features/gamification/AchievementsPage').then(m => ({ default: m.AchievementsPage })))
 const AchievementUnlockOverlay = React.lazy(() => import('@/features/gamification/AchievementUnlockOverlay').then(m => ({ default: m.AchievementUnlockOverlay })))
+const BenchAngleMeter = React.lazy(() => import('@/features/tools/BenchAngleMeter').then(m => ({ default: m.BenchAngleMeter })))
 
 import { useAchievementsStore } from '@/features/gamification/useAchievementsStore'
 
@@ -122,6 +123,9 @@ function App() {
                 } />
                 <Route path="/achievements" element={
                   <ProtectedRoute><AchievementsPage /></ProtectedRoute>
+                } />
+                <Route path="/tools/bench-angle" element={
+                  <ProtectedRoute><BenchAngleMeter /></ProtectedRoute>
                 } />
               </Routes>
               </Suspense>
