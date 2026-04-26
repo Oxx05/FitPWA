@@ -4,7 +4,7 @@ import { Button } from '@/shared/components/Button'
 import { getLevelProgress } from '@/shared/utils/gamification'
 import { GamificationManager } from '@/features/gamification/GamificationManager'
 
-import { Crown, TrendingUp, Flame, Zap, Play } from 'lucide-react'
+import { Crown, TrendingUp, Flame, Zap, Play, Ruler, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
@@ -18,14 +18,15 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
-    }
-  }
+      staggerChildren: 0.07,
+      delayChildren: 0.05,
+    },
+  },
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
 }
 
 export function Dashboard() {
@@ -40,95 +41,177 @@ export function Dashboard() {
   }, [])
 
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
+  const firstName = profile?.full_name?.split(' ')[0] || t('common.athlete')
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="p-4 md:p-8 max-w-4xl mx-auto space-y-6"
+      className="p-4 md:p-8 max-w-5xl mx-auto space-y-6"
     >
-      {/* Header */}
-      <motion.div variants={itemVariants} className="flex justify-between items-start bg-surface-200 p-6 rounded-3xl shadow-lg border border-surface-100">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent italic truncate">
-            {t('dashboard.greeting', { name: profile?.full_name?.split(' ')[0] || t('common.athlete') })}
-          </h1>
-          <p className="text-gray-400 mt-1">{t('dashboard.readyForWorkout')}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-primary font-bold text-sm">{t('common.level')} {profile?.level || 1}</span>
-            <span className="text-gray-400 text-xs">{profile?.xp_total || 0} XP</span>
-          </div>
-          <div className="w-28 h-2 bg-surface-100 rounded-full overflow-hidden border border-surface-200">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${levelProgress}%` }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full"
-            />
-          </div>
-        </div>
-      </motion.div>
+      {/* ============ HERO HEADER ============ */}
+      <motion.section
+        variants={itemVariants}
+        className="card-surface bg-atmos with-grain relative overflow-hidden p-6 md:p-8"
+      >
+        {/* Diagonal decoration */}
+        <div
+          aria-hidden="true"
+          className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/[0.06] blur-3xl pointer-events-none"
+        />
 
-      {/* Active Session Banner */}
+        <div className="relative z-10 flex justify-between items-start gap-4">
+          <div className="min-w-0">
+            <p className="text-ink-dim font-mono text-[11px] tracking-tightest uppercase mb-2">
+              {new Date().toLocaleDateString(t('common.locale', { defaultValue: 'pt-PT' }), { weekday: 'long', day: '2-digit', month: 'short' })}
+            </p>
+            <h1 className="text-display text-5xl md:text-7xl text-white tracking-crush leading-[0.85]">
+              {t('dashboard.hi')},<br />
+              <span className="text-primary">{firstName.toUpperCase()}</span>
+            </h1>
+            <p className="text-ink-muted mt-3 max-w-sm">
+              {t('dashboard.readyForWorkout')}
+            </p>
+          </div>
+
+          {/* Level pill */}
+          <div className="shrink-0 flex flex-col items-end">
+            <div className="card-surface !rounded-2xl px-3 py-2 bg-surface-200/60 border-white/10">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                <span className="text-primary font-bold text-[11px] uppercase tracking-tightest">
+                  {t('common.level')} {profile?.level || 1}
+                </span>
+              </div>
+              <div className="w-24 h-1.5 bg-surface-300 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${levelProgress}%` }}
+                  transition={{ duration: 1.4, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-primary to-primary-deep rounded-full"
+                />
+              </div>
+              <span data-numeric className="block text-right text-ink-dim text-[10px] font-mono mt-1">
+                {profile?.xp_total || 0} XP
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ============ ACTIVE SESSION BANNER ============ */}
       {hasActiveSession && (
-        <motion.div
+        <motion.button
           variants={itemVariants}
           onClick={() => navigate('/session')}
-          className="bg-primary/15 border border-primary/40 p-4 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform shadow-lg shadow-primary/10 animate-pulse"
+          className="w-full text-left bg-primary/[0.10] border border-primary/40 p-4 rounded-2xl
+                     flex items-center justify-between active:scale-[0.99] transition-transform
+                     shadow-glow-primary animate-pulse-glow"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-primary text-black flex items-center justify-center shrink-0">
               <Play className="w-5 h-5 fill-current" />
             </div>
             <div>
-              <p className="text-white font-black text-sm uppercase italic tracking-tight">{t('dashboard.activeSessionBanner')}</p>
-              <p className="text-primary/80 text-xs font-bold">{t('dashboard.continueWorkout')} →</p>
+              <p className="text-white font-bold text-sm uppercase tracking-tightest">
+                {t('dashboard.activeSessionBanner')}
+              </p>
+              <p className="text-primary text-xs font-bold">
+                {t('dashboard.continueWorkout')} →
+              </p>
             </div>
           </div>
-        </motion.div>
+          <ArrowRight className="w-5 h-5 text-primary" />
+        </motion.button>
       )}
 
-      {/* Stats Cards + Today's Workout — CTA principal logo acima do fold */}
+      {/* ============ STATS + TODAY CTA ============ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Streak card */}
         <motion.div
           variants={itemVariants}
-          whileHover={{ y: -5 }}
-          className="bg-surface-200 p-6 rounded-3xl border border-surface-100 shadow-md transition-shadow hover:shadow-primary/5"
+          whileHover={{ y: -4 }}
+          className="card-surface p-6 relative overflow-hidden group"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-5 h-5 text-orange-400" />
-            <h3 className="text-gray-400 font-medium">{t('dashboard.currentStreak')}</h3>
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-8 -right-8 w-32 h-32 rounded-full bg-orange-500/[0.06] blur-2xl"
+          />
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <h3 className="text-ink-muted font-bold text-[11px] uppercase tracking-tightest">
+              {t('dashboard.currentStreak')}
+            </h3>
           </div>
-          <div className="flex items-end gap-2">
-            <span className="text-4xl font-black text-white italic">{profile?.login_streak || 0}</span>
-            <span className="text-primary font-black mb-1 uppercase text-xs tracking-widest">{t('common.days')} 🔥</span>
+          <div className="flex items-baseline gap-2">
+            <span data-numeric className="text-display text-7xl text-white leading-none">
+              {profile?.login_streak || 0}
+            </span>
+            <span className="text-orange-400 font-bold uppercase text-[10px] tracking-tightest">
+              {t('common.days')} 🔥
+            </span>
           </div>
         </motion.div>
 
+        {/* Today's workout CTA */}
         <motion.div
           variants={itemVariants}
-          whileHover={{ y: -5 }}
-          className="bg-surface-200 p-6 rounded-3xl border border-surface-100 shadow-md md:col-span-2"
+          className="card-surface p-6 md:col-span-2 relative overflow-hidden group"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Zap className="w-5 h-5 text-primary" />
-            <h3 className="text-white font-bold italic uppercase tracking-tight">{t('dashboard.todayWorkout')}</h3>
-          </div>
-          <div className="bg-surface-100/50 rounded-2xl p-5 flex justify-between items-center border border-white/5">
-            <div>
-              <h4 className="font-black text-xl text-primary italic uppercase tracking-tighter">{t('dashboard.selectPlan')}</h4>
-              <p className="text-sm text-gray-400">{t('dashboard.chooseSession')}</p>
+            <div className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
+              <Zap className="w-4 h-4" />
             </div>
-            <Link to="/workouts">
-              <Button className="font-black uppercase tracking-tighter">{t('dashboard.startWorkout')}</Button>
+            <h3 className="text-ink-muted font-bold text-[11px] uppercase tracking-tightest">
+              {t('dashboard.todayWorkout')}
+            </h3>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+            <div>
+              <h4 className="text-display text-3xl md:text-4xl text-primary leading-none">
+                {t('dashboard.selectPlan').toUpperCase()}
+              </h4>
+              <p className="text-sm text-ink-muted mt-1">
+                {t('dashboard.chooseSession')}
+              </p>
+            </div>
+            <Link to="/workouts" className="shrink-0">
+              <Button size="lg">
+                {t('dashboard.startWorkout')} <ArrowRight className="w-4 h-4" />
+              </Button>
             </Link>
           </div>
         </motion.div>
       </div>
+
+      {/* ============ TOOLS / BENCH ANGLE ============ */}
+      <motion.div variants={itemVariants}>
+        <Link
+          to="/tools/bench-angle"
+          className="block card-surface relative overflow-hidden p-5 md:p-6 group
+                     hover:border-primary/30 transition-colors"
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-mesh-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          />
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0
+                            group-hover:bg-primary group-hover:text-black transition-all duration-300">
+              <Ruler className="w-7 h-7" strokeWidth={2.2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="badge-tag border-primary/30 text-primary mb-1.5">{t('dashboard.badgeNew')}</p>
+              <h3 className="text-display text-2xl text-white leading-none">{t('dashboard.benchAngleCardTitle')}</h3>
+              <p className="text-ink-muted text-sm mt-1">
+                {t('dashboard.benchAngleCardDesc')}
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-ink-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          </div>
+        </Link>
+      </motion.div>
 
       <motion.div variants={itemVariants}>
         <SmartInsights hideIcon={true} />
@@ -138,7 +221,6 @@ export function Dashboard() {
         <CommunityChallenge />
       </motion.div>
 
-      {/* Virtual Pet */}
       <motion.div variants={itemVariants}>
         <PetWidget />
       </motion.div>
@@ -147,27 +229,33 @@ export function Dashboard() {
         <GamificationManager />
       </motion.div>
 
-      {/* Premium CTA */}
+      {/* ============ PREMIUM CTA ============ */}
       {!profile?.is_premium && (
-        <motion.div
-          variants={itemVariants}
-          whileHover={{ scale: 1.01 }}
-          className="bg-gradient-to-r from-primary/20 via-primary/10 to-purple-500/20 border border-primary/30 p-5 rounded-3xl flex items-center justify-between shadow-xl shadow-primary/5 relative overflow-hidden group"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner shrink-0">
-              <Crown className="w-7 h-7" />
+        <motion.div variants={itemVariants}>
+          <Link
+            to="/premium"
+            className="block relative overflow-hidden rounded-3xl p-5 md:p-6 group
+                       bg-gradient-to-br from-pr/10 via-surface-100 to-accent/10
+                       border border-pr/30 shadow-card transition-transform hover:scale-[1.005]"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-12 h-12 rounded-2xl bg-pr/15 border border-pr/40 flex items-center justify-center text-pr shrink-0">
+                  <Crown className="w-6 h-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-white font-display text-2xl leading-none tracking-tightest">
+                    {t('dashboard.unlockPro').toUpperCase()}
+                  </p>
+                  <p className="text-ink-muted text-xs mt-1">
+                    {t('dashboard.proDescription')}
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" variant="accent" className="shrink-0">
+                {t('dashboard.learnMore')}
+              </Button>
             </div>
-            <div className="min-w-0">
-              <p className="text-white font-black text-base italic uppercase tracking-tight">{t('dashboard.unlockPro')}</p>
-              <p className="text-gray-400 text-xs">{t('dashboard.proDescription')}</p>
-            </div>
-          </div>
-          <Link to="/premium" className="relative z-10 shrink-0 ml-3">
-            <Button size="sm" className="font-black uppercase tracking-tighter">
-              {t('dashboard.learnMore')}
-            </Button>
           </Link>
         </motion.div>
       )}
