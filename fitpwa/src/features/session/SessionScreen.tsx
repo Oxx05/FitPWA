@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import confetti from 'canvas-confetti'
 import { ChevronLeft, ChevronRight, Square, Play, Plus, Trash2, Clock, Zap, Loader2, Target, Pause, Minimize2, Search, StickyNote, TrendingUp, RotateCcw, Volume2, VolumeX, Save, AlertCircle, Dumbbell, X, Info, History, Calculator, Shuffle } from 'lucide-react'
@@ -58,6 +58,7 @@ interface ExerciseInSession {
 
 export function SessionScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id: planId } = useParams<{ id?: string }>()
   const { user, profile, addXp } = useAuthStore()
   const { t, i18n } = useTranslation()
@@ -358,8 +359,18 @@ export function SessionScreen() {
         if (rawActiveSession) {
           try {
             const activeSession = JSON.parse(rawActiveSession)
-            // If it's the SAME plan (or both are quick), resume
-            if (activeSession.planId === planId || (!planId && activeSession.planId === 'quick')) {
+            // Resume conditions:
+            //   1. Same plan id (mid-plan resume)
+            //   2. Both sides are quick (`!planId` here + `'quick'` saved)
+            //   3. The user landed on the bare `/session` URL — that's the
+            //      "Resume" CTA from the dashboard banner, so we should pick
+            //      up whatever session is in storage regardless of its plan id.
+            const isResumeFromBanner = !planId && location.pathname === '/session'
+            const sameContext =
+              activeSession.planId === planId ||
+              (!planId && activeSession.planId === 'quick') ||
+              isResumeFromBanner
+            if (sameContext) {
               setExercises(activeSession.exercises)
               setCurrentExerciseIndex(activeSession.currentExerciseIndex || 0)
               const savedDuration = activeSession.duration || 0
@@ -1212,6 +1223,10 @@ export function SessionScreen() {
       navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
     } catch (error) {
       console.error('Error finishing workout:', error)
+      // Ensure the active-session breadcrumb in localStorage is cleared even
+      // if the Supabase save failed — otherwise the dashboard banner and the
+      // /session route guard will show a stale "active session" indefinitely.
+      try { localStorage.removeItem('titanpulse_active_session') } catch { /* noop */ }
       showToast(t('session.workoutSaveError'), 'error')
     }
   }

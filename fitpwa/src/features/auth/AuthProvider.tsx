@@ -4,6 +4,8 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore, type Profile } from './authStore'
 import { initializeOfflineSync, OfflineSyncService } from '@/shared/lib/offlineSync'
 
+const PROFILE_COLUMNS = 'id,username,full_name,avatar_url,is_premium,premium_expires_at,level,xp_total,login_streak,last_login_date,daily_xp_earned,last_xp_date,default_rest_seconds,default_reps_min,default_reps_max,default_sets,sound_enabled,profile_visibility,total_volume_kg,social_likes_given'
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, setProfile, setLoading, isLoading } = useAuthStore()
 
@@ -45,15 +47,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const fetchProfile = React.useCallback(async (userId: string) => {
+  /**
+   * Loads the profile for `userId`. If the profile row doesn't exist yet,
+   * lazily inserts a minimal one so that subsequent queries succeed.
+   * Returns the profile (or null on hard failure).
+   */
+  const fetchProfile = React.useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,username,full_name,avatar_url,is_premium,premium_expires_at,level,xp_total,login_streak,last_login_date,daily_xp_earned,last_xp_date,default_rest_seconds,default_reps_min,default_reps_max,default_sets,sound_enabled,profile_visibility,total_volume_kg,social_likes_given')
+        .select(PROFILE_COLUMNS)
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      if (!error && data) {
+      if (error) {
+        console.warn('Profile fetch error:', error.message)
+        // Don't trap user in onboarding because of a transient query failure —
+        // hand them an empty-but-non-null profile so the app can still render.
+        setProfile({
+          id: userId,
+          is_premium: false,
+        } as Profile)
+        return null
+      }
+
+      if (data) {
         setProfile({
           ...data,
           sound_enabled: data.sound_enabled ?? true,
@@ -63,8 +81,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         return data as Profile
       }
+
+      // No row yet — create one. This prevents new social-auth users (who
+      // never went through register-page profile creation) from being blocked.
+      const { data: inserted, error: insertError } = await supabase
+        .from('profiles')
+        .insert({ id: userId })
+        .select(PROFILE_COLUMNS)
+        .maybeSingle()
+
+      if (!insertError && inserted) {
+        setProfile({
+          ...inserted,
+          sound_enabled: inserted.sound_enabled ?? true,
+          profile_visibility: inserted.profile_visibility ?? 'private',
+          total_volume_kg: inserted.total_volume_kg ?? 0,
+          social_likes_given: inserted.social_likes_given ?? 0,
+        })
+        return inserted as Profile
+      }
+
+      console.warn('Profile insert failed:', insertError?.message)
+      setProfile({ id: userId, is_premium: false } as Profile)
+      return null
     } catch (e) {
       console.error(e)
+      // Be safe — render with stub profile so guards behave predictably.
+      setProfile({ id: userId, is_premium: false } as Profile)
+      return null
     } finally {
       setLoading(false)
     }
@@ -92,7 +136,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       last_login_date: new Date().toISOString()
     }).eq('id', profile.id)
 
-    // Only update local state if Supabase succeeded
     if (!error) {
       setProfile({ ...profile, login_streak: newStreak, last_login_date: new Date().toISOString() })
     } else {

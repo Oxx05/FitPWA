@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CheckCircle, Share2, TrendingUp, Trophy } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
@@ -13,6 +13,14 @@ export function SessionSummary() {
   const duration = location.state?.duration || 0
   const xpGained = location.state?.xpGained || 0
   const newPrs = (location.state?.newPrs || []) as Array<{ exerciseName: string; weight: number; reps: number; oneRepMax?: number; exerciseId?: string }>
+
+  // Defensive cleanup — once we reach the summary screen, the workout is
+  // definitively over. Nuke any stale `titanpulse_active_session` breadcrumb
+  // that earlier code paths might have left behind, so the dashboard banner
+  // and resume guards stay accurate.
+  useEffect(() => {
+    try { localStorage.removeItem('titanpulse_active_session') } catch { /* noop */ }
+  }, [])
 
   const [mood, setMood] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)

@@ -396,6 +396,7 @@ const pt = {
   // ─── Session / Timer ───
   session: {
     activeSession: 'Sessão Ativa',
+    session: 'Sessão',
     set: 'Série',
     of: 'de',
     reps: 'reps',

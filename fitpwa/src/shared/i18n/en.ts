@@ -399,6 +399,7 @@ const en = {
   // ─── Session / Timer ───
   session: {
     activeSession: 'Active Session',
+    session: 'Session',
     set: 'Set',
     of: 'of',
     reps: 'reps',

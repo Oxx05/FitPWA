@@ -31,17 +31,29 @@ const itemVariants = {
 
 export function Dashboard() {
   const { profile } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [hasActiveSession, setHasActiveSession] = useState(false)
 
   useEffect(() => {
-    const raw = localStorage.getItem('titanpulse_active_session')
-    setHasActiveSession(!!raw)
+    const checkSession = () => {
+      const raw = localStorage.getItem('titanpulse_active_session')
+      setHasActiveSession(!!raw)
+    }
+    checkSession()
+    // Recheck whenever this tab regains focus or storage changes from another tab,
+    // so the "active session" banner stays in sync with reality.
+    window.addEventListener('focus', checkSession)
+    window.addEventListener('storage', checkSession)
+    return () => {
+      window.removeEventListener('focus', checkSession)
+      window.removeEventListener('storage', checkSession)
+    }
   }, [])
 
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
   const firstName = profile?.full_name?.split(' ')[0] || t('common.athlete')
+  const dateLocale = i18n.language === 'en' ? 'en-US' : 'pt-PT'
 
   return (
     <motion.div
@@ -64,7 +76,7 @@ export function Dashboard() {
         <div className="relative z-10 flex justify-between items-start gap-4">
           <div className="min-w-0">
             <p className="text-ink-dim font-mono text-[11px] tracking-tightest uppercase mb-2">
-              {new Date().toLocaleDateString(t('common.locale', { defaultValue: 'pt-PT' }), { weekday: 'long', day: '2-digit', month: 'short' })}
+              {new Date().toLocaleDateString(dateLocale, { weekday: 'long', day: '2-digit', month: 'short' })}
             </p>
             <h1 className="text-display text-5xl md:text-7xl text-white tracking-crush leading-[0.85]">
               {t('dashboard.hi')},<br />
