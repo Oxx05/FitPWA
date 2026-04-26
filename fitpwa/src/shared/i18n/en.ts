@@ -663,6 +663,7 @@ const en = {
   // ─── Progress ───
   progress: {
     title: 'Your Progress',
+    quickSession: 'Quick Workout',
     weeklyVolume: 'Weekly Volume',
     monthlyVolume: 'Monthly Volume',
     personalRecords: 'Personal Records',
@@ -720,6 +721,18 @@ const en = {
   premium: {
     title: 'RepTrack PRO',
     subtitle: 'Unlock the full potential of your training.',
+    heroTitle: 'Take your training to the next level.',
+    heroDescPre: 'Join over',
+    heroDescCount: '1,000+',
+    heroDescPost: 'athletes already maximising their results.',
+    whyPro: 'Why go PRO?',
+    feature: 'Feature',
+    free: 'Free',
+    exclusiveAdvantages: 'Exclusive Perks',
+    annualPlan: 'Annual Plan',
+    save40: 'Save 40% annually',
+    billedAnnually: 'Billed annually ({{price}})',
+    redirectingMock: 'Redirecting to checkout... (Mock)',
     feature1: 'Advanced statistics',
     feature2: 'Unlimited plans',
     feature3: 'Detailed muscle analysis',
@@ -778,6 +791,7 @@ const en = {
   gamification: {
     levelUp: 'LEVEL UP!',
     newLevel: 'Level {{level}}',
+    reachedLevel: 'You reached level',
     achievementUnlocked: 'Achievement Unlocked',
     listTitle: 'Achievements & Medals',
     unlocked: 'Unlocked',

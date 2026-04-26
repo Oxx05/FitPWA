@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2, Heart, Pencil, Trash2, AlertCircle } from 'lucide-react'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
@@ -86,15 +86,29 @@ export function WorkoutsList() {
     }
   }
   
+  // Re-evaluate the active-session breadcrumb on focus / storage events so
+  // this list stays in sync after the user finishes a workout in another tab
+  // or comes back from the summary screen.
+  const [activeSessionTick, setActiveSessionTick] = useState(0)
+  useEffect(() => {
+    const onChange = () => setActiveSessionTick((n) => n + 1)
+    window.addEventListener('focus', onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener('focus', onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [])
+
   const activeSession = useMemo(() => {
     const raw = localStorage.getItem('titanpulse_active_session')
     if (!raw) return null
     try {
       return JSON.parse(raw)
-    } catch (e) {
+    } catch {
       return null
     }
-  }, [])
+  }, [activeSessionTick])
 
   const workoutOptions = [
     {

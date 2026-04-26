@@ -665,6 +665,7 @@ const pt = {
   // ─── Progress ───
   progress: {
     title: 'O Teu Progresso',
+    quickSession: 'Treino Rápido',
     weeklyVolume: 'Volume Semanal',
     monthlyVolume: 'Volume Mensal',
     personalRecords: 'Recordes Pessoais',
@@ -722,6 +723,18 @@ const pt = {
   premium: {
     title: 'RepTrack PRO',
     subtitle: 'Desbloqueia todo o potencial do teu treino.',
+    heroTitle: 'Leva o teu treino para o nível seguinte.',
+    heroDescPre: 'Junta-te a mais de',
+    heroDescCount: '1.000+',
+    heroDescPost: 'atletas que já estão a maximizar os seus resultados.',
+    whyPro: 'Porquê ser PRO?',
+    feature: 'Funcionalidade',
+    free: 'Grátis',
+    exclusiveAdvantages: 'Vantagens Exclusivas',
+    annualPlan: 'Plano Anual',
+    save40: 'Poupas 40% anualmente',
+    billedAnnually: 'Faturado anualmente ({{price}})',
+    redirectingMock: 'A redirecionar para o checkout... (Mock)',
     feature1: 'Estatísticas avançadas',
     feature2: 'Planos ilimitados',
     feature3: 'Análise muscular detalhada',
@@ -780,6 +793,8 @@ const pt = {
   gamification: {
     levelUp: 'Subiste de Nível!',
     newLevel: 'Nível {{level}}',
+    reachedLevel: 'Atingiste o nível',
+    rewardUnlocked: 'Nova recompensa desbloqueada!',
     achievementUnlocked: 'Conquista Desbloqueada!',
     listTitle: 'Conquistas & Medalhas',
     unlocked: 'Desbloqueadas',
