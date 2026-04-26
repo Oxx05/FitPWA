@@ -41,7 +41,7 @@ export function Dashboard() {
   }, [])
 
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
-  const firstName = profile?.full_name?.split(' ')[0] || t('common.athlete', 'Atleta')
+  const firstName = profile?.full_name?.split(' ')[0] || t('common.athlete')
 
   return (
     <motion.div
@@ -64,14 +64,14 @@ export function Dashboard() {
         <div className="relative z-10 flex justify-between items-start gap-4">
           <div className="min-w-0">
             <p className="text-ink-dim font-mono text-[11px] tracking-tightest uppercase mb-2">
-              {new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'short' })}
+              {new Date().toLocaleDateString(t('common.locale', { defaultValue: 'pt-PT' }), { weekday: 'long', day: '2-digit', month: 'short' })}
             </p>
             <h1 className="text-display text-5xl md:text-7xl text-white tracking-crush leading-[0.85]">
-              OLÁ,<br />
+              {t('dashboard.hi')},<br />
               <span className="text-primary">{firstName.toUpperCase()}</span>
             </h1>
             <p className="text-ink-muted mt-3 max-w-sm">
-              {t('dashboard.readyForWorkout', 'Pronto para o próximo treino?')}
+              {t('dashboard.readyForWorkout')}
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export function Dashboard() {
               <div className="flex items-center gap-1.5 mb-1.5">
                 <TrendingUp className="w-3.5 h-3.5 text-primary" />
                 <span className="text-primary font-bold text-[11px] uppercase tracking-tightest">
-                  {t('common.level', 'Nível')} {profile?.level || 1}
+                  {t('common.level')} {profile?.level || 1}
                 </span>
               </div>
               <div className="w-24 h-1.5 bg-surface-300 rounded-full overflow-hidden">
@@ -115,10 +115,10 @@ export function Dashboard() {
             </div>
             <div>
               <p className="text-white font-bold text-sm uppercase tracking-tightest">
-                {t('dashboard.activeSessionBanner', 'Sessão ativa')}
+                {t('dashboard.activeSessionBanner')}
               </p>
               <p className="text-primary text-xs font-bold">
-                {t('dashboard.continueWorkout', 'Continuar treino')} →
+                {t('dashboard.continueWorkout')} →
               </p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function Dashboard() {
           <div className="flex items-center gap-2 mb-3">
             <Flame className="w-4 h-4 text-orange-400" />
             <h3 className="text-ink-muted font-bold text-[11px] uppercase tracking-tightest">
-              {t('dashboard.currentStreak', 'Streak atual')}
+              {t('dashboard.currentStreak')}
             </h3>
           </div>
           <div className="flex items-baseline gap-2">
@@ -149,7 +149,7 @@ export function Dashboard() {
               {profile?.login_streak || 0}
             </span>
             <span className="text-orange-400 font-bold uppercase text-[10px] tracking-tightest">
-              {t('common.days', 'dias')} 🔥
+              {t('common.days')} 🔥
             </span>
           </div>
         </motion.div>
@@ -164,21 +164,21 @@ export function Dashboard() {
               <Zap className="w-4 h-4" />
             </div>
             <h3 className="text-ink-muted font-bold text-[11px] uppercase tracking-tightest">
-              {t('dashboard.todayWorkout', 'Treino de hoje')}
+              {t('dashboard.todayWorkout')}
             </h3>
           </div>
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div>
               <h4 className="text-display text-3xl md:text-4xl text-primary leading-none">
-                {t('dashboard.selectPlan', 'Escolher plano').toUpperCase()}
+                {t('dashboard.selectPlan').toUpperCase()}
               </h4>
               <p className="text-sm text-ink-muted mt-1">
-                {t('dashboard.chooseSession', 'Seleciona a tua próxima sessão')}
+                {t('dashboard.chooseSession')}
               </p>
             </div>
             <Link to="/workouts" className="shrink-0">
               <Button size="lg">
-                {t('dashboard.startWorkout', 'Começar')} <ArrowRight className="w-4 h-4" />
+                {t('dashboard.startWorkout')} <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
@@ -202,10 +202,10 @@ export function Dashboard() {
               <Ruler className="w-7 h-7" strokeWidth={2.2} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="badge-tag border-primary/30 text-primary mb-1.5">New</p>
-              <h3 className="text-display text-2xl text-white leading-none">BENCH ANGLE METER</h3>
+              <p className="badge-tag border-primary/30 text-primary mb-1.5">{t('dashboard.badgeNew')}</p>
+              <h3 className="text-display text-2xl text-white leading-none">{t('dashboard.benchAngleCardTitle')}</h3>
               <p className="text-ink-muted text-sm mt-1">
-                Mede o ângulo do banco com o telemóvel — 15°, 30°, 45°…
+                {t('dashboard.benchAngleCardDesc')}
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-ink-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
@@ -245,15 +245,15 @@ export function Dashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-white font-display text-2xl leading-none tracking-tightest">
-                    {t('dashboard.unlockPro', 'DESBLOQUEIA PRO')}
+                    {t('dashboard.unlockPro').toUpperCase()}
                   </p>
                   <p className="text-ink-muted text-xs mt-1">
-                    {t('dashboard.proDescription', 'Coach IA, planos avançados e mais.')}
+                    {t('dashboard.proDescription')}
                   </p>
                 </div>
               </div>
               <Button size="sm" variant="accent" className="shrink-0">
-                {t('dashboard.learnMore', 'Saber mais')}
+                {t('dashboard.learnMore')}
               </Button>
             </div>
           </Link>

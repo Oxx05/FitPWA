@@ -7,6 +7,7 @@ import { OfflineSyncService } from '@/shared/lib/offlineSync'
 import { motion } from 'framer-motion'
 
 function SyncStatus() {
+  const { t } = useTranslation()
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [pendingCount, setPendingCount] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -45,11 +46,11 @@ function SyncStatus() {
     return (
       <div
         role="status"
-        aria-label="Offline"
+        aria-label={t('nav.offline')}
         className="flex items-center gap-1.5 px-3 py-1 bg-error/10 border border-error/30 rounded-full backdrop-blur-md"
       >
         <WifiOff className="w-3.5 h-3.5 text-error" aria-hidden="true" />
-        <span className="text-[10px] font-bold text-error uppercase tracking-tightest">Offline</span>
+        <span className="text-[10px] font-bold text-error uppercase tracking-tightest">{t('nav.offline')}</span>
       </div>
     )
   }
@@ -58,12 +59,12 @@ function SyncStatus() {
     return (
       <div
         role="status"
-        aria-label={`${pendingCount} ${pendingCount === 1 ? 'item pendente' : 'itens pendentes'}`}
+        aria-label={t(pendingCount === 1 ? 'nav.pendingItemAria' : 'nav.pendingItemsAria', { count: pendingCount })}
         className="flex items-center gap-1.5 px-3 py-1 bg-warn/10 border border-warn/30 rounded-full backdrop-blur-md"
       >
         <RefreshCw className={`w-3.5 h-3.5 text-warn ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
         <span className="text-[10px] font-bold text-warn uppercase tracking-tightest">
-          {pendingCount} {pendingCount === 1 ? 'pendente' : 'pendentes'}
+          {pendingCount} {pendingCount === 1 ? t('nav.pendingOne') : t('nav.pendingMany')}
         </span>
       </div>
     )
@@ -73,11 +74,11 @@ function SyncStatus() {
     return (
       <div
         role="status"
-        aria-label="Sincronizado"
+        aria-label={t('nav.synced')}
         className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/30 rounded-full backdrop-blur-md"
       >
         <CheckCircle2 className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-bold text-primary uppercase tracking-tightest">Sincronizado</span>
+        <span className="text-[10px] font-bold text-primary uppercase tracking-tightest">{t('nav.synced')}</span>
       </div>
     )
   }
@@ -97,25 +98,25 @@ export function Navbar() {
   if (hideNavbar) return null
 
   const navItems = [
-    { label: t('nav.home', 'Home'), path: '/dashboard', icon: <Home className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
-    { label: t('nav.workouts', 'Treinos'), path: '/workouts', icon: <Dumbbell className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
-    { label: t('nav.social', 'Social'), path: '/friends', icon: <Users className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
-    { label: t('nav.progress', 'Progresso'), path: '/progress', icon: <BarChart2 className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
-    { label: t('nav.profile', 'Perfil'), path: '/profile', icon: <User className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
+    { label: t('nav.home'), path: '/dashboard', icon: <Home className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
+    { label: t('nav.workouts'), path: '/workouts', icon: <Dumbbell className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
+    { label: t('nav.social'), path: '/friends', icon: <Users className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
+    { label: t('nav.progress'), path: '/progress', icon: <BarChart2 className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
+    { label: t('nav.profile'), path: '/profile', icon: <User className="w-[22px] h-[22px]" strokeWidth={2.2} /> },
   ]
 
   return (
     <>
       {/* ========== Desktop Sidebar ========== */}
       <nav
-        aria-label="Navegação principal"
+        aria-label={t('nav.mainNav')}
         className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-24 z-40 items-center py-8 gap-7
                    bg-surface-300/80 backdrop-blur-xl border-r border-white/[0.05]"
       >
         {/* Logo */}
         <Link
           to="/dashboard"
-          aria-label="RepTrack — início"
+          aria-label={t('nav.appHome')}
           className="relative w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-black
                      shadow-[0_0_24px_-4px_theme(colors.primary.glow)] transition-transform hover:scale-105"
         >
@@ -160,7 +161,7 @@ export function Navbar() {
         {!profile?.is_premium && (
           <Link
             to="/premium"
-            aria-label="Upgrade para Premium"
+            aria-label={t('nav.upgradePremium')}
             className="mt-auto p-3 text-pr transition-transform hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <Crown className="w-6 h-6" aria-hidden="true" />
@@ -177,7 +178,7 @@ export function Navbar() {
 
       {/* ========== Mobile Bottom Bar ========== */}
       <nav
-        aria-label="Navegação principal"
+        aria-label={t('nav.mainNav')}
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center px-2 pt-2
                    bg-surface-300/85 backdrop-blur-xl border-t border-white/[0.05]"
         style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }}

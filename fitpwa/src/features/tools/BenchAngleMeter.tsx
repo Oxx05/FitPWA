@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -17,44 +18,34 @@ import { Button } from '@/shared/components/Button'
 // ============================================================
 // Bench Angle Meter
 // ------------------------------------------------------------
-// Use the phone (laid flat against the bench backrest, screen
-// facing the lifter) as a digital inclinometer. Reads the
-// DeviceOrientationEvent.beta value (front-back tilt) and maps
-// it to bench-press incline degrees (0° = flat, 90° = upright).
-//
-// Common preset targets:
-//   • Flat            =  0°
-//   • Low Incline     = 15°
-//   • Standard Incline= 30°
-//   • Steep Incline   = 45°
-//   • Shoulder Press  = 75°  (near-vertical)
-//   • Decline         = -15° (negative)
-//
-// Tolerance ±2° → green pulse + haptic + optional voice cue.
+// Use the phone as a digital inclinometer for the bench
+// backrest. Reads DeviceOrientationEvent.beta and maps it
+// to bench-press incline degrees.
 // ============================================================
 
 interface IPreset {
   id: string
-  label: string
+  labelKey: string
+  descKey: string
   angle: number
-  description: string
 }
 
 const PRESETS: IPreset[] = [
-  { id: 'decline', label: 'Decline', angle: -15, description: 'Lower-chest emphasis' },
-  { id: 'flat', label: 'Flat', angle: 0, description: 'Mid-chest, balanced' },
-  { id: 'low', label: 'Low Incline', angle: 15, description: 'Mid/upper chest' },
-  { id: 'std', label: 'Standard Incline', angle: 30, description: 'Classic upper chest' },
-  { id: 'steep', label: 'Steep Incline', angle: 45, description: 'Upper chest + delts' },
-  { id: 'shoulder', label: 'Shoulder Press', angle: 75, description: 'Near-vertical, delts' },
+  { id: 'decline', labelKey: 'tools.benchAngle.presets.decline', descKey: 'tools.benchAngle.presets.declineDesc', angle: -15 },
+  { id: 'flat', labelKey: 'tools.benchAngle.presets.flat', descKey: 'tools.benchAngle.presets.flatDesc', angle: 0 },
+  { id: 'low', labelKey: 'tools.benchAngle.presets.low', descKey: 'tools.benchAngle.presets.lowDesc', angle: 15 },
+  { id: 'std', labelKey: 'tools.benchAngle.presets.std', descKey: 'tools.benchAngle.presets.stdDesc', angle: 30 },
+  { id: 'steep', labelKey: 'tools.benchAngle.presets.steep', descKey: 'tools.benchAngle.presets.steepDesc', angle: 45 },
+  { id: 'shoulder', labelKey: 'tools.benchAngle.presets.shoulder', descKey: 'tools.benchAngle.presets.shoulderDesc', angle: 75 },
 ]
 
-const TOLERANCE = 2 // degrees of error considered "on target"
+const TOLERANCE = 2 // ±degrees considered "on target"
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied' | 'unsupported'
 
 export function BenchAngleMeter() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const [permission, setPermission] = useState<PermissionState>('idle')
   const [, setAngle] = useState<number>(0)
@@ -67,7 +58,6 @@ export function BenchAngleMeter() {
   const [showHelp, setShowHelp] = useState(false)
   const [hasAnnouncedOnTarget, setHasAnnouncedOnTarget] = useState(false)
 
-  // smoothing buffer
   const bufferRef = useRef<number[]>([])
   const lastSpokeRef = useRef<number>(0)
 
@@ -79,7 +69,6 @@ export function BenchAngleMeter() {
     }
     setPermission('requesting')
 
-    // iOS 13+ requires explicit permission
     const anyEvent = DeviceOrientationEvent as any
     if (typeof anyEvent.requestPermission === 'function') {
       try {
@@ -89,7 +78,6 @@ export function BenchAngleMeter() {
         setPermission('denied')
       }
     } else {
-      // Android / Desktop — assume granted
       setPermission('granted')
     }
   }, [])
@@ -98,14 +86,10 @@ export function BenchAngleMeter() {
     if (permission !== 'granted') return
 
     const handler = (e: DeviceOrientationEvent) => {
-      // beta = front-to-back tilt in degrees. Range typically -180..180
-      // When phone lies flat on its back, beta ≈ 0. When stood up
-      // vertically against a backrest, beta ≈ 90.
       if (e.beta == null) return
       const raw = e.beta
       const adjusted = raw - calibrationOffset
 
-      // Rolling average of last 6 samples for jitter reduction
       const buf = bufferRef.current
       buf.push(adjusted)
       if (buf.length > 6) buf.shift()
@@ -119,7 +103,7 @@ export function BenchAngleMeter() {
     return () => window.removeEventListener('deviceorientation', handler, true)
   }, [permission, calibrationOffset])
 
-  // ---------- On-target detection: haptic + voice ----------
+  // ---------- On-target detection ----------
   const delta = smoothedAngle - target.angle
   const absDelta = Math.abs(delta)
   const isOnTarget = absDelta <= TOLERANCE
@@ -128,20 +112,18 @@ export function BenchAngleMeter() {
     if (isLocked) return
 
     if (isOnTarget && !hasAnnouncedOnTarget) {
-      // Haptic
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 40])
 
-      // Voice
       if (voiceEnabled && Date.now() - lastSpokeRef.current > 2000) {
         lastSpokeRef.current = Date.now()
-        speak(`On target. ${Math.round(target.angle)} degrees.`)
+        speak(t('tools.benchAngle.voiceOnTarget', { angle: Math.round(target.angle) }))
       }
 
       setHasAnnouncedOnTarget(true)
     } else if (!isOnTarget && hasAnnouncedOnTarget) {
       setHasAnnouncedOnTarget(false)
     }
-  }, [isOnTarget, hasAnnouncedOnTarget, isLocked, target.angle, voiceEnabled])
+  }, [isOnTarget, hasAnnouncedOnTarget, isLocked, target.angle, voiceEnabled, t])
 
   function speak(text: string) {
     if (!('speechSynthesis' in window)) return
@@ -157,7 +139,6 @@ export function BenchAngleMeter() {
 
   // ---------- Actions ----------
   function handleCalibrate() {
-    // Whatever the phone is currently reading becomes the new "0"
     setCalibrationOffset((prev) => prev + smoothedAngle)
     bufferRef.current = []
     if ('vibrate' in navigator) navigator.vibrate(60)
@@ -183,16 +164,11 @@ export function BenchAngleMeter() {
   const displayAngle = isLocked && lockedReading != null ? lockedReading : smoothedAngle
   const displayDelta = isLocked && lockedReading != null ? lockedReading - target.angle : delta
 
-  // Status colour for the giant readout
   const statusColor = isOnTarget
     ? 'text-primary'
     : absDelta < 5
     ? 'text-warn'
     : 'text-ink'
-
-  // ============================================================
-  // Render
-  // ============================================================
 
   if (permission === 'idle' || permission === 'requesting') {
     return (
@@ -221,12 +197,12 @@ export function BenchAngleMeter() {
       <div className="absolute inset-0 bg-grain opacity-30 pointer-events-none mix-blend-overlay" />
 
       <div className="relative z-10 p-4 md:p-8 max-w-3xl mx-auto pb-nav">
-        {/* ======= Top bar ======= */}
+        {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 rounded-xl hover:bg-white/5 transition"
-            aria-label="Voltar"
+            aria-label={t('tools.benchAngle.back')}
           >
             <ArrowLeft className="w-5 h-5 text-ink-muted" />
           </button>
@@ -235,36 +211,36 @@ export function BenchAngleMeter() {
             <button
               onClick={() => setVoiceEnabled((v) => !v)}
               className="p-2 rounded-xl hover:bg-white/5 transition text-ink-muted hover:text-white"
-              aria-label={voiceEnabled ? 'Silenciar voz' : 'Ativar voz'}
+              aria-label={voiceEnabled ? t('tools.benchAngle.voiceMute') : t('tools.benchAngle.voiceUnmute')}
             >
               {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setShowHelp((s) => !s)}
               className="p-2 rounded-xl hover:bg-white/5 transition text-ink-muted hover:text-white"
-              aria-label="Ajuda"
+              aria-label={t('tools.benchAngle.help')}
             >
               <Info className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* ======= Title ======= */}
+        {/* Title */}
         <header className="mb-8">
           <p className="badge-tag border-primary/30 text-primary mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Bench Tools
+            {t('tools.benchAngle.bannerTag')}
           </p>
           <h1 className="text-display text-5xl md:text-7xl text-white mb-2">
-            BENCH<br />
-            <span className="text-primary">ANGLE</span>
+            {t('tools.benchAngle.title')}<br />
+            <span className="text-primary">{t('tools.benchAngle.titleAccent')}</span>
           </h1>
           <p className="text-ink-muted text-sm max-w-md">
-            Encosta o telemóvel ao banco com o ecrã virado para ti. Ajusta o banco até atingires o ângulo alvo.
+            {t('tools.benchAngle.pageDescription')}
           </p>
         </header>
 
-        {/* ======= Help panel ======= */}
+        {/* Help panel */}
         <AnimatePresence>
           {showHelp && (
             <motion.div
@@ -274,29 +250,37 @@ export function BenchAngleMeter() {
               className="overflow-hidden mb-6"
             >
               <div className="card-surface p-5 text-sm text-ink-muted leading-relaxed space-y-2">
-                <p className="text-white font-bold mb-2">Como usar:</p>
+                <p className="text-white font-bold mb-2">{t('tools.benchAngle.helpHowTo')}</p>
                 <ol className="list-decimal list-inside space-y-1.5">
-                  <li>Coloca o banco aproximadamente no ângulo desejado.</li>
-                  <li>Encosta o telemóvel <strong className="text-white">vertical</strong>, com a parte de trás contra o encosto.</li>
-                  <li>Espera 1 segundo até a leitura estabilizar.</li>
-                  <li>Ajusta o banco até veres o anel <span className="text-primary font-bold">verde</span> e ouvires o sinal.</li>
+                  <li>{t('tools.benchAngle.helpStep1')}</li>
+                  <li>
+                    {t('tools.benchAngle.helpStep2Pre')}{' '}
+                    <strong className="text-white">{t('tools.benchAngle.helpStep2Bold')}</strong>
+                    {t('tools.benchAngle.helpStep2Post')}
+                  </li>
+                  <li>{t('tools.benchAngle.helpStep3')}</li>
+                  <li>
+                    {t('tools.benchAngle.helpStep4Pre')}{' '}
+                    <span className="text-primary font-bold">{t('tools.benchAngle.helpStep4Bold')}</span>{' '}
+                    {t('tools.benchAngle.helpStep4Post')}
+                  </li>
                 </ol>
                 <p className="pt-2 text-ink-dim italic">
-                  Dica: se o telemóvel não estiver perfeitamente plano contra o banco, usa "Calibrar" depois de o encostar para reiniciar a leitura.
+                  {t('tools.benchAngle.helpTip')}
                 </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ======= Main gauge ======= */}
+        {/* Main gauge */}
         <div className="card-surface bg-atmos with-grain relative p-6 md:p-10 mb-6 overflow-hidden">
-          <Gauge angle={displayAngle} target={target.angle} isOnTarget={isOnTarget} isLocked={isLocked} />
+          <Gauge angle={displayAngle} target={target.angle} isOnTarget={isOnTarget} isLocked={isLocked} onTargetLabel={t('tools.benchAngle.onTarget')} lockLabel={t('tools.benchAngle.lockBadge')} />
 
           {/* Numeric readout */}
           <div className="text-center mt-2">
             <div className="text-ink-dim text-[10px] font-bold uppercase tracking-tightest mb-1">
-              {isLocked ? 'Leitura travada' : 'Ângulo medido'}
+              {isLocked ? t('tools.benchAngle.readingLocked') : t('tools.benchAngle.angleMeasured')}
             </div>
             <div
               data-numeric
@@ -310,7 +294,7 @@ export function BenchAngleMeter() {
             <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-200 border border-white/[0.06]">
               <Target className="w-3.5 h-3.5 text-ink-muted" />
               <span className="text-[11px] font-bold uppercase tracking-tightest text-ink-muted">
-                Alvo {target.angle >= 0 ? '+' : ''}{target.angle}° → diff
+                {t('tools.benchAngle.target')} {target.angle >= 0 ? '+' : ''}{target.angle}° → {t('tools.benchAngle.diff')}
               </span>
               <span
                 data-numeric
@@ -331,13 +315,13 @@ export function BenchAngleMeter() {
               className="h-12"
             >
               {isLocked ? (
-                <><Unlock className="w-4 h-4" /> Destravar</>
+                <><Unlock className="w-4 h-4" /> {t('tools.benchAngle.unlock')}</>
               ) : (
-                <><Lock className="w-4 h-4" /> Travar leitura</>
+                <><Lock className="w-4 h-4" /> {t('tools.benchAngle.lock')}</>
               )}
             </Button>
             <Button variant="outline" onClick={handleCalibrate} className="h-12">
-              <Target className="w-4 h-4" /> Calibrar zero
+              <Target className="w-4 h-4" /> {t('tools.benchAngle.calibrate')}
             </Button>
           </div>
           {calibrationOffset !== 0 && (
@@ -345,14 +329,14 @@ export function BenchAngleMeter() {
               onClick={handleResetCalibration}
               className="block mx-auto mt-3 text-[11px] text-ink-dim hover:text-white underline underline-offset-2"
             >
-              Calibração: {calibrationOffset.toFixed(1)}° aplicada — repor
+              {t('tools.benchAngle.calibrationApplied', { value: calibrationOffset.toFixed(1) })}
             </button>
           )}
         </div>
 
-        {/* ======= Preset targets ======= */}
+        {/* Preset targets */}
         <div>
-          <h2 className="text-display text-2xl text-white mb-3">Predefinições</h2>
+          <h2 className="text-display text-2xl text-white mb-3">{t('tools.benchAngle.presetsTitle')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
             {PRESETS.map((p) => {
               const active = p.id === target.id
@@ -379,10 +363,10 @@ export function BenchAngleMeter() {
                     <span className={`text-sm ${active ? 'text-primary' : 'text-ink-muted'}`}>°</span>
                   </div>
                   <div className={`text-[12px] font-bold uppercase tracking-tightest mt-1 ${active ? 'text-white' : 'text-ink'}`}>
-                    {p.label}
+                    {t(p.labelKey)}
                   </div>
                   <div className="text-[10px] text-ink-dim mt-0.5 leading-tight">
-                    {p.description}
+                    {t(p.descKey)}
                   </div>
                 </button>
               )
@@ -391,7 +375,7 @@ export function BenchAngleMeter() {
         </div>
 
         <p className="text-center text-[11px] text-ink-dim mt-8 max-w-md mx-auto">
-          Os sensores do telemóvel têm uma margem típica de ±1°. Para máxima precisão, calibra com o telemóvel encostado plano antes de ajustares o banco.
+          {t('tools.benchAngle.precisionNote')}
         </p>
       </div>
     </div>
@@ -399,7 +383,7 @@ export function BenchAngleMeter() {
 }
 
 // ============================================================
-// Visual gauge — circular dial with target arc
+// Visual gauge
 // ============================================================
 
 function Gauge({
@@ -407,19 +391,21 @@ function Gauge({
   target,
   isOnTarget,
   isLocked,
+  onTargetLabel,
+  lockLabel,
 }: {
   angle: number
   target: number
   isOnTarget: boolean
   isLocked: boolean
+  onTargetLabel: string
+  lockLabel: string
 }) {
-  // Map angle -30..90 to ring rotation
   const clamped = Math.max(-30, Math.min(90, angle))
   const targetClamped = Math.max(-30, Math.min(90, target))
 
   return (
     <div className="relative aspect-square max-w-[280px] mx-auto">
-      {/* Outer ticks */}
       <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full -rotate-90">
         <defs>
           <linearGradient id="gaugeGradient" x1="0" y1="0" x2="1" y2="1">
@@ -446,17 +432,10 @@ function Gauge({
           )
         })}
 
-        {/* Background circle */}
-        <circle
-          cx="100"
-          cy="100"
-          r="78"
-          fill="none"
-          stroke="rgba(255,255,255,0.04)"
-          strokeWidth="14"
-        />
+        {/* Background ring */}
+        <circle cx="100" cy="100" r="78" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="14" />
 
-        {/* Progress arc — from -30 (start) to current angle */}
+        {/* Progress arc */}
         <circle
           cx="100"
           cy="100"
@@ -470,7 +449,7 @@ function Gauge({
           opacity={isOnTarget ? 1 : 0.6}
         />
 
-        {/* Target marker — small notch on the ring */}
+        {/* Target marker */}
         <line
           x1="100"
           y1="14"
@@ -497,29 +476,24 @@ function Gauge({
         >
           {isOnTarget ? (
             <div className="text-primary text-[10px] font-bold uppercase tracking-tightest">
-              On target
+              {onTargetLabel}
             </div>
           ) : (
             <Smartphone
-              className={`w-10 h-10 ${absDeltaIcon(angle - target) ? 'text-warn' : 'text-ink-dim'}`}
+              className={`w-10 h-10 ${Math.abs(angle - target) < 5 ? 'text-warn' : 'text-ink-dim'}`}
               style={{ transform: `rotate(${angle * 0.6}deg)` }}
             />
           )}
         </motion.div>
       </div>
 
-      {/* Lock indicator */}
       {isLocked && (
         <div className="absolute top-2 right-2 bg-accent text-white text-[10px] font-bold uppercase tracking-tightest px-2 py-1 rounded-full flex items-center gap-1">
-          <Lock className="w-3 h-3" /> Lock
+          <Lock className="w-3 h-3" /> {lockLabel}
         </div>
       )}
     </div>
   )
-}
-
-function absDeltaIcon(d: number): boolean {
-  return Math.abs(d) < 5
 }
 
 // ============================================================
@@ -535,37 +509,40 @@ function Gate({
   loading: boolean
   onBack: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="min-h-screen bg-background flex flex-col p-6 max-w-md mx-auto">
       <button
         onClick={onBack}
         className="self-start p-2 -ml-2 rounded-xl hover:bg-white/5 transition mb-8"
-        aria-label="Voltar"
+        aria-label={t('tools.benchAngle.back')}
       >
         <ArrowLeft className="w-5 h-5 text-ink-muted" />
       </button>
 
       <div className="flex-1 flex flex-col justify-center">
-        <p className="badge-tag border-primary/30 text-primary mb-4 self-start">New tool</p>
+        <p className="badge-tag border-primary/30 text-primary mb-4 self-start">
+          {t('tools.benchAngle.newToolTag')}
+        </p>
         <h1 className="text-display text-5xl text-white mb-3">
-          BENCH<br /><span className="text-primary">ANGLE</span> METER
+          {t('tools.benchAngle.title')}<br /><span className="text-primary">{t('tools.benchAngle.titleAccent')}</span> {t('tools.benchAngle.titleSuffix')}
         </h1>
         <p className="text-ink-muted mb-8 leading-relaxed">
-          Transforma o teu telemóvel num inclinómetro digital. Mede e ajusta o ângulo do banco com precisão, antes de cada série.
+          {t('tools.benchAngle.gateDescription')}
         </p>
 
         <div className="card-surface p-5 mb-6 space-y-3">
-          <Bullet num="01" text="Encosta o telemóvel ao banco com o ecrã virado para ti" />
-          <Bullet num="02" text="Escolhe um ângulo alvo (15°, 30°, 45°…)" />
-          <Bullet num="03" text="Ajusta o banco até veres o anel verde e ouvires o sinal" />
+          <Bullet num="01" text={t('tools.benchAngle.gateStep1')} />
+          <Bullet num="02" text={t('tools.benchAngle.gateStep2')} />
+          <Bullet num="03" text={t('tools.benchAngle.gateStep3')} />
         </div>
 
         <Button onClick={onAllow} isLoading={loading} size="lg" className="w-full">
-          Permitir acesso aos sensores
+          {t('tools.benchAngle.gateAllow')}
         </Button>
 
         <p className="text-[11px] text-ink-dim text-center mt-4">
-          O RepTrack só usa os sensores enquanto este ecrã estiver aberto.
+          {t('tools.benchAngle.gatePrivacy')}
         </p>
       </div>
     </div>
@@ -590,12 +567,13 @@ function Unsupported({
   onBack: () => void
   onRetry: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="min-h-screen bg-background flex flex-col p-6 max-w-md mx-auto">
       <button
         onClick={onBack}
         className="self-start p-2 -ml-2 rounded-xl hover:bg-white/5 transition mb-8"
-        aria-label="Voltar"
+        aria-label={t('tools.benchAngle.back')}
       >
         <ArrowLeft className="w-5 h-5 text-ink-muted" />
       </button>
@@ -605,16 +583,16 @@ function Unsupported({
           <AlertTriangle className="w-8 h-8 text-warn" />
         </div>
         <h1 className="text-display text-4xl text-white mb-3">
-          {reason === 'denied' ? 'Acesso negado' : 'Não suportado'}
+          {reason === 'denied' ? t('tools.benchAngle.deniedTitle') : t('tools.benchAngle.unsupportedTitle')}
         </h1>
         <p className="text-ink-muted mb-8 leading-relaxed">
           {reason === 'denied'
-            ? 'Para usar o medidor de ângulo, precisamos de permissão para aceder aos sensores de movimento. Verifica as definições do teu browser.'
-            : 'O teu dispositivo ou browser não expõe os sensores de movimento necessários. Tenta abrir esta página no Safari (iOS) ou Chrome (Android).'}
+            ? t('tools.benchAngle.deniedDescription')
+            : t('tools.benchAngle.unsupportedDescription')}
         </p>
         {reason === 'denied' && (
           <Button onClick={onRetry} size="lg" className="w-full">
-            Tentar novamente
+            {t('tools.benchAngle.retry')}
           </Button>
         )}
       </div>
