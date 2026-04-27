@@ -25,7 +25,7 @@ export interface PetInfo {
 }
 
 export const PET_CATALOG: Record<PetModel, PetInfo> = {
-  buff_slime:     { name: 'Buff Slime',     unlockLevel: 1,  color: '#00ff87', accentColor: '#00cc6a' },
+  buff_slime:     { name: 'Buff Slime',     unlockLevel: 1,  color: '#c6ff3d', accentColor: '#b1ed1f' },
   power_bunny:    { name: 'Power Bunny',    unlockLevel: 2,  color: '#f472b6', accentColor: '#ec4899' },
   gym_cat:        { name: 'Gym Cat',        unlockLevel: 4,  color: '#f59e0b', accentColor: '#d97706' },
   turbo_tortoise: { name: 'Turbo Tortoise', unlockLevel: 6,  color: '#34d399', accentColor: '#059669' },

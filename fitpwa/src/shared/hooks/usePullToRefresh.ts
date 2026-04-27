@@ -57,7 +57,7 @@ export function usePullToRefresh({ onRefresh, scrollRef }: Options) {
       'height:36px',
       'border-radius:50%',
       'background:#1a1a1a',
-      'border:2px solid #00ff87',
+      'border:2px solid #c6ff3d',
       'display:flex',
       'align-items:center',
       'justify-content:center',
@@ -69,7 +69,7 @@ export function usePullToRefresh({ onRefresh, scrollRef }: Options) {
 
     // Simple SVG arrow-down icon
     el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-      stroke="#00ff87" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      stroke="#c6ff3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="6 9 12 15 18 9"></polyline>
     </svg>`
 
@@ -118,7 +118,7 @@ export function usePullToRefresh({ onRefresh, scrollRef }: Options) {
     // Spin the indicator while refreshing
     if (indicatorRef.current) {
       indicatorRef.current.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-        stroke="#00ff87" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        stroke="#c6ff3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
         style="animation:spin 0.8s linear infinite">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
@@ -134,7 +134,7 @@ export function usePullToRefresh({ onRefresh, scrollRef }: Options) {
       setIndicatorOffset(0)
       if (indicatorRef.current) {
         indicatorRef.current.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="#00ff87" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          stroke="#c6ff3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>`
       }

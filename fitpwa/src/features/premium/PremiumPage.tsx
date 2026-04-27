@@ -26,7 +26,7 @@ export function PremiumPage() {
 
   const handleSubscribe = () => {
     if (!user) return
-    showToast('A redirecionar para o checkout... (Mock)', 'info')
+    showToast(t('premium.redirectingMock'), 'info')
     createCheckoutSession(user.id)
   }
 
@@ -39,11 +39,15 @@ export function PremiumPage() {
           animate={{ scale: 1, opacity: 1 }}
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold uppercase tracking-widest"
         >
-          <Crown className="w-4 h-4" /> RepTrack PRO
+          <Crown className="w-4 h-4" /> {t('premium.title')}
         </motion.div>
-        <h1 className="text-4xl md:text-6xl font-black text-white">Leva o teu treino para o nível seguinte.</h1>
-        <p className="text-gray-400 text-lg max-w-2xl mx-auto italic">
-          Junta-te a mais de <span className="text-primary font-black">1.000+</span> atletas que já estão a maximizar os seus resultados.
+        <h1 className="text-display text-4xl md:text-6xl text-white tracking-crush">
+          {t('premium.heroTitle')}
+        </h1>
+        <p className="text-ink-muted text-lg max-w-2xl mx-auto">
+          {t('premium.heroDescPre')}{' '}
+          <span className="text-primary font-black">{t('premium.heroDescCount')}</span>{' '}
+          {t('premium.heroDescPost')}
         </p>
       </div>
 
@@ -51,27 +55,29 @@ export function PremiumPage() {
         {/* Features & Comparison */}
         <div className="space-y-10">
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tighter italic">Porquê ser PRO?</h2>
+            <h2 className="text-display text-3xl text-white">
+              {t('premium.whyPro').toUpperCase()}
+            </h2>
             <div className="overflow-hidden rounded-2xl border border-white/5 bg-surface-100/50">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="p-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Funcionalidade</th>
-                    <th className="p-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Grátis</th>
-                    <th className="p-4 text-xs font-bold text-primary uppercase tracking-widest text-center">PRO</th>
+                    <th className="p-4 text-xs font-bold text-ink-muted uppercase tracking-tightest">{t('premium.feature')}</th>
+                    <th className="p-4 text-xs font-bold text-ink-muted uppercase tracking-tightest text-center">{t('premium.free')}</th>
+                    <th className="p-4 text-xs font-bold text-primary uppercase tracking-tightest text-center">PRO</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {[
-                    { name: 'Histórico de Treinos', free: '7 dias', pro: 'Ilimitado' },
-                    { name: 'Backup Automático', free: <Shield className="w-4 h-4 mx-auto text-gray-600 opacity-20" />, pro: <Check className="w-4 h-4 mx-auto text-primary" /> },
-                    { name: 'Análise de Volume', free: 'Básico', pro: 'Avançado' },
-                    { name: 'Planos Exclusivos', free: '-', pro: 'Sim' },
-                    { name: 'Sem Publicidade', free: 'Não', pro: 'Sim' },
+                    { name: t('premium.rows.historyName'), free: t('premium.rows.historyFree'), pro: t('premium.rows.historyPro') },
+                    { name: t('premium.rows.backupName'), free: <Shield className="w-4 h-4 mx-auto text-ink-faint opacity-40" />, pro: <Check className="w-4 h-4 mx-auto text-primary" /> },
+                    { name: t('premium.rows.volumeName'), free: t('premium.rows.volumeFree'), pro: t('premium.rows.volumePro') },
+                    { name: t('premium.rows.plansName'), free: t('premium.rows.dash'), pro: t('premium.rows.yes') },
+                    { name: t('premium.rows.adsName'), free: t('premium.rows.no'), pro: t('premium.rows.yes') },
                   ].map((row, i) => (
                     <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="p-4 text-gray-300 font-medium">{row.name}</td>
-                      <td className="p-4 text-gray-500 text-center">{row.free}</td>
+                      <td className="p-4 text-ink font-medium">{row.name}</td>
+                      <td className="p-4 text-ink-dim text-center">{row.free}</td>
                       <td className="p-4 text-primary font-black text-center">{row.pro}</td>
                     </tr>
                   ))}
@@ -81,13 +87,15 @@ export function PremiumPage() {
           </div>
 
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tighter italic text-right">Vantagens Exclusivas</h2>
+            <h2 className="text-display text-3xl text-white text-right">
+              {t('premium.exclusiveAdvantages').toUpperCase()}
+            </h2>
             <ul className="space-y-4">
               {[
-                { icon: <Zap />, title: 'Análise de Volume Ilimitada', desc: 'Gráficos detalhados por grupo muscular.' },
-                { icon: <Shield />, title: 'Privacidade Total', desc: 'Backup seguro na nuvem.' },
+                { icon: <Zap />, title: t('premium.perks.volumeTitle'), desc: t('premium.perks.volumeDesc') },
+                { icon: <Shield />, title: t('premium.perks.privacyTitle'), desc: t('premium.perks.privacyDesc') },
               ].map((f, i) => (
-                <motion.li 
+                <motion.li
                   key={i}
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
@@ -99,7 +107,7 @@ export function PremiumPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-white">{f.title}</h4>
-                    <p className="text-gray-400 text-sm">{f.desc}</p>
+                    <p className="text-ink-muted text-sm">{f.desc}</p>
                   </div>
                 </motion.li>
               ))}
@@ -111,46 +119,49 @@ export function PremiumPage() {
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="bg-surface-200 border-2 border-primary rounded-3xl p-8 shadow-2xl shadow-primary/10 relative overflow-hidden group hover:shadow-primary/20 transition-all"
+          className="card-surface bg-atmos with-grain border-2 border-primary p-8 shadow-glow-primary relative overflow-hidden group"
         >
-          <div className="absolute top-0 right-0 bg-primary text-black text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-tighter">
-            Melhor Valor
+          <div className="absolute top-0 right-0 bg-primary text-black text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-tightest">
+            {t('premium.bestValue')}
           </div>
 
           {isPremium && (
-            <div className="absolute top-8 right-4 bg-primary text-black text-xs font-black px-2 py-1 rounded">
-              ATIVO
+            <div className="absolute top-8 right-4 bg-primary text-black text-xs font-black px-2 py-1 rounded uppercase tracking-tightest">
+              {t('premium.active')}
             </div>
           )}
-          
+
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-white mb-2 uppercase italic tracking-tighter">Plano Anual</h3>
+            <h3 className="text-display text-3xl text-white mb-2">
+              {t('premium.annualPlan').toUpperCase()}
+            </h3>
             <div className="flex items-baseline gap-1">
-              <span className="text-6xl font-black text-white group-hover:text-primary transition-colors">2.99€</span>
-              <span className="text-gray-400 font-bold">/mês</span>
+              <span data-numeric className="font-mono font-black text-6xl text-white group-hover:text-primary transition-colors">2.99€</span>
+              <span className="text-ink-muted font-bold">{t('premium.perMonth')}</span>
             </div>
-            <p className="text-primary text-sm mt-2 font-bold uppercase tracking-widest">Poupas 40% anualmente</p>
+            <p className="text-primary text-sm mt-2 font-bold uppercase tracking-tightest">{t('premium.save40')}</p>
           </div>
 
           <div className="space-y-4 mb-8">
-            {['Sem fidelização', '7 dias de teste grátis', 'Acesso em todos os teus dispositivos'].map((t, i) => (
-              <div key={i} className="flex items-center gap-2 text-gray-300">
+            {[t('premium.noCommitment'), t('premium.freeTrial'), t('premium.allDevices')].map((line, i) => (
+              <div key={i} className="flex items-center gap-2 text-ink">
                 <Check className="w-5 h-5 text-primary" />
-                <span>{t}</span>
+                <span>{line}</span>
               </div>
             ))}
           </div>
 
-          <Button 
-            onClick={handleSubscribe} 
-            className="w-full h-14 text-lg font-bold"
+          <Button
+            onClick={handleSubscribe}
+            className="w-full"
+            size="lg"
             disabled={isPremium}
           >
-            {isPremium ? 'Já és Premium' : 'Começar Agora'}
+            {isPremium ? t('premium.alreadyPremium') : t('premium.startNow')}
           </Button>
-          
-          <p className="text-center text-xs text-gray-500 mt-6">
-            Pagamentos seguros via Stripe. Cancela a qualquer momento nas definições.
+
+          <p className="text-center text-xs text-ink-dim mt-6">
+            {t('premium.securePayments')}
           </p>
         </motion.div>
       </div>
@@ -161,16 +172,16 @@ export function PremiumPage() {
     <Modal
       isOpen={true}
       onClose={() => navigate(-1)}
-      title="RepTrack PRO"
+      title={t('premium.title')}
       size="lg"
       closeButton
     >
       <div className="space-y-6 max-h-[80vh] overflow-y-auto">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">O que recebes com o PRO:</h2>
+          <h2 className="text-display text-2xl text-white">{t('premium.whatYouGet')}</h2>
           <ul className="space-y-4">
             {[
-              { icon: <Zap />, title: 'Análise de Volume Ilimitada', desc: 'Gráficos detalhados por grupo muscular e tendências de longo prazo.' },
+              { icon: <Zap />, title: t('premium.perks.volumeTitle'), desc: t('premium.perks.volumeDescLong') },
               { icon: <Shield />, title: t('premium.feature4Title'), desc: t('premium.feature4Desc') },
               { icon: <Check />, title: t('premium.feature5Title'), desc: t('premium.feature5Desc') },
             ].map((f, i) => (
@@ -180,7 +191,7 @@ export function PremiumPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-sm">{f.title}</h4>
-                  <p className="text-gray-400 text-xs">{f.desc}</p>
+                  <p className="text-ink-muted text-xs">{f.desc}</p>
                 </div>
               </li>
             ))}
@@ -189,26 +200,26 @@ export function PremiumPage() {
 
         <div className="bg-surface-100 p-4 rounded-xl space-y-3">
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-black text-white">2.99€</span>
-            <span className="text-gray-400 text-sm">/mês</span>
+            <span data-numeric className="font-mono font-black text-3xl text-white">2.99€</span>
+            <span className="text-ink-muted text-sm">{t('premium.perMonth')}</span>
           </div>
-          <p className="text-gray-400 text-xs">Faturado anualmente (35.88€)</p>
-          <ul className="space-y-2 text-xs text-gray-300">
-            {['Sem fidelização', '7 dias de teste grátis', 'Acesso em todos os teus dispositivos'].map((t, i) => (
+          <p className="text-ink-muted text-xs">{t('premium.billedAnnually', { price: '35.88€' })}</p>
+          <ul className="space-y-2 text-xs text-ink">
+            {[t('premium.noCommitment'), t('premium.freeTrial'), t('premium.allDevices')].map((line, i) => (
               <li key={i} className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-primary" />
-                {t}
+                {line}
               </li>
             ))}
           </ul>
         </div>
 
-        <Button 
-          onClick={handleSubscribe} 
+        <Button
+          onClick={handleSubscribe}
           className="w-full"
           disabled={isPremium}
         >
-          {isPremium ? 'Já és Premium' : 'Começar Agora'}
+          {isPremium ? t('premium.alreadyPremium') : t('premium.startNow')}
         </Button>
       </div>
     </Modal>

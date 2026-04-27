@@ -357,16 +357,16 @@ export function ProgressDashboard() {
                   <button
                     onClick={(e) => { e.stopPropagation(); setCompareSession(session) }}
                     className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                    aria-label="Comparar treino"
-                    title="Comparar treino"
+                    aria-label={t('progress.compareWorkout')}
+                    title={t('progress.compareWorkout')}
                   >
                     <TrendingUp className="w-5 h-5" aria-hidden="true" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setSessionToDelete(session.id) }}
                     className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                    aria-label="Apagar treino"
-                    title="Apagar treino"
+                    aria-label={t('progress.deleteWorkout')}
+                    title={t('progress.deleteWorkout')}
                   >
                     <Trash2 className="w-5 h-5" aria-hidden="true" />
                   </button>
@@ -429,8 +429,8 @@ export function ProgressDashboard() {
               <AreaChart data={safeStats.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00ff87" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00ff87" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#c6ff3d" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#c6ff3d" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="week" stroke="#525252" fontSize={12} tickLine={false} axisLine={false} />
@@ -443,7 +443,7 @@ export function ProgressDashboard() {
                 />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#111111', borderColor: '#262626', borderRadius: '8px' }}
-                  itemStyle={{ color: '#00ff87' }}
+                  itemStyle={{ color: '#c6ff3d' }}
                   formatter={(value) => {
                     const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
                     const label = numericValue >= 1000
@@ -452,7 +452,7 @@ export function ProgressDashboard() {
                     return [label, t('progress.weeklyVolume')]
                   }}
                 />
-                <Area type="monotone" dataKey="volume" stroke="#00ff87" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
+                <Area type="monotone" dataKey="volume" stroke="#c6ff3d" strokeWidth={3} fillOpacity={1} fill="url(#colorVolume)" />
               </AreaChart>
             </ResponsiveContainer>
           </FeatureGate>

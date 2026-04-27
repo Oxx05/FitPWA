@@ -49,8 +49,8 @@ export function LevelUpModal({ level, onClose }: LevelUpModalProps) {
                 <ChevronRight className="w-4 h-4" />
               </button>
               <SocialShare 
-                title="Novo Nível Alcançado!"
-                text={`Cheguei ao nível ${level} no RepTrack! 🚀💪`}
+                title={t('gamification.shareLevelTitle')}
+                text={t('gamification.shareLevelText', { level })}
               />
             </div>
           </div>
@@ -85,8 +85,8 @@ export function AchievementToast({ achievement, onClose }: AchievementToastProps
       </div>
       <div onClick={(e) => e.stopPropagation()}>
         <SocialShare 
-          title="Nova Conquista Desbloqueada!"
-          text={`Desbloqueei a conquista "${achievement.title}" no RepTrack! 🏆\n${achievement.description}`}
+          title={t('gamification.shareAchievementTitle')}
+          text={t('gamification.shareAchievementText', { title: achievement.title, description: achievement.description })}
         />
       </div>
     </motion.div>
