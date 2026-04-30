@@ -10,8 +10,12 @@
 
 import { createClient } from '../node_modules/@supabase/supabase-js/dist/index.mjs'
 
-const SUPABASE_URL = 'https://skehofopzhnhzhhqtnam.supabase.co'
-const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrZWhvZm9wemhuaHpoaHF0bmFtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzYxNTc1MSwiZXhwIjoyMDg5MTkxNzUxfQ.ArRsGlSrO20mFYQHNi_g8mProZxsueCMt8EaPFaOSvs'
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment')
+  process.exit(1)
+}
 
 const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
