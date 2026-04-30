@@ -30,6 +30,7 @@ export function PetWidget() {
   const { profile } = useAuthStore()
   const {
     selectedPet, petName, unlockedPets, hunger, cleanliness, currentStreak, milestones,
+    interactionCooldown,
     setPet, renamePet, unlockPet, tickStats, getMood, canInteract, interact,
   } = usePetStore()
 
@@ -42,6 +43,7 @@ export function PetWidget() {
   const [showMilestoneToast, setShowMilestoneToast] = useState(false)
   const [lastMilestoneCount, setLastMilestoneCount] = useState(milestones.length)
   const [cooldownRemaining, setCooldownRemaining]   = useState(false)
+  const [cooldownMinutes, setCooldownMinutes]       = useState(0)
 
   const isPt      = i18n.language === 'pt'
   const userLevel = profile?.level || 1
@@ -101,10 +103,18 @@ export function PetWidget() {
 
   // Cooldown indicator
   useEffect(() => {
-    setCooldownRemaining(!canInteract())
-    const iv = setInterval(() => setCooldownRemaining(!canInteract()), 5_000)
+    const update = () => {
+      const onCooldown = !canInteract()
+      setCooldownRemaining(onCooldown)
+      if (onCooldown && interactionCooldown) {
+        const mins = Math.max(0, Math.ceil((new Date(interactionCooldown).getTime() - Date.now()) / 60_000))
+        setCooldownMinutes(mins)
+      }
+    }
+    update()
+    const iv = setInterval(update, 30_000)
     return () => clearInterval(iv)
-  }, [canInteract])
+  }, [canInteract, interactionCooldown])
 
   const hungerPercent      = Math.round(hunger)
   const cleanlinessPercent = Math.round(cleanliness)
@@ -391,7 +401,7 @@ export function PetWidget() {
                 </span>
               ) : interactDisabled ? (
                 <span className="text-[9px] text-gray-500 font-bold px-2 py-1 bg-surface-100 rounded-lg">
-                  ⏳ {isPt ? 'Cooldown...' : 'Cooldown...'}
+                  ⏳ {cooldownMinutes > 0 ? `${cooldownMinutes}min` : (isPt ? 'Cooldown...' : 'Cooldown...')}
                 </span>
               ) : hunger < 50 ? (
                 <motion.div

@@ -4,7 +4,7 @@ import { useAuthStore } from '@/features/auth/authStore'
 import { Loader2 } from 'lucide-react'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, profile, isLoading } = useAuthStore()
+  const { session, profile, isLoading, profileFetchFailed } = useAuthStore()
   const location = useLocation()
 
   if (isLoading) {
@@ -19,20 +19,28 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Onboarding gate.
-  // We only redirect to /onboarding if we are CONFIDENT the user is brand-new:
-  //   - profile row exists in DB (so it's loaded — not null) AND
-  //   - the full_name field is empty.
+  // Determine whether onboarding is needed.
   //
-  // If `profile` is `null`, the row may simply not have loaded yet (race), or the
-  // DB query may have failed. In that case we let the destination render — its
-  // own UI will handle the missing profile gracefully — instead of trapping
-  // returning users in onboarding every time they sign in.
-  const profileLoaded = profile !== null
-  const isFreshUser = profileLoaded && !profile?.full_name?.trim()
+  // We are confident the user is NEW only when:
+  //   1. Profile loaded successfully (not a stub from a network error), AND
+  //   2. full_name is empty, AND
+  //   3. No local completion flag (fallback for same-device returning users)
+  //
+  // If the profile fetch failed we let the user through — they may be a
+  // returning user whose DB query failed transiently. Sending them to
+  // onboarding would wipe all their settings.
+  const userId = session.user.id
+  const hasLocalFlag = localStorage.getItem(`onboarding_complete_${userId}`) === '1'
+  const profileLoadedSuccessfully = profile !== null && !profileFetchFailed
+  const isFreshUser = profileLoadedSuccessfully && !profile.full_name?.trim() && !hasLocalFlag
 
   if (isFreshUser && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />
+  }
+
+  // If the user already completed onboarding, don't let them back in
+  if (!isFreshUser && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>

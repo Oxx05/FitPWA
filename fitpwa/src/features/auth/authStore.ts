@@ -31,10 +31,12 @@ interface AuthState {
   profile: Profile | null
   isPremium: boolean
   isLoading: boolean
+  profileFetchFailed: boolean
   pendingLevelUp: number | null
   setSession: (session: Session | null) => void
   setProfile: (profile: Profile | null) => void
   setLoading: (isLoading: boolean) => void
+  setProfileFetchFailed: (failed: boolean) => void
   addXp: (amount: number) => void
   clearPendingLevelUp: () => void
   setSoundEnabled: (enabled: boolean) => void
@@ -50,8 +52,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   isPremium: false,
   isLoading: true,
+  profileFetchFailed: false,
   pendingLevelUp: null,
   setSession: (session) => set({ session, user: session?.user || null }),
+  setProfileFetchFailed: (failed) => set({ profileFetchFailed: failed }),
   setProfile: (profile) => {
     const previousLevel = get().profile?.level ?? null
     const nextLevel = profile?.level ?? null
@@ -122,11 +126,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .maybeSingle()
     if (!error && data) {
       get().setProfile(data)
+      get().setProfileFetchFailed(false)
+    } else if (error) {
+      console.warn('authStore.fetchProfile error:', error.message)
+      get().setProfileFetchFailed(true)
     }
   },
   clearPendingLevelUp: () => set({ pendingLevelUp: null }),
   signOut: async () => {
     await supabase.auth.signOut()
-    set({ session: null, user: null, profile: null, isPremium: false, pendingLevelUp: null })
+    set({ session: null, user: null, profile: null, isPremium: false, pendingLevelUp: null, profileFetchFailed: false })
   }
 }))

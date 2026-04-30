@@ -87,7 +87,8 @@ export function SmartInsights({ hideIcon }: SmartInsightsProps) {
 
       return list
     },
-    enabled: !!profile?.id
+    enabled: !!profile?.id,
+    staleTime: 5 * 60 * 1000,
   })
 
   // Helper to remove redundant "Suggestion:" prefix
@@ -95,7 +96,13 @@ export function SmartInsights({ hideIcon }: SmartInsightsProps) {
     return title.replace(/^(Suggestion|Sugestão):\s*/i, '')
   }
 
-  if (isLoading || !insights?.length) return null
+  if (isLoading) return (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-4 bg-surface-200 rounded w-32" />
+      <div className="h-20 bg-surface-200 rounded-3xl" />
+    </div>
+  )
+  if (!insights?.length) return null
 
   return (
     <div className="space-y-3">
@@ -107,7 +114,7 @@ export function SmartInsights({ hideIcon }: SmartInsightsProps) {
       <div className="flex flex-col gap-4">
         {insights.map((insight, i) => (
           <motion.div
-            key={i}
+            key={insight.title}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: i * 0.1 }}

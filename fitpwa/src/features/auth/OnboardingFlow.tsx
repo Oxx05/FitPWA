@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/Button'
 import { Input } from '@/shared/components/Input'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from './authStore'
 import { supabase } from '@/shared/lib/supabase'
@@ -11,10 +11,11 @@ export function OnboardingFlow() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { session, profile, setProfile, isLoading: authLoading } = useAuthStore()
-  
+
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
-  
+  const [saveError, setSaveError] = useState('')
+
   // Step 1
   const [name, setName] = useState('')
   // Step 2
@@ -40,7 +41,7 @@ export function OnboardingFlow() {
   const handleBack = () => setStep(s => Math.max(1, s - 1))
 
   const toggleEquipment = (eq: string) => {
-    setEquipment(prev => 
+    setEquipment(prev =>
       prev.includes(eq) ? prev.filter(e => e !== eq) : [...prev, eq]
     )
   }
@@ -48,11 +49,12 @@ export function OnboardingFlow() {
   const finishOnboarding = async () => {
     if (!session?.user) return
     setIsLoading(true)
+    setSaveError('')
 
     const updates = {
       id: session.user.id,
-      full_name: name,
-      username: name.toLowerCase().replace(/\s+/g, '_') + Math.floor(Math.random() * 1000),
+      full_name: name.trim(),
+      username: name.trim().toLowerCase().replace(/\s+/g, '_') + Math.floor(Math.random() * 1000),
       goal,
       experience_level: experience,
       preferred_equipment: equipment,
@@ -60,14 +62,26 @@ export function OnboardingFlow() {
     }
 
     const { error } = await supabase.from('profiles').upsert(updates)
-    
+
     if (!error) {
-      // Refetch profile via auth store or manually update
-      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
-      if (data) setProfile(data)
+      // Update store immediately — don't rely on a re-fetch that might fail
+      setProfile({
+        ...(profile ?? {}),
+        ...updates,
+        is_premium: profile?.is_premium ?? false,
+        sound_enabled: profile?.sound_enabled ?? true,
+        level: profile?.level ?? 1,
+        xp_total: profile?.xp_total ?? 0,
+        login_streak: profile?.login_streak ?? 0,
+        total_volume_kg: profile?.total_volume_kg ?? 0,
+        social_likes_given: profile?.social_likes_given ?? 0,
+        profile_visibility: profile?.profile_visibility ?? 'private',
+      })
+      localStorage.setItem(`onboarding_complete_${session.user.id}`, '1')
       navigate('/dashboard')
     } else {
-      console.error(error)
+      console.error('Onboarding save error:', error)
+      setSaveError(t('auth.onboardingSaveError'))
     }
     setIsLoading(false)
   }
@@ -75,7 +89,7 @@ export function OnboardingFlow() {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md flex flex-col gap-6 bg-surface-200 p-8 rounded-2xl shadow-xl">
-        
+
         {/* Progress Bar */}
         <div className="flex gap-2 w-full mb-4">
           {[1, 2, 3, 4].map(i => (
@@ -87,8 +101,8 @@ export function OnboardingFlow() {
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.welcome')}</h2>
             <p className="text-gray-400 mb-6">{t('onboarding.step1Title')}</p>
-            <Input 
-              placeholder={t('onboarding.step1Placeholder')} 
+            <Input
+              placeholder={t('onboarding.step1Placeholder')}
               value={name}
               onChange={e => setName(e.target.value)}
             />
@@ -99,10 +113,10 @@ export function OnboardingFlow() {
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.yourGoals')}</h2>
             <p className="text-gray-400 mb-6">{t('onboarding.goalsDesc')}</p>
-            
+
             <div className="flex flex-col gap-4">
               <label className="text-sm font-medium text-gray-300">{t('onboarding.mainGoal')}</label>
-              <select 
+              <select
                 className="w-full bg-surface-100 border border-surface-200 text-white rounded-md h-10 px-3"
                 value={goal}
                 onChange={e => setGoal(e.target.value)}
@@ -115,7 +129,7 @@ export function OnboardingFlow() {
               </select>
 
               <label className="text-sm font-medium text-gray-300 mt-2">{t('onboarding.experienceLevel')}</label>
-              <select 
+              <select
                 className="w-full bg-surface-100 border border-surface-200 text-white rounded-md h-10 px-3"
                 value={experience}
                 onChange={e => setExperience(e.target.value)}
@@ -132,7 +146,7 @@ export function OnboardingFlow() {
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.equipment')}</h2>
             <p className="text-gray-400 mb-6">{t('onboarding.whereTrain')}</p>
-            
+
             <div className="grid grid-cols-2 gap-3">
               {[
                 { id: 'barbell', label: t('onboarding.eqBarbell') },
@@ -159,7 +173,7 @@ export function OnboardingFlow() {
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <h2 className="text-2xl font-bold text-white mb-2">{t('onboarding.allSet')}</h2>
             <p className="text-gray-400 mb-6">{t('onboarding.allSetDesc')}</p>
-            
+
             <div className="bg-surface-100 p-4 rounded-lg flex flex-col gap-2">
               <span className="text-sm text-gray-400">{t('common.goal')}: <strong className="text-white capitalize">{t(`onboarding.goal${goal.charAt(0).toUpperCase() + goal.slice(1).replace('_', 'L')}`)}</strong></span>
               <span className="text-sm text-gray-400">{t('common.level')}: <strong className="text-white capitalize">{t(`onboarding.level${experience.charAt(0).toUpperCase() + experience.slice(1)}`)}</strong></span>
@@ -168,10 +182,17 @@ export function OnboardingFlow() {
           </div>
         )}
 
+        {saveError && (
+          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg p-3">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {saveError}
+          </div>
+        )}
+
         <div className="flex justify-between mt-4">
-          <Button 
-            variant="ghost" 
-            onClick={handleBack} 
+          <Button
+            variant="ghost"
+            onClick={handleBack}
             disabled={step === 1 || isLoading}
             className={`gap-2 ${step === 1 ? 'invisible' : ''}`}
           >
@@ -180,7 +201,7 @@ export function OnboardingFlow() {
           </Button>
 
           {step < 4 ? (
-            <Button onClick={handleNext} disabled={step === 1 && !name} className="gap-2">
+            <Button onClick={handleNext} disabled={step === 1 && !name.trim()} className="gap-2">
               {t('common.next')}
               <ChevronRight className="w-4 h-4" />
             </Button>

@@ -48,7 +48,6 @@ export function BenchAngleMeter() {
   const { t } = useTranslation()
 
   const [permission, setPermission] = useState<PermissionState>('idle')
-  const [, setAngle] = useState<number>(0)
   const [smoothedAngle, setSmoothedAngle] = useState<number>(0)
   const [lockedReading, setLockedReading] = useState<number | null>(null)
   const [isLocked, setIsLocked] = useState(false)
@@ -60,6 +59,7 @@ export function BenchAngleMeter() {
 
   const bufferRef = useRef<number[]>([])
   const lastSpokeRef = useRef<number>(0)
+  const lastSensorUpdateRef = useRef<number>(0)
 
   // ---------- Permission / Sensor ----------
   const requestPermission = useCallback(async () => {
@@ -87,16 +87,19 @@ export function BenchAngleMeter() {
 
     const handler = (e: DeviceOrientationEvent) => {
       if (e.beta == null) return
-      const raw = e.beta
-      const adjusted = raw - calibrationOffset
+      const adjusted = e.beta - calibrationOffset
 
       const buf = bufferRef.current
       buf.push(adjusted)
       if (buf.length > 6) buf.shift()
       const avg = buf.reduce((a, b) => a + b, 0) / buf.length
 
-      setAngle(adjusted)
-      setSmoothedAngle(avg)
+      // Throttle React re-renders to ~10fps — angle meter doesn't need 60fps
+      const now = Date.now()
+      if (now - lastSensorUpdateRef.current >= 100) {
+        lastSensorUpdateRef.current = now
+        setSmoothedAngle(avg)
+      }
     }
 
     window.addEventListener('deviceorientation', handler, true)
@@ -464,15 +467,10 @@ function Gauge({
 
       {/* Center indicator */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <motion.div
-          animate={{
-            scale: isOnTarget ? [1, 1.06, 1] : 1,
-            opacity: isLocked ? 0.7 : 1,
-          }}
-          transition={{ duration: 1, repeat: isOnTarget ? Infinity : 0 }}
-          className={`w-32 h-32 rounded-full flex items-center justify-center
-                      ${isOnTarget ? 'bg-primary/10 border-2 border-primary' : 'bg-surface-200 border-2 border-white/5'}
-                      transition-colors duration-300`}
+        <div
+          style={{ opacity: isLocked ? 0.7 : 1 }}
+          className={`w-32 h-32 rounded-full flex items-center justify-center transition-colors duration-300
+                      ${isOnTarget ? 'bg-primary/10 border-2 border-primary animate-pulse' : 'bg-surface-200 border-2 border-white/5'}`}
         >
           {isOnTarget ? (
             <div className="text-primary text-[10px] font-bold uppercase tracking-tightest">
@@ -484,7 +482,7 @@ function Gauge({
               style={{ transform: `rotate(${angle * 0.6}deg)` }}
             />
           )}
-        </motion.div>
+        </div>
       </div>
 
       {isLocked && (

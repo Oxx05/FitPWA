@@ -50,7 +50,8 @@ export function BaseWorkouts() {
         .order('name')
       if (error) throw error
       return (data || []) as TemplatePlan[]
-    }
+    },
+    staleTime: 10 * 60 * 1000,
   })
 
   const filtered = templates

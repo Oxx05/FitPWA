@@ -114,6 +114,7 @@ const en = {
     invalidEmail: 'Invalid email',
     passwordMinLength: 'Password must be at least 6 characters',
     passwordsDontMatch: 'Passwords do not match',
+    onboardingSaveError: 'Could not save your profile. Check your connection and try again.',
   },
 
   // ─── Dashboard ───
@@ -300,6 +301,7 @@ const en = {
     cannotEditActivePlan: 'This plan is being used in an active workout and cannot be edited now.',
     publicWorkout: 'Public Workout',
     publicWorkoutDesc: 'Allow other users to see and save this workout.',
+    removeExercise: 'Remove exercise',
   },
 
   // ─── AI Generator ───
@@ -370,6 +372,7 @@ const en = {
     savingProfile: 'Saving...',
     profileUpdated: 'Profile updated!',
     profileError: 'Error saving profile',
+    nameInvalid: 'Name must be between 2 and 50 characters.',
     proMember: 'PRO Member',
     browserNoNotifications: 'This browser does not support notifications.',
     notificationsActivated: 'Notifications Enabled!',
@@ -684,6 +687,7 @@ const en = {
     volumeChartTitle: 'Workout Volume (8 weeks)',
     workoutHistory: 'Workout History',
     loadingProgress: 'Loading progress...',
+    loadError: 'Could not load your progress. Check your connection and try again.',
     noSessionDetails: 'No details found for this session.',
     deleteWorkout: 'Delete Workout',
     deleteWorkoutConfirm: 'Are you sure you want to delete this workout? This action cannot be undone.',
@@ -891,6 +895,11 @@ const en = {
     quickTags: 'Quick Tags',
     painLevel: 'Pain Level',
     fatigueLevel: 'Fatigue Level',
+    tagInjury: 'Injury',
+    tagEasy: 'Easy',
+    tagHard: 'Hard',
+    tagFocus: 'Focus',
+    tagTired: 'Tired',
   },
   exercisesExtra: {
     libraryTitle: 'Exercises',

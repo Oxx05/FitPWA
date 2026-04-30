@@ -10,10 +10,17 @@ interface NoteEditorProps {
   onCancel?: () => void
 }
 
-const AVAILABLE_TAGS = ['PR', 'Lesão', 'Fácil', 'Difícil', 'Foco', 'Cansado']
-
 export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCancel }: NoteEditorProps) {
   const { t } = useTranslation()
+
+  const AVAILABLE_TAGS = [
+    { key: 'PR',      label: 'PR' },
+    { key: 'Injury',  label: t('notes.tagInjury') },
+    { key: 'Easy',    label: t('notes.tagEasy') },
+    { key: 'Hard',    label: t('notes.tagHard') },
+    { key: 'Focus',   label: t('notes.tagFocus') },
+    { key: 'Tired',   label: t('notes.tagTired') },
+  ]
   const [content, setContent] = useState(initialContent)
   const [tags, setTags] = useState<string[]>(initialTags)
   const [painLevel, setPainLevel] = useState(0)
@@ -43,21 +50,21 @@ export function NoteEditor({ initialContent = '', initialTags = [], onSave, onCa
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_TAGS.map(tag => (
             <button
-              key={tag}
-              onClick={() => toggleTag(tag)}
+              key={tag.key}
+              onClick={() => toggleTag(tag.key)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors border ${
-                tags.includes(tag) 
-                  ? tag === 'Lesão' ? 'bg-error/20 border-error text-error' : 'bg-primary/20 border-primary text-primary'
+                tags.includes(tag.key)
+                  ? tag.key === 'Injury' ? 'bg-error/20 border-error text-error' : 'bg-primary/20 border-primary text-primary'
                   : 'bg-surface-100 border-surface-200 text-gray-400 hover:border-gray-500'
               }`}
             >
-              {tag}
+              {tag.label}
             </button>
           ))}
         </div>
       </div>
 
-      {tags.includes('Lesão') && (
+      {tags.includes('Injury') && (
         <div className="animate-in slide-in-from-top-2 fade-in duration-200">
           <label className="text-sm text-gray-400 font-medium mb-2 flex justify-between">
             <span>{t('notes.painLevel')}</span>

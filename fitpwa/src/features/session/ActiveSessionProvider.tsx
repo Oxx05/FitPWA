@@ -90,8 +90,8 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
       isWeekend: [0, 6].includes(now.getDay())
     })
 
-    // Store in global state or show toast (we'll need a way to show these)
-    console.log('New achievements:', newAchievements)
+    // newAchievements are stored in pendingUnlocks via checkAchievements → shown by AchievementUnlockOverlay in App.tsx
+    void newAchievements
 
     // Attempt to save to Supabase. If offline, defer to pendingSync.
     try {

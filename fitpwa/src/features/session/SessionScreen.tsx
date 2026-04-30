@@ -172,6 +172,8 @@ export function SessionScreen() {
   const durationStartRef = useRef<number | null>(null)
   const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const durationUpdatedAtRef = useRef<number | null>(null)
+  const lastSessionSaveRef = useRef(0)
+  const sessionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const syncDuration = () => {
     if (!durationStartRef.current) return
@@ -224,26 +226,33 @@ export function SessionScreen() {
     document.title = title
   }, [isRunning, duration, restTimer, isRestTimerRunning, t])
 
-  // Persistent Active Session Effect
+  // Persistent Active Session Effect — throttled to avoid JSON.stringify on every timer tick
   useEffect(() => {
     if (exercises.length === 0) return
-    const currentState = {
-      exercises,
-      currentExerciseIndex,
-      duration,
-      durationUpdatedAt: durationUpdatedAtRef.current,
-      restTimer,
-      restEndAt,
-      targetRestTimer,
-      isRestTimerRunning,
-      hasAutoRestStarted,
-      sessionNotes,
-      planId,
-      planName,
-      isRunning
+
+    const doSave = () => {
+      lastSessionSaveRef.current = Date.now()
+      localStorage.setItem('titanpulse_active_session', JSON.stringify({
+        exercises, currentExerciseIndex, duration,
+        durationUpdatedAt: durationUpdatedAtRef.current,
+        restTimer, restEndAt, targetRestTimer,
+        isRestTimerRunning, hasAutoRestStarted,
+        sessionNotes, planId, planName, isRunning,
+      }))
     }
-    localStorage.setItem('titanpulse_active_session', JSON.stringify(currentState))
-  }, [exercises, currentExerciseIndex, duration, restTimer, targetRestTimer, isRestTimerRunning, sessionNotes, planId, planName, isRunning])
+
+    const elapsed = Date.now() - lastSessionSaveRef.current
+    if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current)
+
+    if (elapsed >= 4000) {
+      doSave()
+    } else {
+      // Write at most once per 4s; trailing write ensures final state is captured
+      sessionSaveTimerRef.current = setTimeout(doSave, 4000 - elapsed)
+    }
+
+    return () => { if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current) }
+  }, [exercises, currentExerciseIndex, duration, restTimer, targetRestTimer, isRestTimerRunning, hasAutoRestStarted, sessionNotes, planId, planName, isRunning])
 
   // Rest timer effet
   useEffect(() => {
@@ -259,7 +268,7 @@ export function SessionScreen() {
         setIsRestTimerRunning(false)
 
         // Haptic Feedback
-        if (typeof navigator !== 'undefined' && navigator.vibrate && profile?.sound_enabled !== false) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate && voiceEnabled) {
           navigator.vibrate([200, 100, 200])
         }
 
@@ -270,7 +279,7 @@ export function SessionScreen() {
           })
         }
         try {
-          if (profile?.sound_enabled !== false) {
+          if (voiceEnabled) {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3')
             audio.play().catch(() => {})
           }
@@ -285,7 +294,7 @@ export function SessionScreen() {
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [restEndAt, isRestTimerRunning, t, profile?.sound_enabled, voiceEnabled, speak])
+  }, [restEndAt, isRestTimerRunning, t, voiceEnabled, speak])
 
   // Load recent timers
   useEffect(() => {
@@ -742,7 +751,7 @@ export function SessionScreen() {
 
     if (!shouldStartRest) return
     const restTime = nextRestTime ?? 90
-    if ('vibrate' in navigator && profile?.sound_enabled !== false) navigator.vibrate(50)
+    if ('vibrate' in navigator && voiceEnabled) navigator.vibrate(50)
     if (isRestTimerRunning && restEndAt && restTimer && restTimer > 0) {
       showToast(t('session.setCompletedSuccess'), 'success')
       return
@@ -1909,7 +1918,7 @@ export function SessionScreen() {
             initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-3xl flex flex-col p-4 sm:p-6 overflow-y-auto overflow-x-hidden"
+            className="fixed inset-0 z-[60] bg-background/95 backdrop-blur-lg flex flex-col p-4 sm:p-6 overflow-y-auto overflow-x-hidden"
           >
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2 min-w-0 shrink">

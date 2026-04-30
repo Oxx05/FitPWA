@@ -88,6 +88,7 @@ export function ProfilePage() {
         createdAt: w.created_at as string,
       })) as WorkoutPlan[]
     },
+    staleTime: 5 * 60 * 1000,
   })
 
   // Fetch real training stats
@@ -117,6 +118,7 @@ export function ProfilePage() {
 
       return { totalWorkouts: count || 0, totalMinutes: Math.floor(totalSeconds / 60) }
     },
+    staleTime: 5 * 60 * 1000,
   })
 
   const publishMutation = useMutation({
@@ -150,13 +152,18 @@ export function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return
+    const trimmedName = editName.trim()
+    if (trimmedName.length < 2 || trimmedName.length > 50) {
+      setProfileMsg(t('profile.nameInvalid'))
+      return
+    }
     try {
       setSavingProfile(true)
       setProfileMsg(null)
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: editName.trim(),
+          full_name: trimmedName,
           default_rest_seconds: defaultRest,
           default_reps_min: defaultMinReps,
           default_reps_max: defaultMaxReps,

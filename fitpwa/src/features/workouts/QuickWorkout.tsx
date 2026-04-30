@@ -167,8 +167,12 @@ export function QuickWorkout() {
     mutationFn: async () => {
       const raw = localStorage.getItem('titanpulse_active_session')
       if (raw) {
-        const session = JSON.parse(raw)
-        setActiveSession(session)
+        try {
+          const session = JSON.parse(raw)
+          setActiveSession(session)
+        } catch {
+          localStorage.removeItem('titanpulse_active_session')
+        }
         setShowActiveSessionModal(true)
         throw new Error('Active session exists')
       }

@@ -81,7 +81,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
           <MuscleIcon muscles={ex.muscle_groups || []} size="sm" />
         </div>
         <h4 className="font-bold text-white flex-grow">{ex.name}</h4>
-        <button onClick={() => onRemove(ex.id)} className="p-2 text-gray-500 hover:text-error transition-colors">
+        <button onClick={() => onRemove(ex.id)} aria-label={t('editor.removeExercise')} className="p-2 text-gray-500 hover:text-error transition-colors">
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
@@ -196,7 +196,7 @@ export function WorkoutEditor() {
             setIsActivePlan(true)
             setError(t('editor.cannotEditActivePlan'))
           }
-        } catch(e) {}
+        } catch { /* JSON parse failed — treat as no active session */ }
       }
 
       const { data: plan, error: planErr } = await supabase

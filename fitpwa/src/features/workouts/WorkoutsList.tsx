@@ -14,6 +14,19 @@ import { supabase } from '@/shared/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/shared/contexts/ToastContext'
 
+interface WorkoutPlan {
+  id: string
+  name: string
+  description?: string | null
+  type?: string
+  is_public?: boolean
+  is_favorite?: boolean
+  user_id?: string
+  exercise_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
 export function WorkoutsList() {
   const { profile } = useAuthStore()
   const { t } = useTranslation()
@@ -22,20 +35,20 @@ export function WorkoutsList() {
   const queryClient = useQueryClient()
   const { showToast } = useToast()
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
-  const [planToDelete, setPlanToDelete] = useState<any>(null)
+  const [planToDelete, setPlanToDelete] = useState<WorkoutPlan | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const displayPlans = useMemo(() => {
     if (!plans) return []
     if (!showFavoritesOnly) return plans
-    return plans.filter((p: any) => p.is_favorite)
+    return plans.filter((p: WorkoutPlan) => p.is_favorite)
   }, [plans, showFavoritesOnly])
 
   const toggleFavorite = async (planId: string, currentValue: boolean) => {
     const newValue = !currentValue
     // Optimistic update
-    queryClient.setQueryData(['plans', profile?.id], (old: any[]) =>
-      old?.map((p: any) => p.id === planId ? { ...p, is_favorite: newValue } : p)
+    queryClient.setQueryData(['plans', profile?.id], (old: WorkoutPlan[]) =>
+      old?.map((p) => p.id === planId ? { ...p, is_favorite: newValue } : p)
     )
     const { error } = await supabase
       .from('workout_plans')
@@ -43,15 +56,15 @@ export function WorkoutsList() {
       .eq('id', planId)
     if (error) {
       // Rollback
-      queryClient.setQueryData(['plans', profile?.id], (old: any[]) =>
-        old?.map((p: any) => p.id === planId ? { ...p, is_favorite: currentValue } : p)
+      queryClient.setQueryData(['plans', profile?.id], (old: WorkoutPlan[]) =>
+        old?.map((p) => p.id === planId ? { ...p, is_favorite: currentValue } : p)
       )
     } else {
       showToast(newValue ? t('workouts.addedToFavorites') : t('workouts.removedFromFavorites'), 'success')
     }
   }
 
-  const confirmDelete = (plan: any) => {
+  const confirmDelete = (plan: WorkoutPlan) => {
     setPlanToDelete(plan)
   }
 
@@ -72,8 +85,8 @@ export function WorkoutsList() {
 
       if (error) throw error
 
-      queryClient.setQueryData(['plans', profile.id], (old: any[]) =>
-        old?.filter((p: any) => p.id !== planToDelete.id)
+      queryClient.setQueryData(['plans', profile.id], (old: WorkoutPlan[]) =>
+        old?.filter((p) => p.id !== planToDelete.id)
       )
       
       showToast(t('workouts.planDeletedSuccess'), 'success')

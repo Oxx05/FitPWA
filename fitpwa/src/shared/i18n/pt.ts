@@ -111,6 +111,7 @@ const pt = {
     invalidEmail: 'Email inválido',
     passwordMinLength: 'Password deve ter pelo menos 6 caracteres',
     passwordsDontMatch: 'As passwords não coincidem',
+    onboardingSaveError: 'Erro ao guardar o teu perfil. Verifica a tua ligação e tenta novamente.',
   },
 
   // ─── Dashboard ───
@@ -297,6 +298,7 @@ const pt = {
     cannotEditActivePlan: 'Este plano está a ser usado num treino ativo e não pode ser editado agora.',
     publicWorkout: 'Treino Público',
     publicWorkoutDesc: 'Permite que outros utilizadores vejam e guardem este treino.',
+    removeExercise: 'Remover exercício',
   },
 
   // ─── AI Generator ───
@@ -367,6 +369,7 @@ const pt = {
     savingProfile: 'Guardando...',
     profileUpdated: 'Perfil atualizado!',
     profileError: 'Erro ao guardar perfil',
+    nameInvalid: 'O nome deve ter entre 2 e 50 caracteres.',
     proMember: 'PRO Member',
     browserNoNotifications: 'Este browser não suporta notificações.',
     notificationsActivated: 'Notificações Ativadas!',
@@ -686,6 +689,7 @@ const pt = {
     volumeChartTitle: 'Volume de Treino (8 semanas)',
     workoutHistory: 'Histórico de Treinos',
     loadingProgress: 'A carregar progresso...',
+    loadError: 'Não foi possível carregar o teu progresso. Verifica a ligação e tenta novamente.',
     noSessionDetails: 'Não foram encontrados detalhes para esta sessão.',
     deleteWorkout: 'Apagar Treino',
     deleteWorkoutConfirm: 'Tens a certeza que queres apagar este treino? Esta acção não pode ser revertida.',
@@ -893,6 +897,11 @@ const pt = {
     quickTags: 'Tags Rápidas',
     painLevel: 'Nível de Dor',
     fatigueLevel: 'Nível de Fadiga',
+    tagInjury: 'Lesão',
+    tagEasy: 'Fácil',
+    tagHard: 'Difícil',
+    tagFocus: 'Foco',
+    tagTired: 'Cansado',
   },
   exercisesExtra: {
     libraryTitle: 'Exercícios',

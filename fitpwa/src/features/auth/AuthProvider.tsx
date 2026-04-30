@@ -6,8 +6,53 @@ import { initializeOfflineSync, OfflineSyncService } from '@/shared/lib/offlineS
 
 const PROFILE_COLUMNS = 'id,username,full_name,avatar_url,is_premium,premium_expires_at,level,xp_total,login_streak,last_login_date,daily_xp_earned,last_xp_date,default_rest_seconds,default_reps_min,default_reps_max,default_sets,sound_enabled,profile_visibility,total_volume_kg,social_likes_given'
 
+/** Safe defaults so no component ever gets `undefined` from a stub/partial profile. */
+function makeStubProfile(userId: string): Profile {
+  return {
+    id: userId,
+    is_premium: false,
+    level: 1,
+    xp_total: 0,
+    login_streak: 0,
+    sound_enabled: true,
+    profile_visibility: 'private',
+    total_volume_kg: 0,
+    social_likes_given: 0,
+    default_rest_seconds: 90,
+    default_reps_min: 8,
+    default_reps_max: 12,
+    default_sets: 3,
+  }
+}
+
+/** Apply nullish defaults to a row fetched from the DB. */
+function normalizeProfile(data: Record<string, unknown>, userId: string): Profile {
+  return {
+    ...(data as Profile),
+    id: userId,
+    sound_enabled: (data.sound_enabled as boolean | null) ?? true,
+    profile_visibility: (data.profile_visibility as Profile['profile_visibility'] | null) ?? 'private',
+    total_volume_kg: (data.total_volume_kg as number | null) ?? 0,
+    social_likes_given: (data.social_likes_given as number | null) ?? 0,
+    level: (data.level as number | null) ?? 1,
+    xp_total: (data.xp_total as number | null) ?? 0,
+    login_streak: (data.login_streak as number | null) ?? 0,
+    default_rest_seconds: (data.default_rest_seconds as number | null) ?? 90,
+    default_reps_min: (data.default_reps_min as number | null) ?? 8,
+    default_reps_max: (data.default_reps_max as number | null) ?? 12,
+    default_sets: (data.default_sets as number | null) ?? 3,
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setSession, setProfile, setLoading, isLoading } = useAuthStore()
+  const { setSession, setProfile, setLoading, setProfileFetchFailed, isLoading } = useAuthStore()
+
+  /**
+   * Deduplicate concurrent fetches for the same user.
+   * `onAuthStateChange` + `getSession` can both fire almost simultaneously;
+   * we should only run one fetch at a time.
+   */
+  const fetchInProgressRef = React.useRef<string | null>(null)
 
   const preFetchOfflineData = React.useCallback(async (userId: string) => {
     try {
@@ -48,11 +93,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   /**
-   * Loads the profile for `userId`. If the profile row doesn't exist yet,
-   * lazily inserts a minimal one so that subsequent queries succeed.
-   * Returns the profile (or null on hard failure).
+   * Loads the profile for `userId`.
+   * - On success: sets the full normalised profile.
+   * - On network/DB error: sets a fully-defaulted stub and marks `profileFetchFailed`.
+   *   ProtectedRoute uses this flag to avoid bouncing returning users to onboarding.
+   * - On missing row: inserts a minimal row (new user, e.g. Google OAuth).
    */
   const fetchProfile = React.useCallback(async (userId: string): Promise<Profile | null> => {
+    // Deduplicate: skip if a fetch for this user is already in-flight
+    if (fetchInProgressRef.current === userId) return null
+    fetchInProgressRef.current = userId
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -62,28 +113,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.warn('Profile fetch error:', error.message)
-        // Don't trap user in onboarding because of a transient query failure —
-        // hand them an empty-but-non-null profile so the app can still render.
-        setProfile({
-          id: userId,
-          is_premium: false,
-        } as Profile)
+        // Mark the failure so ProtectedRoute won't send returning users to onboarding
+        setProfileFetchFailed(true)
+        setProfile(makeStubProfile(userId))
         return null
       }
 
       if (data) {
-        setProfile({
-          ...data,
-          sound_enabled: data.sound_enabled ?? true,
-          profile_visibility: data.profile_visibility ?? 'private',
-          total_volume_kg: data.total_volume_kg ?? 0,
-          social_likes_given: data.social_likes_given ?? 0,
-        })
-        return data as Profile
+        const profile = normalizeProfile(data as Record<string, unknown>, userId)
+        setProfile(profile)
+        setProfileFetchFailed(false)
+        return profile
       }
 
-      // No row yet — create one. This prevents new social-auth users (who
-      // never went through register-page profile creation) from being blocked.
+      // No row yet — new user (e.g. Google OAuth). Create a minimal row.
       const { data: inserted, error: insertError } = await supabase
         .from('profiles')
         .insert({ id: userId })
@@ -91,30 +134,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle()
 
       if (!insertError && inserted) {
-        setProfile({
-          ...inserted,
-          sound_enabled: inserted.sound_enabled ?? true,
-          profile_visibility: inserted.profile_visibility ?? 'private',
-          total_volume_kg: inserted.total_volume_kg ?? 0,
-          social_likes_given: inserted.social_likes_given ?? 0,
-        })
-        return inserted as Profile
+        const profile = normalizeProfile(inserted as Record<string, unknown>, userId)
+        setProfile(profile)
+        setProfileFetchFailed(false)
+        return profile
       }
 
       console.warn('Profile insert failed:', insertError?.message)
-      setProfile({ id: userId, is_premium: false } as Profile)
+      // Insert failed — set a stub but don't mark as fetch-failed (row might exist now)
+      setProfile(makeStubProfile(userId))
       return null
     } catch (e) {
-      console.error(e)
-      // Be safe — render with stub profile so guards behave predictably.
-      setProfile({ id: userId, is_premium: false } as Profile)
+      console.error('fetchProfile unexpected error:', e)
+      setProfileFetchFailed(true)
+      setProfile(makeStubProfile(userId))
       return null
     } finally {
+      fetchInProgressRef.current = null
       setLoading(false)
     }
-  }, [setLoading, setProfile])
+  }, [setLoading, setProfile, setProfileFetchFailed])
 
   const handleStreak = React.useCallback(async (profile: Profile) => {
+    // Only update streak for real profiles (not stubs — no full_name)
+    if (!profile.full_name) return
+
     const today = new Date().toISOString().split('T')[0]
     const lastLogin = profile.last_login_date ? profile.last_login_date.split('T')[0] : null
 
@@ -164,15 +208,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         initializeOfflineSync(session.user.id)
         void preFetchOfflineData(session.user.id)
-        void fetchProfile(session.user.id)
+        fetchProfile(session.user.id).then((profile) => {
+          if (profile) void handleStreak(profile)
+        })
       } else {
         setProfile(null)
+        setProfileFetchFailed(false)
         setLoading(false)
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [fetchProfile, handleStreak, setLoading, setProfile, setSession, preFetchOfflineData])
+  }, [fetchProfile, handleStreak, setLoading, setProfile, setProfileFetchFailed, setSession, preFetchOfflineData])
 
   if (isLoading) {
     return (

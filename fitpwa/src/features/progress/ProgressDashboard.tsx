@@ -69,7 +69,7 @@ export function ProgressDashboard() {
     enabled: !!selectedSessionForDetails?.id
   })
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError: isStatsError } = useQuery({
     queryKey: ['progress-stats', profile?.id],
     queryFn: async () => {
       if (!profile?.id) return null
@@ -287,6 +287,16 @@ export function ProgressDashboard() {
       <div className="flex flex-col items-center justify-center p-24 space-y-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
         <p className="text-gray-400 font-medium">{t('progress.loadingProgress')}</p>
+      </div>
+    )
+  }
+
+  if (isStatsError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-24 space-y-4 text-center">
+        <Zap className="w-12 h-12 text-error" />
+        <p className="text-white font-bold">{t('common.error')}</p>
+        <p className="text-gray-400 text-sm">{t('progress.loadError')}</p>
       </div>
     )
   }
