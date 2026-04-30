@@ -5,6 +5,7 @@ import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
+import { useQueryClient } from '@tanstack/react-query'
 import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
 import { useTranslation } from 'react-i18next'
 
@@ -20,7 +21,8 @@ const SUGGESTION_CHIPS = [
 
 export function AiWorkoutGenerator() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
+  const queryClient = useQueryClient()
   const { t, i18n } = useTranslation()
   const isPt = i18n.language === 'pt'
 
@@ -93,29 +95,27 @@ export function AiWorkoutGenerator() {
       if (newPlan && generatedPlan.exercises.length > 0) {
         const { data: dbExercises } = await supabase
           .from('exercises')
-          .select('id, name')
+          .select('id, name, name_pt')
           .limit(500)
 
         const nameToUuid = new Map<string, string>()
         if (dbExercises) {
           dbExercises.forEach((e: Record<string, unknown>) => {
-            nameToUuid.set(e.name as string, e.id as string)
+            if (e.name) nameToUuid.set((e.name as string).toLowerCase(), e.id as string)
+            if (e.name_pt) nameToUuid.set((e.name_pt as string).toLowerCase(), e.id as string)
           })
         }
 
         const planExercises = generatedPlan.exercises
           .map((ex, idx) => {
-            const uuid = nameToUuid.get(ex.name)
+            const uuid = nameToUuid.get(ex.name.toLowerCase())
             if (!uuid) return null
             return {
               plan_id: newPlan.id,
               exercise_id: uuid,
               order_index: idx,
               sets: ex.sets,
-              reps_min: ex.reps_min,
-              reps_max: ex.reps_max,
-              rest_seconds: ex.rest_seconds,
-              weight_kg: ex.weight_kg,
+              weight_kg: ex.weight_kg ?? 0,
             }
           })
           .filter(Boolean)
@@ -128,6 +128,7 @@ export function AiWorkoutGenerator() {
         }
       }
 
+      await queryClient.invalidateQueries({ queryKey: ['plans', profile?.id] })
       setIsOpen(false)
       setGeneratedPlan(null)
       setPrompt('')
