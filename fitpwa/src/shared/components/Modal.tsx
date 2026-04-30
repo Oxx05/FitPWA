@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface ModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export function Modal({
   size = 'md',
   closeButton = true
 }: ModalProps) {
+  const { t } = useTranslation()
   const titleId = React.useId()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   // Ref para onClose: evita que o effect reexecute (e roube o foco) quando
@@ -79,7 +81,7 @@ export function Modal({
                       ref={closeButtonRef}
                       onClick={onClose}
                       className="p-2 hover:bg-surface-100 rounded-lg transition-colors text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary min-w-[44px] min-h-[44px] flex items-center justify-center"
-                      aria-label="Fechar diálogo"
+                      aria-label={t('common.closeDialog')}
                     >
                       <X className="w-5 h-5" />
                     </button>

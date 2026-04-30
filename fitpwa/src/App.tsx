@@ -33,6 +33,7 @@ const AchievementsPage = React.lazy(() => import('@/features/gamification/Achiev
 const AchievementUnlockOverlay = React.lazy(() => import('@/features/gamification/AchievementUnlockOverlay').then(m => ({ default: m.AchievementUnlockOverlay })))
 const BenchAngleMeter = React.lazy(() => import('@/features/tools/BenchAngleMeter').then(m => ({ default: m.BenchAngleMeter })))
 
+import { useTranslation } from 'react-i18next'
 import { useAchievementsStore } from '@/features/gamification/useAchievementsStore'
 
 const PageLoader = () => (
@@ -42,6 +43,7 @@ const PageLoader = () => (
 )
 
 function App() {
+  const { t } = useTranslation()
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -53,7 +55,7 @@ function App() {
               href="#main-content"
               className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary focus:text-black focus:rounded-lg focus:font-bold"
             >
-              Saltar para o conteúdo
+              {t('common.skipToContent')}
             </a>
             <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 pb-nav md:pb-0 md:pl-24 overflow-x-hidden">
             <Navbar />

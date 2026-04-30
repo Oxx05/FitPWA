@@ -206,7 +206,7 @@ export function QuickWorkout() {
                       />
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Reps</span>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">{t('session.reps').toUpperCase()}</span>
                       <input
                         type="number"
                         value={ex.reps}
@@ -216,7 +216,7 @@ export function QuickWorkout() {
                       />
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">Kg</span>
+                      <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">{t('common.kg').toUpperCase()}</span>
                       <input
                         type="number"
                         value={ex.weight || ''}

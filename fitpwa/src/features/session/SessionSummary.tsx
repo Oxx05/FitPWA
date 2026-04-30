@@ -170,7 +170,7 @@ export function SessionSummary() {
         <div className="flex flex-col items-center">
           <ConquestCard 
             title={bestPr ? t('progress.newRecord') : t('session.workoutCompleted')}
-            subtitle={bestPr ? bestPr.exerciseName : "RepTrack Session"}
+            subtitle={bestPr ? bestPr.exerciseName : t('session.shareSubtitle')}
             value={bestPr ? `${Math.round(bestPr.oneRepMax || 0)}` : `${stats.volume}`}
             label={bestPr ? t('progress.estimated1rm') : t('social.feed.valueVolume')}
             achievementIcon={bestPr ? <Trophy className="w-10 h-10" /> : <TrendingUp className="w-10 h-10" />}

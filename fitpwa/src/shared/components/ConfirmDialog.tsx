@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Modal } from './Modal'
 import { Button } from './Button'
 import { AlertCircle } from 'lucide-react'
@@ -20,11 +21,14 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirmar',
-  cancelText = 'Cancelar',
+  confirmText,
+  cancelText,
   variant = 'primary',
   isLoading = false
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
+  const resolvedConfirmText = confirmText ?? t('common.confirm')
+  const resolvedCancelText = cancelText ?? t('common.cancel')
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-6">
@@ -44,7 +48,7 @@ export function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
           >
-            {cancelText}
+            {resolvedCancelText}
           </Button>
           <Button
             variant={variant === 'danger' ? 'danger' : 'primary'}
@@ -52,7 +56,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             isLoading={isLoading}
           >
-            {confirmText}
+            {resolvedConfirmText}
           </Button>
         </div>
       </div>

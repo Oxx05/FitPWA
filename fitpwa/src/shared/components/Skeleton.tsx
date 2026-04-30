@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '../utils/cn'
 
 interface SkeletonProps {
@@ -70,8 +71,9 @@ Skeleton.List = function SkeletonList({
   count?: number
   className?: string
 }) {
+  const { t } = useTranslation()
   return (
-    <div className={cn('flex flex-col gap-3', className)} aria-busy="true" aria-label="A carregar…">
+    <div className={cn('flex flex-col gap-3', className)} aria-busy="true" aria-label={t('common.loadingList')}>
       {Array.from({ length: count }).map((_, i) => (
         <Skeleton.Card key={i} />
       ))}

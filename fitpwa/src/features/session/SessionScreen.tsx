@@ -1607,8 +1607,8 @@ export function SessionScreen() {
 
               <div className="grid grid-cols-[32px_1fr_1fr_64px] gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider px-2 mb-2 items-center">
                 <span className="text-center">{t('session.set')}</span>
-                <span className="text-center">Kg</span>
-                <span className="text-center">Reps</span>
+                <span className="text-center">{t('common.kg').toUpperCase()}</span>
+                <span className="text-center">{t('session.reps').toUpperCase()}</span>
                 <span className="text-center">{t('common.done')}</span>
               </div>
 
