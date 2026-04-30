@@ -28,7 +28,7 @@ function makeStubProfile(userId: string): Profile {
 /** Apply nullish defaults to a row fetched from the DB. */
 function normalizeProfile(data: Record<string, unknown>, userId: string): Profile {
   return {
-    ...(data as Profile),
+    ...(data as unknown as Profile),
     id: userId,
     sound_enabled: (data.sound_enabled as boolean | null) ?? true,
     profile_visibility: (data.profile_visibility as Profile['profile_visibility'] | null) ?? 'private',
