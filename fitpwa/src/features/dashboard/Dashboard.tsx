@@ -4,11 +4,13 @@ import { Button } from '@/shared/components/Button'
 import { getLevelProgress } from '@/shared/utils/gamification'
 import { GamificationManager } from '@/features/gamification/GamificationManager'
 
-import { Crown, TrendingUp, Flame, Zap, Play, Ruler, ArrowRight } from 'lucide-react'
+import { Crown, TrendingUp, Flame, Zap, Play, Ruler, ArrowRight, RotateCcw } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/shared/lib/supabase'
 import { SmartInsights } from './components/SmartInsights'
 import { CommunityChallenge } from '../social/components/CommunityChallenge'
 import { PetWidget } from '../pet/PetWidget'
@@ -54,6 +56,36 @@ export function Dashboard() {
   const levelProgress = getLevelProgress(profile?.xp_total || 0)
   const firstName = profile?.full_name?.split(' ')[0] || t('common.athlete')
   const dateLocale = i18n.language === 'en' ? 'en-US' : 'pt-PT'
+
+  const { data: lastWorkout } = useQuery({
+    queryKey: ['last-workout', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return null
+      const { data } = await supabase
+        .from('workout_sessions')
+        .select('id, plan_id, plan_name, duration_seconds, finished_at')
+        .eq('user_id', profile.id)
+        .order('finished_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!profile?.id,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const lastWorkoutLabel = (() => {
+    if (!lastWorkout?.finished_at) return null
+    const diff = Math.floor((Date.now() - new Date(lastWorkout.finished_at).getTime()) / 86400000)
+    if (diff === 0) return t('dashboard.today')
+    if (diff === 1) return t('dashboard.yesterday')
+    return t('dashboard.daysAgo', { count: diff })
+  })()
+
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60)
+    return `${m} min`
+  }
 
   return (
     <motion.div
@@ -179,21 +211,48 @@ export function Dashboard() {
               {t('dashboard.todayWorkout')}
             </h3>
           </div>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-            <div>
-              <h4 className="text-display text-3xl md:text-4xl text-primary leading-none">
-                {t('dashboard.selectPlan').toUpperCase()}
-              </h4>
-              <p className="text-sm text-ink-muted mt-1">
-                {t('dashboard.chooseSession')}
-              </p>
+          {lastWorkout?.plan_id ? (
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] text-primary/70 font-black uppercase tracking-widest mb-1">
+                  {t('dashboard.lastWorkout')} · {lastWorkoutLabel}
+                  {lastWorkout.duration_seconds ? ` · ${formatDuration(lastWorkout.duration_seconds)}` : ''}
+                </p>
+                <h4 className="text-display text-2xl md:text-3xl text-primary leading-none truncate">
+                  {(lastWorkout.plan_name ?? t('dashboard.selectPlan')).toUpperCase()}
+                </h4>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Link to={`/workouts/${lastWorkout.plan_id}/start`}>
+                  <Button size="lg" className="gap-1.5">
+                    <RotateCcw className="w-4 h-4" />
+                    {t('dashboard.trainAgain')}
+                  </Button>
+                </Link>
+                <Link to="/workouts">
+                  <Button size="lg" variant="secondary" className="!px-3">
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <Link to="/workouts" className="shrink-0">
-              <Button size="lg">
-                {t('dashboard.startWorkout')} <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+              <div>
+                <h4 className="text-display text-3xl md:text-4xl text-primary leading-none">
+                  {t('dashboard.selectPlan').toUpperCase()}
+                </h4>
+                <p className="text-sm text-ink-muted mt-1">
+                  {t('dashboard.chooseSession')}
+                </p>
+              </div>
+              <Link to="/workouts" className="shrink-0">
+                <Button size="lg">
+                  {t('dashboard.startWorkout')} <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          )}
         </motion.div>
       </div>
 

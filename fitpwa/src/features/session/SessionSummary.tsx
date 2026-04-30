@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { CheckCircle, Share2, TrendingUp, Trophy } from 'lucide-react'
+import { CheckCircle, Share2, TrendingUp, Trophy, RotateCcw } from 'lucide-react'
 import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { ConquestCard } from '@/shared/components/ConquestCard'
 import { useTranslation } from 'react-i18next'
+import { supabase } from '@/shared/lib/supabase'
 
 export function SessionSummary() {
   const { t } = useTranslation()
@@ -13,6 +14,8 @@ export function SessionSummary() {
   const duration = location.state?.duration || 0
   const xpGained = location.state?.xpGained || 0
   const newPrs = (location.state?.newPrs || []) as Array<{ exerciseName: string; weight: number; reps: number; oneRepMax?: number; exerciseId?: string }>
+  const sessionId = location.state?.sessionId as string | undefined
+  const planId = location.state?.planId as string | undefined
 
   // Defensive cleanup — once we reach the summary screen, the workout is
   // definitively over. Nuke any stale `titanpulse_active_session` breadcrumb
@@ -24,6 +27,15 @@ export function SessionSummary() {
 
   const [mood, setMood] = useState<string | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+
+  const handleMoodSelect = async (emoji: string) => {
+    setMood(emoji)
+    if (sessionId) {
+      try {
+        await supabase.from('workout_sessions').update({ mood: emoji }).eq('id', sessionId)
+      } catch { /* non-critical */ }
+    }
+  }
   
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -93,25 +105,38 @@ export function SessionSummary() {
           {['😫', '😕', '😐', '🙂', '🤩'].map(emoji => (
             <button
               key={emoji}
-              onClick={() => setMood(emoji)}
+              onClick={() => handleMoodSelect(emoji)}
               className={`hover:scale-125 transition-transform ${mood === emoji ? 'scale-125 drop-shadow-md drop-shadow-primary/50' : 'opacity-30 grayscale'}`}
             >
               {emoji}
             </button>
           ))}
         </div>
+        {mood && (
+          <p className="text-center text-xs text-primary font-bold mt-3 tracking-widest uppercase">{t('session.moodSaved')}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">
-        <Button 
+        {planId && (
+          <Link to={`/workouts/${planId}/start`}>
+            <Button className="w-full text-black font-black h-14 uppercase tracking-tighter italic text-lg">
+              <RotateCcw className="w-5 h-5 mr-2" />
+              {t('session.trainAgain')}
+            </Button>
+          </Link>
+        )}
+
+        <Button
           onClick={() => setShowShareModal(true)}
-          className="w-full text-black font-black h-14 uppercase tracking-tighter italic text-lg"
+          variant={planId ? 'secondary' : 'primary'}
+          className="w-full font-black h-14 uppercase tracking-tighter italic text-lg"
         >
           <Share2 className="w-5 h-5 mr-2" />
           {t('session.shareResult')}
         </Button>
 
-        {stats.exercisesCount > 0 && (
+        {stats.exercisesCount > 0 && !planId && (
           <Link
             to="/workouts/new"
             state={{

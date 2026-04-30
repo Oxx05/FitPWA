@@ -13,13 +13,22 @@ export function useOfflinePlans(userId?: string) {
         try {
           const { data, error } = await supabase
             .from('workout_plans')
-            .select('*')
+            .select('*, plan_exercises(sets, exercises(muscle_groups))')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
 
           if (!error && data) {
+            const enriched = data.map((p: any) => ({
+              ...p,
+              exercise_count: p.plan_exercises?.length ?? 0,
+              muscle_tags: [
+                ...new Set<string>(
+                  (p.plan_exercises ?? []).flatMap((pe: any) => pe.exercises?.muscle_groups ?? [])
+                ),
+              ].slice(0, 5),
+            }))
             // Update cache in background
-            const cacheData = data.map(p => ({
+            const cacheData = enriched.map((p: any) => ({
               id: p.id,
               name: p.name,
               description: p.description,
@@ -28,7 +37,7 @@ export function useOfflinePlans(userId?: string) {
               updatedAt: p.updated_at || new Date().toISOString()
             }))
             void OfflineSyncService.cachePlans(cacheData)
-            return data
+            return enriched
           }
         } catch (err) {
           console.warn('Network fetch failed, falling back to cache:', err)

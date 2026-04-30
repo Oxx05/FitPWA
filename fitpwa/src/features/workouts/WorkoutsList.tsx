@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2, Heart, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Plus, ChevronRight, Zap, Dumbbell, Layers, Loader2, Heart, Pencil, Trash2, AlertCircle, Clock } from 'lucide-react'
+import { humanizeMuscle } from '@/shared/utils/muscleUtils'
 import { Modal } from '@/shared/components/Modal'
 import { Button } from '@/shared/components/Button'
 import { EmptyState } from '@/shared/components/EmptyState'
@@ -23,6 +24,7 @@ interface WorkoutPlan {
   is_favorite?: boolean
   user_id?: string
   exercise_count?: number
+  muscle_tags?: string[]
   created_at?: string
   updated_at?: string
 }
@@ -245,12 +247,33 @@ export function WorkoutsList() {
               <h3 className="text-xl font-black text-white capitalize italic tracking-tighter mb-2 group-hover:text-primary transition-colors">
                 {plan.name}
               </h3>
-              <p className="text-sm text-gray-400 line-clamp-2 min-h-[40px] leading-relaxed">
+              <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">
                 {plan.description || t('common.noDescription')}
               </p>
-              
-              <div className="flex justify-end items-center mt-6 pt-6 border-t border-white/5 relative z-10">
-                <div className="flex gap-2">
+
+              {/* Muscle tags */}
+              {(plan.muscle_tags ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {(plan.muscle_tags ?? []).slice(0, 3).map((m: string) => (
+                    <span key={m} className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {humanizeMuscle(m, t)}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-5 pt-5 border-t border-white/5 relative z-10">
+                {/* Exercise count + duration estimate */}
+                {(plan.exercise_count ?? 0) > 0 && (
+                  <div className="flex items-center gap-2 text-gray-500 text-xs font-bold">
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    <span>{t('workouts.exercisesCount', { count: plan.exercise_count })}</span>
+                    <span>·</span>
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{t('workouts.estDuration', { min: Math.max(15, Math.round((plan.exercise_count ?? 0) * 4)) })}</span>
+                  </div>
+                )}
+                <div className="flex gap-2 ml-auto">
                   <Link to={`/workouts/${plan.id}/edit`}>
                     <Button size="sm" variant="secondary" className="rounded-xl px-3 h-10 bg-surface-100 hover:bg-surface-200 border border-white/5" title={t('common.edit')}>
                       <Pencil className="w-4 h-4 text-primary" />

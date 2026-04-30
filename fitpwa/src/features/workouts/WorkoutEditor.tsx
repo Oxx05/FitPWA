@@ -34,6 +34,9 @@ interface PlanExercise {
   exercise_id: string
   name: string
   sets: number
+  reps_min?: number
+  reps_max?: number
+  rest_seconds?: number
   weight_kg: number | null
   is_superset: boolean
   muscle_groups?: string[]
@@ -90,8 +93,7 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.sets')}</label>
           <DebouncedNumericInput
-            min={1}
-            max={20}
+            min={1} max={20}
             value={ex.sets}
             onChange={val => onUpdate(ex.id, 'sets', val || 1)}
             className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
@@ -100,11 +102,27 @@ function SortableExerciseItem({ ex, onRemove, onUpdate }: SortableExerciseItemPr
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.weight')}</label>
           <DebouncedNumericInput
-            min={0}
-            step={0.5}
-            placeholder="—"
+            min={0} step={0.5} placeholder="—"
             value={ex.weight_kg}
             onChange={val => onUpdate(ex.id, 'weight_kg', val)}
+            className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.repsMin')}</label>
+          <DebouncedNumericInput
+            min={1} max={100}
+            value={ex.reps_min ?? 8}
+            onChange={val => onUpdate(ex.id, 'reps_min', val || 1)}
+            className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">{t('editor.repsMax')}</label>
+          <DebouncedNumericInput
+            min={1} max={100}
+            value={ex.reps_max ?? 12}
+            onChange={val => onUpdate(ex.id, 'reps_max', val || 1)}
             className="w-full h-12 bg-background border border-surface-100 rounded-xl text-center text-white focus:ring-2 focus:ring-primary/50 text-lg font-bold"
           />
         </div>
@@ -230,6 +248,9 @@ export function WorkoutEditor() {
               exercise_id: (ex?.id as string) || (pe.exercise_id as string),
               name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
               sets: (pe.sets as number) || 3,
+              reps_min: (pe.reps_min as number) || undefined,
+              reps_max: (pe.reps_max as number) || undefined,
+              rest_seconds: (pe.rest_seconds as number) || undefined,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
               muscle_groups: (ex?.muscle_groups as string[]) || [],
@@ -279,6 +300,9 @@ export function WorkoutEditor() {
               exercise_id: (ex?.id as string) || (pe.exercise_id as string),
               name: (ex?.name_pt as string) || (ex?.name as string) || 'Exercício',
               sets: (pe.sets as number) || 3,
+              reps_min: (pe.reps_min as number) || undefined,
+              reps_max: (pe.reps_max as number) || undefined,
+              rest_seconds: (pe.rest_seconds as number) || undefined,
               weight_kg: (pe.weight_kg as number) || null,
               is_superset: (pe.is_superset as boolean) || false,
               muscle_groups: (ex?.muscle_groups as string[]) || [],
@@ -464,6 +488,9 @@ export function WorkoutEditor() {
           exercise_id: ex.exercise_id,
           order_index: idx,
           sets: ex.sets,
+          reps_min: ex.reps_min ?? 8,
+          reps_max: ex.reps_max ?? 12,
+          rest_seconds: ex.rest_seconds ?? 90,
           weight_kg: ex.weight_kg,
           is_superset: ex.is_superset,
         }))

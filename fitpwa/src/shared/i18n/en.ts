@@ -138,6 +138,11 @@ const en = {
     benchAngleCardTitle: 'BENCH ANGLE METER',
     benchAngleCardDesc: 'Measure your bench angle with your phone — 15°, 30°, 45°…',
     badgeNew: 'New',
+    lastWorkout: 'Last Workout',
+    trainAgain: 'Train Again',
+    today: 'today',
+    yesterday: 'yesterday',
+    daysAgo: '{{count}} days ago',
   },
 
   // ─── Tools ───
@@ -258,6 +263,8 @@ const en = {
     planDeletedError: 'Error deleting plan.',
     planDeletedSuccess: 'Plan deleted successfully.',
     usePlan: 'Use Plan',
+    exercisesCount: '{{count}} ex.',
+    estDuration: '~{{min}} min',
   },
 
   // ─── Workout Editor ───
@@ -302,6 +309,9 @@ const en = {
     publicWorkout: 'Public Workout',
     publicWorkoutDesc: 'Allow other users to see and save this workout.',
     removeExercise: 'Remove exercise',
+    repsMin: 'Reps Min',
+    repsMax: 'Reps Max',
+    restSeconds: 'Rest (s)',
   },
 
   // ─── AI Generator ───
@@ -561,6 +571,10 @@ const en = {
     swapExercise: 'Swap Exercise',
     swapSuccess: 'Exercise swapped.',
     plates: 'Plates',
+    progressSets: '{{done}} / {{total}} sets',
+    previewExercises: 'Exercises in this workout',
+    trainAgain: 'Train Again',
+    moodSaved: 'Mood saved!',
   },
 
   // ─── Social ───

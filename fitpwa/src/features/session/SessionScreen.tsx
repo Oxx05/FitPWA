@@ -1011,6 +1011,7 @@ export function SessionScreen() {
         }).filter(b => b.weight !== null && b.reps !== null)
 
         const newPrs: Array<{ exerciseName: string; weight: number; reps: number; oneRepMax: number; exerciseId: string }> = []
+        let savedSessionId: string | undefined
 
         try {
           if (navigator.onLine) {
@@ -1030,6 +1031,7 @@ export function SessionScreen() {
               .maybeSingle()
 
             if (sessionError) throw sessionError
+            savedSessionId = sessionRow?.id
 
             if (completedSets.length > 0 && sessionRow) {
               await supabase.from('session_sets').insert(
@@ -1224,12 +1226,12 @@ export function SessionScreen() {
 
         addXp(xpGained)
         localStorage.removeItem('titanpulse_active_session')
-        navigate('/session/summary', { state: { stats, duration, xpGained, newPrs, exercises } })
+        navigate('/session/summary', { state: { stats, duration, xpGained, newPrs, exercises, sessionId: savedSessionId, planId, planName } })
         return
       }
 
       localStorage.removeItem('titanpulse_active_session')
-      navigate('/session/summary', { state: { stats, duration, xpGained, exercises } })
+      navigate('/session/summary', { state: { stats, duration, xpGained, exercises, planId, planName } })
     } catch (error) {
       console.error('Error finishing workout:', error)
       // Ensure the active-session breadcrumb in localStorage is cleared even
@@ -1334,29 +1336,52 @@ export function SessionScreen() {
   }
 
   if (!hasStartedSession) {
+    const estMin = exercises.reduce((acc, ex) => acc + (ex.sets.length * 2), 0)
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-24 h-24 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-8 border-4 border-primary shadow-[0_0_30px_rgba(var(--color-primary),0.3)]">
-          <Dumbbell className="w-12 h-12 rotate-[-45deg]" />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 pb-24">
+        <div className="w-20 h-20 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-6 border-4 border-primary shadow-[0_0_30px_rgba(var(--color-primary),0.3)]">
+          <Dumbbell className="w-10 h-10 rotate-[-45deg]" />
         </div>
-        <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-4">{planName || t('session.workout')}</h1>
-        <p className="text-gray-400 mb-12 max-w-sm text-lg">
-          {exercises.length} {t('session.exercises')} • ~{exercises.reduce((acc, ex) => acc + (ex.sets.length * 2), 0)} min
+        <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-1 text-center">{planName || t('session.workout')}</h1>
+        <p className="text-gray-500 mb-6 text-sm font-bold">
+          {exercises.length} {t('session.exercises')} · ~{estMin} min
         </p>
-        <Button 
+
+        {/* Exercise preview list */}
+        <div className="w-full max-w-sm mb-8 space-y-2">
+          <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3">{t('session.previewExercises')}</p>
+          {exercises.slice(0, 6).map((ex, idx) => (
+            <div key={ex.id} className="flex items-center gap-3 bg-surface-200 px-4 py-2.5 rounded-xl border border-white/5">
+              <span className="text-primary font-black text-sm w-5 shrink-0">{idx + 1}</span>
+              <span className="text-white font-bold text-sm flex-1 truncate">
+                {isPt && ex.name_pt ? ex.name_pt : ex.name}
+              </span>
+              <span className="text-gray-500 text-xs font-bold shrink-0">
+                {ex.sets.length} × {ex.repsMin}–{ex.repsMax}
+              </span>
+            </div>
+          ))}
+          {exercises.length > 6 && (
+            <p className="text-center text-gray-600 text-xs font-bold pt-1">
+              +{exercises.length - 6} {t('session.exercises').toLowerCase()}
+            </p>
+          )}
+        </div>
+
+        <Button
           onClick={() => {
             setHasStartedSession(true)
             setIsRunning(true)
-          }} 
-          variant="primary" 
-          className="w-full max-w-xs h-16 rounded-3xl font-black uppercase italic tracking-widest text-xl shadow-xl shadow-primary/20 active:scale-95 transition-all"
+          }}
+          variant="primary"
+          className="w-full max-w-sm h-16 rounded-3xl font-black uppercase italic tracking-widest text-xl shadow-xl shadow-primary/20 active:scale-95 transition-all"
         >
           {t('common.start')}
         </Button>
-        <Button 
-          onClick={() => navigate('/workouts')} 
-          variant="ghost" 
-          className="mt-6 text-gray-500 hover:text-white font-bold uppercase tracking-widest text-sm"
+        <Button
+          onClick={() => navigate('/workouts')}
+          variant="ghost"
+          className="mt-4 text-gray-500 hover:text-white font-bold uppercase tracking-widest text-sm"
         >
           {t('common.cancel')}
         </Button>
@@ -1367,11 +1392,14 @@ export function SessionScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col pb-24 overflow-x-hidden w-full max-w-full">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4">
+      <header className="sticky top-0 z-10 bg-surface-200/90 backdrop-blur border-b border-surface-100 p-4 relative">
         <div className="max-w-4xl mx-auto flex justify-between items-center gap-2">
           <div className="min-w-0 flex-1">
             <h1 className="font-bold text-white text-lg truncate">{t('session.activeSession')}</h1>
-            <p className="text-sm text-gray-400">{currentExerciseIndex + 1} / {exercises.length}</p>
+            <p className="text-sm text-gray-400">
+              {t('session.progressSets', { done: completedSetsCount, total: exercises.reduce((a, ex) => a + ex.sets.length, 0) })}
+              {' · '}{currentExerciseIndex + 1}/{exercises.length}
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <div className="text-right flex items-center gap-2">
@@ -1401,6 +1429,21 @@ export function SessionScreen() {
             </Button>
           </div>
         </div>
+        {/* Global progress bar */}
+        {(() => {
+          const totalSets = exercises.reduce((a, ex) => a + ex.sets.length, 0)
+          const pct = totalSets > 0 ? Math.round((completedSetsCount / totalSets) * 100) : 0
+          return (
+            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-surface-100">
+              <motion.div
+                className="h-full bg-primary"
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.4 }}
+              />
+            </div>
+          )
+        })()}
       </header>
 
       {/* Main Content */}

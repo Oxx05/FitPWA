@@ -135,6 +135,11 @@ const pt = {
     benchAngleCardTitle: 'BENCH ANGLE METER',
     benchAngleCardDesc: 'Mede o ângulo do banco com o telemóvel — 15°, 30°, 45°…',
     badgeNew: 'Novo',
+    lastWorkout: 'Último Treino',
+    trainAgain: 'Treinar Novamente',
+    today: 'hoje',
+    yesterday: 'ontem',
+    daysAgo: 'há {{count}} dias',
   },
 
   // ─── Tools ───
@@ -255,6 +260,8 @@ const pt = {
     deleteWarningText: 'O plano e todos os seus exercícios associados serão removidos da tua lista.',
     planDeletedError: 'Erro ao apagar plano.',
     planDeletedSuccess: 'Plano apagado com sucesso.',
+    exercisesCount: '{{count}} exerc.',
+    estDuration: '~{{min}} min',
   },
 
   // ─── Workout Editor ───
@@ -299,6 +306,9 @@ const pt = {
     publicWorkout: 'Treino Público',
     publicWorkoutDesc: 'Permite que outros utilizadores vejam e guardem este treino.',
     removeExercise: 'Remover exercício',
+    repsMin: 'Reps Min',
+    repsMax: 'Reps Max',
+    restSeconds: 'Descanso (s)',
   },
 
   // ─── AI Generator ───
@@ -563,6 +573,10 @@ const pt = {
     swapExercise: 'Trocar Exercício',
     swapSuccess: 'Exercício trocado.',
     plates: 'Discos',
+    progressSets: '{{done}} / {{total}} séries',
+    previewExercises: 'Exercícios neste treino',
+    trainAgain: 'Treinar Novamente',
+    moodSaved: 'Humor guardado!',
   },
 
   // ─── Social ───

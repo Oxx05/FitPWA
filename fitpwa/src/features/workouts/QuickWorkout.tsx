@@ -12,20 +12,6 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '@/shared/lib/supabase'
 import Fuse from 'fuse.js'
 
-const TRANSLATION_MAP: Record<string, string> = {
-  'supino': 'bench press',
-  'agachamento': 'squat',
-  'levantamento terra': 'deadlift',
-  'rosca direta': 'bicep curl',
-  'flexao': 'push up',
-  'abdominal': 'crunch',
-  'remada': 'row',
-  'puxada': 'lat pulldown',
-  'extensao': 'extension',
-  'flexao de pernas': 'leg curl',
-  'press militar': 'military press',
-  'elevaçao lateral': 'lateral raise'
-}
 
 interface QuickExercise {
   exerciseId: string
@@ -79,36 +65,14 @@ export function QuickWorkout() {
   }), [availableExercises])
 
   const filteredExercises = useMemo(() => {
-    let results = (availableExercises as Exercise[])
-    
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim()
-      const searchTerms = [term]
-      
-      // Add translated term to search if found in map
-      for (const [pt, en] of Object.entries(TRANSLATION_MAP)) {
-        if (term.includes(pt) || pt.includes(term)) {
-          searchTerms.push(en)
-        }
-      }
-      
-      // Perform multi-term search
-      const fuseResults = new Set<string>()
-      let searchResults: Exercise[] = []
-      
-      searchTerms.forEach(t => {
-        fuse.search(t).forEach(r => {
-          if (!fuseResults.has(r.item.id)) {
-            fuseResults.add(r.item.id)
-            searchResults.push(r.item)
-          }
-        })
-      })
-      results = searchResults
-    }
+    let results: Exercise[] = searchTerm.trim()
+      ? fuse.search(searchTerm.trim()).map(r => r.item)
+      : (availableExercises as Exercise[])
 
     if (selectedMuscle) {
-      results = results.filter(ex => ex.muscle_groups?.some(mg => mg.toLowerCase().includes(selectedMuscle.toLowerCase())))
+      results = results.filter(ex =>
+        ex.muscle_groups?.some(mg => mg.toLowerCase().includes(selectedMuscle.toLowerCase()))
+      )
     }
 
     return results
