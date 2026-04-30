@@ -1,4 +1,12 @@
-import { EXERCISES, type Exercise } from '@/shared/data/exercises'
+export interface DbExercise {
+  id: string
+  name: string
+  name_pt: string | null
+  muscle_groups: string[]
+  secondary_muscles: string[]
+  equipment: string[]
+  difficulty: number
+}
 
 export interface AiGeneratedExercise {
   exercise_id: string
@@ -16,8 +24,6 @@ export interface AiGeneratedPlan {
   difficulty: 'beginner' | 'intermediate' | 'advanced'
   exercises: AiGeneratedExercise[]
 }
-
-// ─── Muscle group mappings for workout templates ───
 
 // ─── Difficulty presets ───
 
@@ -53,296 +59,331 @@ const DIFFICULTY_PRESETS: Record<string, DifficultyPreset> = {
   },
 }
 
+// ─── DB exercise adapters ───
+
+const ISOLATION_KEYWORDS = ['curl', 'fly', 'raise', 'extension', 'crunch', 'plank', 'twist', 'kickback', 'shrug', 'pullover', 'crossover', 'bridge']
+
+function deriveMovementType(ex: DbExercise): 'compound' | 'isolation' | 'cardio' {
+  const nameLower = ex.name.toLowerCase()
+  if (ISOLATION_KEYWORDS.some(k => nameLower.includes(k))) return 'isolation'
+  if ((ex.secondary_muscles?.length ?? 0) >= 1) return 'compound'
+  return 'isolation'
+}
+
+function expandDbMuscle(mg: string): string[] {
+  const map: Record<string, string[]> = {
+    lats: ['back', 'lats'],
+    'lower back': ['back'],
+    back: ['back'],
+    abdominals: ['abs', 'core'],
+    obliques: ['abs', 'core', 'obliques'],
+    quads: ['quads', 'legs'],
+    hamstrings: ['hamstrings', 'legs'],
+    glutes: ['glutes', 'legs'],
+    calves: ['calves', 'legs'],
+  }
+  return map[mg] ?? [mg]
+}
+
+function dbDifficultyToPreset(difficulty: number): 'beginner' | 'intermediate' | 'advanced' {
+  if (difficulty <= 2) return 'beginner'
+  if (difficulty === 3) return 'intermediate'
+  return 'advanced'
+}
+
+// Internal normalized representation built from DbExercise
+interface NormalizedExercise {
+  id: string
+  name: string
+  name_pt: string | null
+  muscleGroups: string[]
+  equipment: string[]
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  movementType: 'compound' | 'isolation' | 'cardio'
+}
+
+function normalizeDbExercise(ex: DbExercise): NormalizedExercise {
+  const muscleGroups = (ex.muscle_groups ?? []).flatMap(expandDbMuscle)
+  const equipment = (ex.equipment ?? []).map(e => e.toLowerCase())
+  return {
+    id: ex.id,
+    name: ex.name,
+    name_pt: ex.name_pt,
+    muscleGroups,
+    equipment,
+    difficulty: dbDifficultyToPreset(ex.difficulty),
+    movementType: deriveMovementType(ex),
+  }
+}
+
 // ─── Smarter Rule-Based AI Engine ───
 
-// Helpers for advanced string parsing
 function normalizeContext(prompt: string): string {
   return prompt
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // removes accents for easier matching
+    .replace(/[\u0300-\u036f]/g, "")
 }
 
 function detectEquipment(prompt: string): string[] | null {
-  const normalized = normalizeContext(prompt);
-  const equipment = new Set<string>();
+  const normalized = normalizeContext(prompt)
+  const equipment = new Set<string>()
 
-  // If user explicitly asks for "apenas", "so tenho", "only" bodyweight
   if (normalized.match(/so (com )?peso corporal|apenas peso corporal|bodyweight|sem equipamento/)) {
-    return []; // Empty array means strict bodyweight only
+    return []
   }
 
-  // Detect specific equipment
-  if (normalized.match(/halter|halteres|dumbbell/)) equipment.add('Dumbbell');
+  if (normalized.match(/halter|halteres|dumbbell/)) equipment.add('dumbbell')
   if (normalized.match(/barra|barbell/)) {
-    equipment.add('Barbell');
-    equipment.add('Rack');
-    equipment.add('Banco'); // Assume they have a bench if they have a barbell usually
+    equipment.add('barbell')
+    equipment.add('rack')
+    equipment.add('bench')
   }
-  if (normalized.match(/banco|bench/)) equipment.add('Banco');
-  if (normalized.match(/elastico|banda|band/)) equipment.add('Resistance Band');
-  if (normalized.match(/kettlebell|kettle/)) equipment.add('Kettlebell');
+  if (normalized.match(/banco|bench/)) equipment.add('bench')
+  if (normalized.match(/elastico|banda|band/)) equipment.add('resistance band')
+  if (normalized.match(/kettlebell|kettle/)) equipment.add('kettlebell')
   if (normalized.match(/maquina|cabo|cable|ginasio/)) {
-    // Gym access
-    equipment.add('Machine');
-    equipment.add('Cable Machine');
-    equipment.add('Smith Machine');
-    equipment.add('Dip Station');
-    equipment.add('Pull-up Bar');
+    equipment.add('machine')
+    equipment.add('cable')
+    equipment.add('smith machine')
+    equipment.add('dip station')
+    equipment.add('pull-up bar')
   }
 
-  // If we detected specific equipment, return it. Otherwise null (meaning access to everything)
-  return equipment.size > 0 ? Array.from(equipment) : null;
+  return equipment.size > 0 ? Array.from(equipment) : null
 }
 
 function detectLimitations(prompt: string): string[] {
-  const normalized = normalizeContext(prompt);
-  const limitations: string[] = [];
+  const normalized = normalizeContext(prompt)
+  const limitations: string[] = []
 
   if (normalized.match(/dor(es)? (de|no|nos) joelho|problema joelho|knee pain/)) {
-    limitations.push('knee_pain');
+    limitations.push('knee_pain')
   }
   if (normalized.match(/dor(es)? (de|no|nos) ombro|problema ombro|shoulder pain/)) {
-    limitations.push('shoulder_pain');
+    limitations.push('shoulder_pain')
   }
   if (normalized.match(/dor(es)? (de|na|nas) costa|lombar/)) {
-    limitations.push('back_pain');
+    limitations.push('back_pain')
   }
 
-  return limitations;
+  return limitations
 }
 
 function detectDifficulty(prompt: string): 'beginner' | 'intermediate' | 'advanced' {
-  const lower = normalizeContext(prompt);
-  if (lower.match(/iniciante|beginner|facil|basico|comecar/)) return 'beginner';
-  if (lower.match(/avancado|advanced|dificil|pesado|intenso|hardcore/)) return 'advanced';
-  return 'intermediate';
+  const lower = normalizeContext(prompt)
+  if (lower.match(/iniciante|beginner|facil|basico|comecar/)) return 'beginner'
+  if (lower.match(/avancado|advanced|dificil|pesado|intenso|hardcore/)) return 'advanced'
+  return 'intermediate'
 }
 
 function detectGoal(prompt: string): 'strength' | 'hypertrophy' | 'endurance' {
-  const lower = normalizeContext(prompt);
-  if (lower.match(/forca|strength|pesado|powerlifting/)) return 'strength';
-  if (lower.match(/resistencia|endurance|cardio|emagrecer|secar|perder peso/)) return 'endurance';
-  return 'hypertrophy';
+  const lower = normalizeContext(prompt)
+  if (lower.match(/forca|strength|pesado|powerlifting/)) return 'strength'
+  if (lower.match(/resistencia|endurance|cardio|emagrecer|secar|perder peso/)) return 'endurance'
+  return 'hypertrophy'
 }
 
 function detectTimeLimit(prompt: string): number | null {
-  const match = prompt.match(/(\d+)\s*min/);
-  return match ? parseInt(match[1]) : null;
+  const match = prompt.match(/(\d+)\s*min/)
+  return match ? parseInt(match[1]) : null
 }
 
-// ─── Dynamic Template Matching ───
-
-// Instead of picking 1 template, we score all muscle groups and construct a hybrid
 function analyzeMuscleTargets(prompt: string): string[] {
-  const lower = normalizeContext(prompt);
-  const targets = new Set<string>();
+  const lower = normalizeContext(prompt)
+  const targets = new Set<string>()
 
-  // Direct hits
-  if (lower.match(/peito|chest|supino|empurrar/)) targets.add('chest');
-  if (lower.match(/costa|back|puxar/)) targets.add('back');
-  if (lower.match(/ombro|shoulder|deltoide/)) targets.add('shoulders');
-  if (lower.match(/bicep/)) targets.add('biceps');
-  if (lower.match(/tricep/)) targets.add('triceps');
-  if (lower.match(/braco|arm/)) { targets.add('biceps'); targets.add('triceps'); }
-  if (lower.match(/perna|leg|quad/)) { 
-    targets.add('legs'); 
-    targets.add('quads'); 
-    if (!lower.match(/gluteo|glute/)) { // If they only said legs, don't necessarily add glutes unless mentioned
-       targets.add('hamstrings'); targets.add('calves'); 
+  if (lower.match(/peito|chest|supino|empurrar/)) targets.add('chest')
+  if (lower.match(/costa|back|puxar/)) targets.add('back')
+  if (lower.match(/ombro|shoulder|deltoide/)) targets.add('shoulders')
+  if (lower.match(/bicep/)) targets.add('biceps')
+  if (lower.match(/tricep/)) targets.add('triceps')
+  if (lower.match(/braco|arm/)) { targets.add('biceps'); targets.add('triceps') }
+  if (lower.match(/perna|leg|quad/)) {
+    targets.add('legs')
+    targets.add('quads')
+    if (!lower.match(/gluteo|glute/)) {
+      targets.add('hamstrings'); targets.add('calves')
     }
   }
-  if (lower.match(/gluteo|glute|bunda|posterior/)) { 
-    targets.add('glutes'); 
-    // Only add hamstrings if specifically mentioned or if it's "posterior"
+  if (lower.match(/gluteo|glute|bunda|posterior/)) {
+    targets.add('glutes')
     if (lower.match(/posterior|hamstring/)) {
-      targets.add('hamstrings');
+      targets.add('hamstrings')
     }
   }
-  if (lower.match(/abs|abdominal|core/)) { targets.add('abs'); targets.add('core'); targets.add('obliques'); }
-  
-  // Macros
-  if (lower.match(/superior|upper/)) { targets.add('chest'); targets.add('back'); targets.add('shoulders'); targets.add('biceps'); targets.add('triceps'); }
-  if (lower.match(/inferior|lower/)) { targets.add('legs'); targets.add('glutes'); targets.add('hamstrings'); targets.add('calves'); }
-  if (lower.match(/push/)) { targets.add('chest'); targets.add('shoulders'); targets.add('triceps'); }
-  if (lower.match(/pull/)) { targets.add('back'); targets.add('biceps'); }
-  if (lower.match(/corpo inteiro|full body/)) { targets.add('chest'); targets.add('back'); targets.add('legs'); targets.add('shoulders'); targets.add('abs'); }
+  if (lower.match(/abs|abdominal|core/)) { targets.add('abs'); targets.add('core'); targets.add('obliques') }
 
-  return Array.from(targets);
+  if (lower.match(/superior|upper/)) { targets.add('chest'); targets.add('back'); targets.add('shoulders'); targets.add('biceps'); targets.add('triceps') }
+  if (lower.match(/inferior|lower/)) { targets.add('legs'); targets.add('glutes'); targets.add('hamstrings'); targets.add('calves') }
+  if (lower.match(/push/)) { targets.add('chest'); targets.add('shoulders'); targets.add('triceps') }
+  if (lower.match(/pull/)) { targets.add('back'); targets.add('biceps') }
+  if (lower.match(/corpo inteiro|full body/)) { targets.add('chest'); targets.add('back'); targets.add('legs'); targets.add('shoulders'); targets.add('abs') }
+
+  return Array.from(targets)
 }
 
-function isExerciseAllowed(ex: Exercise, equipment: string[] | null, limitations: string[]): boolean {
-  // Check Equipment Constraint
+function isExerciseAllowed(ex: NormalizedExercise, equipment: string[] | null, limitations: string[]): boolean {
   if (equipment !== null) {
     if (ex.equipment.length > 0) {
-      // Exercise requires equipment. Do we have at least one thing it needs? Or exactly what it needs?
-      // Strict matching: we must have EVERY piece of equipment it lists, OR it lists something we have.
-      // Easiest strict logic: If the exercise requires gear, user must possess all of the required gear for that exercise
-      // e.g., if ex requires ['Barbell', 'Bench'], user must have both.
-      const hasRequiredGear = ex.equipment.every(req => equipment.includes(req));
-      if (!hasRequiredGear) return false;
+      // Equipment in both ex.equipment and the passed list are already lowercased
+      const hasRequiredGear = ex.equipment.every(req => equipment.includes(req))
+      if (!hasRequiredGear) return false
     }
   }
 
-  // Check Limitations Constraint
   if (limitations.includes('knee_pain')) {
-    const hazardous = ['Agachamento', 'Squat', 'Leg Press', 'Jump', 'Lunges', 'Step-Up', 'Sprint'];
-    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz.toLowerCase()))) return false;
-  }
-  
-  if (limitations.includes('shoulder_pain')) {
-    const hazardous = ['Military', 'Overhead', 'Dip', 'Snatch', 'Thruster', 'Lateral'];
-    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz.toLowerCase()))) return false;
-  }
-  
-  if (limitations.includes('back_pain')) {
-    const hazardous = ['Deadlift', 'Good Morning', 'Bent Row', 'T-Bar'];
-    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz.toLowerCase()))) return false;
+    const hazardous = ['squat', 'leg press', 'jump', 'lunge', 'step-up', 'sprint']
+    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz))) return false
   }
 
-  return true;
+  if (limitations.includes('shoulder_pain')) {
+    const hazardous = ['military', 'overhead', 'dip', 'snatch', 'thruster', 'lateral']
+    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz))) return false
+  }
+
+  if (limitations.includes('back_pain')) {
+    const hazardous = ['deadlift', 'good morning', 'bent row', 't-bar']
+    if (hazardous.some(hz => ex.name.toLowerCase().includes(hz))) return false
+  }
+
+  return true
 }
 
 function shuffle<T>(arr: T[]): T[] {
-  const shuffled = [...arr];
+  const shuffled = [...arr]
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
-  return shuffled;
+  return shuffled
 }
 
 function pickSmartExercises(
+  pool: NormalizedExercise[],
   targetMuscles: string[],
   difficulty: 'beginner' | 'intermediate' | 'advanced',
   maxCount: number,
   isCardioRequested: boolean,
   equipmentConstraints: string[] | null,
   limitations: string[]
-): Exercise[] {
-  
-  let pool = EXERCISES;
+): NormalizedExercise[] {
 
-  // 1. Filter by allowed equipment and physical limitations
-  pool = pool.filter(ex => isExerciseAllowed(ex, equipmentConstraints, limitations));
+  let filtered = pool.filter(ex => isExerciseAllowed(ex, equipmentConstraints, limitations))
 
-  // 1.1 STRICTOR FILTERING: If specific muscles are requested, narrow the pool immediately
   if (targetMuscles.length > 0) {
-    const strictPool = pool.filter(ex => ex.muscleGroups.some(mg => targetMuscles.includes(mg)));
-    // But if strictPool is too small (e.g. < 3 exercises), we might want to keep some general ones.
-    // However, the user explicitly asked for "ONLY X", so let's stick to it unless empty.
+    const strictPool = filtered.filter(ex => ex.muscleGroups.some(mg => targetMuscles.includes(mg)))
     if (strictPool.length >= 2) {
-      pool = strictPool;
+      filtered = strictPool
     }
   }
 
-  // 2. Filter by difficulty (beginners shouldn't do advanced moves)
   if (difficulty === 'beginner') {
-    pool = pool.filter(e => e.difficulty !== 'advanced');
+    filtered = filtered.filter(e => e.difficulty !== 'advanced')
   }
 
-  const picked = new Set<Exercise>();
+  const picked = new Set<NormalizedExercise>()
 
-  // 3. Strategy: Ensure we hit every requested muscle group with at least one compound if possible
-  const targetCompounds = shuffle(pool.filter(e => e.movementType === 'compound'));
-  const targetIsolations = shuffle(pool.filter(e => e.movementType === 'isolation'));
-  const cardio = shuffle(pool.filter(e => e.movementType === 'cardio'));
+  const targetCompounds = shuffle(filtered.filter(e => e.movementType === 'compound'))
+  const targetIsolations = shuffle(filtered.filter(e => e.movementType === 'isolation'))
+  const cardio = shuffle(filtered.filter(e => e.movementType === 'cardio'))
 
-  // If pure cardio requested and no muscles targeted
   if (isCardioRequested && targetMuscles.length === 0) {
-    return cardio.slice(0, maxCount);
+    return cardio.slice(0, maxCount)
   }
 
-  // Try to find a compound movement for each target muscle
-  const missingMuscles = [...targetMuscles];
-  
+  const missingMuscles = [...targetMuscles]
+
   for (const muscle of targetMuscles) {
-    if (picked.size >= Math.ceil(maxCount * 0.6)) break; // Don't fill whole workout with compounds
-    
-    const ex = targetCompounds.find(e => e.muscleGroups.includes(muscle) && !picked.has(e));
+    if (picked.size >= Math.ceil(maxCount * 0.6)) break
+
+    const ex = targetCompounds.find(e => e.muscleGroups.includes(muscle) && !picked.has(e))
     if (ex) {
-      picked.add(ex);
+      picked.add(ex)
       ex.muscleGroups.forEach(mg => {
-        const idx = missingMuscles.indexOf(mg);
-        if (idx > -1) missingMuscles.splice(idx, 1);
-      });
+        const idx = missingMuscles.indexOf(mg)
+        if (idx > -1) missingMuscles.splice(idx, 1)
+      })
     }
   }
 
-  // Fill remaining slots with isolations targeting the requested muscles
   for (const muscle of targetMuscles) {
-    if (picked.size >= maxCount - (isCardioRequested ? 1 : 0)) break; // save 1 slot for cardio if needed
+    if (picked.size >= maxCount - (isCardioRequested ? 1 : 0)) break
 
-    const exIso = targetIsolations.find(e => e.muscleGroups.includes(muscle) && !picked.has(e));
-    if (exIso) picked.add(exIso);
+    const exIso = targetIsolations.find(e => e.muscleGroups.includes(muscle) && !picked.has(e))
+    if (exIso) picked.add(exIso)
   }
 
-  // Add cardio finisher if requested and there's space
   if (isCardioRequested && cardio.length > 0 && picked.size < maxCount) {
-    picked.add(cardio[0]);
+    picked.add(cardio[0])
   }
 
-  // If we still need more exercises to reach maxCount, fill with general compounds related to targets
   if (picked.size < maxCount) {
     for (const ex of targetCompounds) {
-      if (picked.size >= maxCount) break;
+      if (picked.size >= maxCount) break
       if (!picked.has(ex) && ex.muscleGroups.some(mg => targetMuscles.includes(mg))) {
-        picked.add(ex);
+        picked.add(ex)
       }
     }
   }
 
-  return Array.from(picked);
+  return Array.from(picked)
 }
 
 // ─── Main generator ───
 
-export function generateWorkoutPlan(userPrompt: string, lang: string = 'pt'): AiGeneratedPlan {
+export function generateWorkoutPlan(
+  userPrompt: string,
+  dbExercises: DbExercise[],
+  lang: string = 'pt'
+): AiGeneratedPlan {
   // 1. Context Parsing
-  const difficulty = detectDifficulty(userPrompt);
-  const goal = detectGoal(userPrompt);
-  const timeLimit = detectTimeLimit(userPrompt);
-  const equipment = detectEquipment(userPrompt);
-  const limitations = detectLimitations(userPrompt);
-  
-  let targetMuscles = analyzeMuscleTargets(userPrompt);
-  const isCardio = normalizeContext(userPrompt).match(/hiit|cardio|emagrecer|suar|queimar/) !== null;
+  const difficulty = detectDifficulty(userPrompt)
+  const goal = detectGoal(userPrompt)
+  const timeLimit = detectTimeLimit(userPrompt)
+  const equipment = detectEquipment(userPrompt)
+  const limitations = detectLimitations(userPrompt)
 
-  // Fallback if no specific muscle was mentioned (Full Body)
+  let targetMuscles = analyzeMuscleTargets(userPrompt)
+  const isCardio = normalizeContext(userPrompt).match(/hiit|cardio|emagrecer|suar|queimar/) !== null
+
   if (targetMuscles.length === 0 && !isCardio) {
-    targetMuscles = ['chest', 'back', 'legs', 'shoulders', 'abs'];
+    targetMuscles = ['chest', 'back', 'legs', 'shoulders', 'abs']
   }
 
-  const preset = DIFFICULTY_PRESETS[difficulty];
+  const preset = DIFFICULTY_PRESETS[difficulty]
 
   // 2. Dynamic Rules (Time vs Volume)
-  let maxExercises = preset.maxExercises;
+  let maxExercises = preset.maxExercises
   if (timeLimit) {
-    // Advanced algorithm: time based on rest times + execution time
-    // Execution: ~45s per set. 
-    // Example: 3 sets * (45s work + 90s rest) = 405s ~= 6.7 mins per exercise
-    const timePerExerciseMins = 6.5; 
-    maxExercises = Math.max(2, Math.floor(timeLimit / timePerExerciseMins));
+    const timePerExerciseMins = 6.5
+    maxExercises = Math.max(2, Math.floor(timeLimit / timePerExerciseMins))
   }
 
-  // 3. Selection
+  // 3. Normalize DB exercises
+  const normalizedPool = dbExercises.map(normalizeDbExercise)
+
+  // 4. Selection
   const selectedExercises = pickSmartExercises(
-    targetMuscles, 
-    difficulty, 
-    maxExercises, 
-    isCardio, 
-    equipment, 
+    normalizedPool,
+    targetMuscles,
+    difficulty,
+    maxExercises,
+    isCardio,
+    equipment,
     limitations
-  );
+  )
 
   if (selectedExercises.length === 0) {
-    throw new Error(lang === 'pt' ? "Não encontrei exercícios que correspondam às tuas limitações/equipamento. Tenta ser menos restritivo!" : "Could not find exercises matching your limitations/equipment. Try to be less restrictive!");
+    throw new Error(lang === 'pt'
+      ? "Não encontrei exercícios que correspondam às tuas limitações/equipamento. Tenta ser menos restritivo!"
+      : "Could not find exercises matching your limitations/equipment. Try to be less restrictive!")
   }
 
-  // 4. Volume Mapping
+  // 5. Volume Mapping
   const repsRange = goal === 'strength' ? preset.repsStrength
     : goal === 'endurance' ? preset.repsEndurance
-    : preset.repsHypertrophy;
+    : preset.repsHypertrophy
 
   const exercises: AiGeneratedExercise[] = selectedExercises.map(ex => ({
     exercise_id: ex.id,
@@ -356,30 +397,36 @@ export function generateWorkoutPlan(userPrompt: string, lang: string = 'pt'): Ai
       : ex.movementType === 'cardio' ? 30
       : preset.restIsolation,
     weight_kg: null,
-  }));
+  }))
 
-  // 5. Intelligent Naming & Description
-  const muscleString = targetMuscles.length > 3 ? (lang === 'pt' ? 'Corpo Inteiro' : 'Full Body') : targetMuscles.join(', ');
-  const modeString = isCardio && targetMuscles.length > 0 ? (lang === 'pt' ? '+ Cardio' : '+ Cardio') : '';
-  const planName = timeLimit 
+  // 6. Intelligent Naming & Description
+  const muscleString = targetMuscles.length > 3
+    ? (lang === 'pt' ? 'Corpo Inteiro' : 'Full Body')
+    : targetMuscles.join(', ')
+  const modeString = isCardio && targetMuscles.length > 0
+    ? (lang === 'pt' ? '+ Cardio' : '+ Cardio')
+    : ''
+  const planName = timeLimit
     ? (lang === 'pt' ? `Treino Dinâmico de ${timeLimit} min` : `Dynamic Workout of ${timeLimit} min`)
-    : (lang === 'pt' ? `Plano Gerado: ${muscleString} ${modeString}` : `Generated Plan: ${muscleString} ${modeString}`);
+    : (lang === 'pt' ? `Plano Gerado: ${muscleString} ${modeString}` : `Generated Plan: ${muscleString} ${modeString}`)
 
-  let description = lang === 'pt' 
+  let description = lang === 'pt'
     ? `Treino gerado à medida. Foco em ${goal === 'strength' ? 'força' : goal === 'endurance' ? 'resistência' : 'hipertrofia'}.`
-    : `Custom generated workout. Focus on ${goal === 'strength' ? 'strength' : goal === 'endurance' ? 'endurance' : 'hypertrophy'}.`;
-  
+    : `Custom generated workout. Focus on ${goal === 'strength' ? 'strength' : goal === 'endurance' ? 'endurance' : 'hypertrophy'}.`
+
   if (equipment !== null) {
     if (equipment.length === 0) {
-      description += lang === 'pt' ? ' Sem recurso a equipamento (apenas peso corporal).' : ' No equipment needed (bodyweight only).';
+      description += lang === 'pt'
+        ? ' Sem recurso a equipamento (apenas peso corporal).'
+        : ' No equipment needed (bodyweight only).'
     } else {
-      description += lang === 'pt' ? ' Equipamento filtrado.' : ' Equipment filtered.';
+      description += lang === 'pt' ? ' Equipamento filtrado.' : ' Equipment filtered.'
     }
   }
   if (limitations.length > 0) {
-    description += lang === 'pt' 
+    description += lang === 'pt'
       ? ' Adaptado para evitar sobrecarga nas tuas limitações articulatórias.'
-      : ' Adapted to avoid overloading your joint limitations.';
+      : ' Adapted to avoid overloading your joint limitations.'
   }
 
   return {
@@ -387,5 +434,5 @@ export function generateWorkoutPlan(userPrompt: string, lang: string = 'pt'): Ai
     description,
     difficulty,
     exercises,
-  };
+  }
 }

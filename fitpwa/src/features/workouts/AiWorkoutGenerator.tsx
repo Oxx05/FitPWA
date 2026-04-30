@@ -5,8 +5,8 @@ import { Button } from '@/shared/components/Button'
 import { Modal } from '@/shared/components/Modal'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuthStore } from '../auth/authStore'
-import { useQueryClient } from '@tanstack/react-query'
-import { generateWorkoutPlan, type AiGeneratedPlan } from '@/shared/lib/aiService'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { generateWorkoutPlan, type AiGeneratedPlan, type DbExercise } from '@/shared/lib/aiService'
 import { useTranslation } from 'react-i18next'
 
 const SUGGESTION_CHIPS = [
@@ -39,6 +39,20 @@ export function AiWorkoutGenerator() {
   const [filterDifficulty, setFilterDifficulty] = useState<string>('') // '' | 'beginner' | 'intermediate' | 'advanced'
   const [filterDuration, setFilterDuration] = useState<number | null>(null)
 
+  const { data: dbExercises = [] } = useQuery<DbExercise[]>({
+    queryKey: ['exercises-for-ai'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('id,name,name_pt,muscle_groups,secondary_muscles,equipment,difficulty')
+        .eq('is_custom', false)
+        .limit(500)
+      if (error) throw error
+      return (data ?? []) as DbExercise[]
+    },
+    staleTime: 30 * 60 * 1000,
+  })
+
   const buildPrompt = () => {
     let parts: string[] = []
     if (prompt.trim()) parts.push(prompt.trim())
@@ -55,7 +69,7 @@ export function AiWorkoutGenerator() {
   const handleGenerate = () => {
     try {
       setError(null)
-      const plan = generateWorkoutPlan(buildPrompt())
+      const plan = generateWorkoutPlan(buildPrompt(), dbExercises, i18n.language)
       setGeneratedPlan(plan)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
@@ -65,7 +79,7 @@ export function AiWorkoutGenerator() {
   const handleRegenerate = () => {
     try {
       setError(null)
-      const plan = generateWorkoutPlan(buildPrompt())
+      const plan = generateWorkoutPlan(buildPrompt(), dbExercises, i18n.language)
       setGeneratedPlan(plan)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('ai.errorGenerating'))
@@ -93,39 +107,19 @@ export function AiWorkoutGenerator() {
       if (planErr) throw planErr
 
       if (newPlan && generatedPlan.exercises.length > 0) {
-        const { data: dbExercises } = await supabase
-          .from('exercises')
-          .select('id, name, name_pt')
-          .limit(500)
+        const planExercises = generatedPlan.exercises.map((ex, idx) => ({
+          plan_id: newPlan.id,
+          exercise_id: ex.exercise_id,
+          order_index: idx,
+          sets: ex.sets,
+          reps_min: ex.reps_min,
+          reps_max: ex.reps_max,
+          rest_seconds: ex.rest_seconds,
+          weight_kg: ex.weight_kg ?? 0,
+        }))
 
-        const nameToUuid = new Map<string, string>()
-        if (dbExercises) {
-          dbExercises.forEach((e: Record<string, unknown>) => {
-            if (e.name) nameToUuid.set((e.name as string).toLowerCase(), e.id as string)
-            if (e.name_pt) nameToUuid.set((e.name_pt as string).toLowerCase(), e.id as string)
-          })
-        }
-
-        const planExercises = generatedPlan.exercises
-          .map((ex, idx) => {
-            const uuid = nameToUuid.get(ex.name.toLowerCase())
-            if (!uuid) return null
-            return {
-              plan_id: newPlan.id,
-              exercise_id: uuid,
-              order_index: idx,
-              sets: ex.sets,
-              weight_kg: ex.weight_kg ?? 0,
-            }
-          })
-          .filter(Boolean)
-
-        if (planExercises.length > 0) {
-          const { error: exErr } = await supabase
-            .from('plan_exercises')
-            .insert(planExercises)
-          if (exErr) console.error('Error saving exercises:', exErr)
-        }
+        const { error: exErr } = await supabase.from('plan_exercises').insert(planExercises)
+        if (exErr) throw exErr
       }
 
       await queryClient.invalidateQueries({ queryKey: ['plans', profile?.id] })
