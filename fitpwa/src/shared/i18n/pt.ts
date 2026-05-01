@@ -62,6 +62,10 @@ const pt = {
       upper_back: 'Costas Superiores'
     },
     kg: 'kg',
+    closeNotification: 'Fechar notificação',
+    closeDialog: 'Fechar diálogo',
+    loadingList: 'A carregar…',
+    skipToContent: 'Saltar para o conteúdo',
   },
 
   // ─── Navigation ───
@@ -577,6 +581,7 @@ const pt = {
     previewExercises: 'Exercícios neste treino',
     trainAgain: 'Treinar Novamente',
     moodSaved: 'Humor guardado!',
+    shareSubtitle: 'Sessão RepTrack',
   },
 
   // ─── Social ───

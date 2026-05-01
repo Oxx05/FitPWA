@@ -65,6 +65,10 @@ const en = {
       upper_back: 'Upper Back'
     },
     kg: 'kg',
+    closeNotification: 'Close notification',
+    closeDialog: 'Close dialog',
+    loadingList: 'Loading…',
+    skipToContent: 'Skip to content',
   },
 
   // ─── Navigation ───
@@ -575,6 +579,7 @@ const en = {
     previewExercises: 'Exercises in this workout',
     trainAgain: 'Train Again',
     moodSaved: 'Mood saved!',
+    shareSubtitle: 'RepTrack Session',
   },
 
   // ─── Social ───
